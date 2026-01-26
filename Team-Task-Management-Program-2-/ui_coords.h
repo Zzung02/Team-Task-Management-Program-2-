@@ -1,0 +1,97 @@
+﻿#pragma once
+
+#define BASE_W 1651
+#define BASE_H 896
+
+// ===============================
+// START(로그인)
+// ===============================
+#define R_START_ID_X1      120
+#define R_START_ID_Y1      620
+#define R_START_ID_X2      900
+#define R_START_ID_Y2      690
+
+#define R_START_PW_X1      120
+#define R_START_PW_Y1      720
+#define R_START_PW_X2      900
+#define R_START_PW_Y2      790
+
+#define R_BTN_LOGIN_X1     520
+#define R_BTN_LOGIN_Y1     815
+#define R_BTN_LOGIN_X2     760
+#define R_BTN_LOGIN_Y2     890
+
+#define R_BTN_TO_SIGNUP_X1 1180
+#define R_BTN_TO_SIGNUP_Y1 690
+#define R_BTN_TO_SIGNUP_X2 1580
+#define R_BTN_TO_SIGNUP_Y2 780
+
+#define R_BTN_FINDPW_X1    1180
+#define R_BTN_FINDPW_Y1    780
+#define R_BTN_FINDPW_X2    1580
+#define R_BTN_FINDPW_Y2    860
+
+// ===============================
+// SIGNUP(회원가입)
+// ===============================
+#define R_BTN_BACK_X1      40
+#define R_BTN_BACK_Y1      40
+#define R_BTN_BACK_X2      360
+#define R_BTN_BACK_Y2      120
+
+#define R_SIGN_NAME_X1     650
+#define R_SIGN_NAME_Y1     260
+#define R_SIGN_NAME_X2     1350
+#define R_SIGN_NAME_Y2     330
+
+#define R_SIGN_ID_X1       77
+#define R_SIGN_ID_Y1       655
+#define R_SIGN_ID_X2       851
+#define R_SIGN_ID_Y2       731
+
+#define R_SIGN_PW_X1       77
+#define R_SIGN_PW_Y1       770
+#define R_SIGN_PW_X2       851
+#define R_SIGN_PW_Y2       847
+
+#define R_SIGN_TEAM_X1     650
+#define R_SIGN_TEAM_Y1     650
+#define R_SIGN_TEAM_X2     1350
+#define R_SIGN_TEAM_Y2     720
+
+#define R_BTN_CREATE_X1    800
+#define R_BTN_CREATE_Y1    840
+#define R_BTN_CREATE_X2    1120
+#define R_BTN_CREATE_Y2    920
+
+// ===============================
+// MAIN(캘린더) 왼쪽 필터 버튼들 (임시 좌표)
+// ===============================
+#define R_MAIN_BTN_DEADLINE_X1  60
+#define R_MAIN_BTN_DEADLINE_Y1  190
+#define R_MAIN_BTN_DEADLINE_X2  130
+#define R_MAIN_BTN_DEADLINE_Y2  260
+
+#define R_MAIN_BTN_TODO_X1      60
+#define R_MAIN_BTN_TODO_Y1      285
+#define R_MAIN_BTN_TODO_X2      130
+#define R_MAIN_BTN_TODO_Y2      355
+
+#define R_MAIN_BTN_MYTEAM_X1    60
+#define R_MAIN_BTN_MYTEAM_Y1    380
+#define R_MAIN_BTN_MYTEAM_X2    130
+#define R_MAIN_BTN_MYTEAM_Y2    450
+
+#define R_MAIN_BTN_DONE_X1      60
+#define R_MAIN_BTN_DONE_Y1      475
+#define R_MAIN_BTN_DONE_X2      130
+#define R_MAIN_BTN_DONE_Y2      545
+
+// ===============================
+// MAIN(캘린더) 오른쪽 메뉴 버튼들 (임시 좌표)
+// ===============================
+// ✅ 팀 등록 버튼 (오른쪽 상단 첫 번째)
+#define R_MAIN_BTN_TEAM_CREATE_X1  1420
+#define R_MAIN_BTN_TEAM_CREATE_Y1  170   
+#define R_MAIN_BTN_TEAM_CREATE_X2  1605
+#define R_MAIN_BTN_TEAM_CREATE_Y2  225  
