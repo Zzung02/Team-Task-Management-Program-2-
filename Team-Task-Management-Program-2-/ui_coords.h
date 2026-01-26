@@ -65,7 +65,7 @@
 #define R_BTN_CREATE_Y2    920
 
 // ===============================
-// MAIN(캘린더) 왼쪽 필터 버튼들 (임시 좌표)
+// MAIN(캘린더) 왼쪽 필터 버튼들 (임시)
 // ===============================
 #define R_MAIN_BTN_DEADLINE_X1  60
 #define R_MAIN_BTN_DEADLINE_Y1  190
@@ -88,10 +88,29 @@
 #define R_MAIN_BTN_DONE_Y2      545
 
 // ===============================
-// MAIN(캘린더) 오른쪽 메뉴 버튼들 (임시 좌표)
+// MAIN(캘린더) 오른쪽 메뉴 버튼들
 // ===============================
-// ✅ 팀 등록 버튼 (오른쪽 상단 첫 번째)
+// ✅ 팀 등록 (너가 올려달라 해서 반영)
 #define R_MAIN_BTN_TEAM_CREATE_X1  1420
-#define R_MAIN_BTN_TEAM_CREATE_Y1  170   
+#define R_MAIN_BTN_TEAM_CREATE_Y1  160
 #define R_MAIN_BTN_TEAM_CREATE_X2  1605
-#define R_MAIN_BTN_TEAM_CREATE_Y2  225  
+#define R_MAIN_BTN_TEAM_CREATE_Y2  215
+
+// ✅ 팀 참여 (팀 등록 아래)
+#define R_MAIN_BTN_TEAM_JOIN_X1    1420
+#define R_MAIN_BTN_TEAM_JOIN_Y1    235
+#define R_MAIN_BTN_TEAM_JOIN_X2    1605
+#define R_MAIN_BTN_TEAM_JOIN_Y2    290
+
+
+// ✅ 과제 등록 (팀 참여 아래)
+#define R_MAIN_BTN_TASK_ADD_X1   1420
+#define R_MAIN_BTN_TASK_ADD_Y1   300
+#define R_MAIN_BTN_TASK_ADD_X2   1605
+#define R_MAIN_BTN_TASK_ADD_Y2   350
+
+// ✅ 게시판 
+#define R_MAIN_BTN_BOARD_X1  1420
+#define R_MAIN_BTN_BOARD_Y1  360
+#define R_MAIN_BTN_BOARD_X2  1605
+#define R_MAIN_BTN_BOARD_Y2  415
