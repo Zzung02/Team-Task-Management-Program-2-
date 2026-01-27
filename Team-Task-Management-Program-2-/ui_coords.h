@@ -7,9 +7,9 @@
 // START(로그인)
 // ===============================
 #define R_START_ID_X1      120
-#define R_START_ID_Y1      620
+#define R_START_ID_Y1      500
 #define R_START_ID_X2      900
-#define R_START_ID_Y2      690
+#define R_START_ID_Y2      600
 
 #define R_START_PW_X1      120
 #define R_START_PW_Y1      720
@@ -17,14 +17,14 @@
 #define R_START_PW_Y2      790
 
 #define R_BTN_LOGIN_X1     520
-#define R_BTN_LOGIN_Y1     815
+#define R_BTN_LOGIN_Y1     680
 #define R_BTN_LOGIN_X2     760
-#define R_BTN_LOGIN_Y2     890
+#define R_BTN_LOGIN_Y2     800
 
 #define R_BTN_TO_SIGNUP_X1 1180
 #define R_BTN_TO_SIGNUP_Y1 690
 #define R_BTN_TO_SIGNUP_X2 1580
-#define R_BTN_TO_SIGNUP_Y2 780
+#define R_BTN_TO_SIGNUP_Y2 750
 
 #define R_BTN_FINDPW_X1    1180
 #define R_BTN_FINDPW_Y1    780

@@ -41,6 +41,8 @@ int g_clientW = 0, g_clientH = 0;
 
 static HFONT g_uiFont = NULL;
 
+
+
 // Edit 컨트롤 (START/SIGNUP만)
 static HWND g_edStartId = NULL;
 static HWND g_edStartPw = NULL;
@@ -149,7 +151,6 @@ static void ResizeToBitmap(HWND hWnd, HBITMAP bmp)
 
 static void CreateControlsForScreen(HWND hWnd, Screen s)
 {
-    DestroyAllEdits();
 
     // ✅ Edit 없는 화면들(추가: BOARD도 없음)
     if (s == SCR_MAIN || s == SCR_FINDPW || s == SCR_DEADLINE || s == SCR_TODO ||
@@ -161,24 +162,18 @@ static void CreateControlsForScreen(HWND hWnd, Screen s)
     if (s == SCR_START) {
         g_edStartId = CreateEdit(hWnd, 101, 0);
         g_edStartPw = CreateEdit(hWnd, 102, ES_PASSWORD);
-        ShowWindow(g_edStartId, SW_SHOW);
-        ShowWindow(g_edStartPw, SW_SHOW);
-        RelayoutControls(hWnd);
-        return;
-    }
 
-    if (s == SCR_SIGNUP) {
+
+     
+    }
+    else if (s == SCR_SIGNUP) {
+  
         g_edSignName = CreateEdit(hWnd, 201, 0);
         g_edSignId = CreateEdit(hWnd, 202, 0);
         g_edSignPw = CreateEdit(hWnd, 203, ES_PASSWORD);
         g_edSignTeam = CreateEdit(hWnd, 204, 0);
 
-        ShowWindow(g_edSignName, SW_SHOW);
-        ShowWindow(g_edSignId, SW_SHOW);
-        ShowWindow(g_edSignPw, SW_SHOW);
-        ShowWindow(g_edSignTeam, SW_SHOW);
-        RelayoutControls(hWnd);
-        return;
+ 
     }
 }
 
@@ -412,7 +407,7 @@ void App_OnPaint(HWND hWnd, HDC hdc)
 void App_OnDestroy(void)
 {
     DestroyAllEdits();
-
+     
     if (g_bmpStart) { DeleteObject(g_bmpStart);      g_bmpStart = NULL; }
     if (g_bmpSignup) { DeleteObject(g_bmpSignup);     g_bmpSignup = NULL; }
     if (g_bmpMain) { DeleteObject(g_bmpMain);       g_bmpMain = NULL; }
