@@ -6,15 +6,15 @@
 // ===============================
 // START(로그인)
 // ===============================
-#define R_START_ID_X1      120
-#define R_START_ID_Y1      500
-#define R_START_ID_X2      900
-#define R_START_ID_Y2      600
+#define R_START_ID_X1      40         // x1,x2를 같이 바꾼다   /좌우
+#define R_START_ID_Y1      545		  // y1,y2를 같이 바꾼다   상하 
+#define R_START_ID_X2      300        // 가로 x2, 세로 y2
+#define R_START_ID_Y2      415
 
-#define R_START_PW_X1      120
-#define R_START_PW_Y1      720
-#define R_START_PW_X2      900
-#define R_START_PW_Y2      790
+#define R_START_PW_X1      90
+#define R_START_PW_Y1      635
+#define R_START_PW_X2      620
+#define R_START_PW_Y2      685
 
 #define R_BTN_LOGIN_X1     520
 #define R_BTN_LOGIN_Y1     680
@@ -114,3 +114,17 @@
 #define R_MAIN_BTN_BOARD_Y1  360
 #define R_MAIN_BTN_BOARD_X2  1605
 #define R_MAIN_BTN_BOARD_Y2  415
+
+
+
+// 로그인 ID, PW 텍스트 콘솔
+
+#define R_START_ID_X      50
+#define R_START_ID_Y      565
+#define R_START_ID_W      613
+#define R_START_ID_H      58
+
+#define R_START_PW_X      70
+#define R_START_PW_Y      658
+#define R_START_PW_W      613
+#define R_START_PW_H      57

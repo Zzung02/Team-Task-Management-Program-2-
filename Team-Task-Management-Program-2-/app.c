@@ -10,6 +10,9 @@
 
 Screen g_screen = SCR_START;
 
+// =========================================================
+// [BMP 파일명]
+// =========================================================
 const wchar_t* BMP_START = L"start.bmp";
 const wchar_t* BMP_SIGNUP = L"signup.bmp";
 const wchar_t* BMP_MAIN = L"main.bmp";
@@ -20,9 +23,12 @@ const wchar_t* BMP_MYTEAM = L"myteam.bmp";
 const wchar_t* BMP_DONE = L"done.bmp";
 const wchar_t* BMP_TEAM_CREATE = L"team_create.bmp";
 const wchar_t* BMP_TEAM_JOIN = L"team_join.bmp";
-const wchar_t* BMP_TASK_ADD = L"task_add.bmp";     // ✅ 과제등록
-const wchar_t* BMP_BOARD = L"board.bmp";        // ✅ 게시판
+const wchar_t* BMP_TASK_ADD = L"task_add.bmp";   // ✅ 과제등록
+const wchar_t* BMP_BOARD = L"board.bmp";      // ✅ 게시판
 
+// =========================================================
+// [BMP 핸들]
+// =========================================================
 HBITMAP g_bmpStart = NULL;
 HBITMAP g_bmpSignup = NULL;
 HBITMAP g_bmpMain = NULL;
@@ -33,17 +39,24 @@ HBITMAP g_bmpMyTeam = NULL;
 HBITMAP g_bmpDone = NULL;
 HBITMAP g_bmpTeamCreate = NULL;
 HBITMAP g_bmpTeamJoin = NULL;
-HBITMAP g_bmpTaskAdd = NULL;                       // ✅ 과제등록
-HBITMAP g_bmpBoard = NULL;                       // ✅ 게시판
+HBITMAP g_bmpTaskAdd = NULL;  // ✅ 과제등록
+HBITMAP g_bmpBoard = NULL;  // ✅ 게시판
 
+// =========================================================
+// [디버그/클라이언트 크기]
+// =========================================================
 int g_lastX = -1, g_lastY = -1;
 int g_clientW = 0, g_clientH = 0;
 
+// =========================================================
+// [공통 폰트]
+// =========================================================
 static HFONT g_uiFont = NULL;
 
-
-
-// Edit 컨트롤 (START/SIGNUP만)
+// =========================================================
+// [텍스트 필드(Edit 컨트롤)]
+//  - START / SIGNUP 화면에서만 사용
+// =========================================================
 static HWND g_edStartId = NULL;
 static HWND g_edStartPw = NULL;
 
@@ -52,20 +65,24 @@ static HWND g_edSignId = NULL;
 static HWND g_edSignPw = NULL;
 static HWND g_edSignTeam = NULL;
 
-// -------------------------
+// ---------------------------------------------------------
 // 내부 유틸
-// -------------------------
+// ---------------------------------------------------------
+
+// ✅ 화면 전환 시 Edit가 누적 생성되는 문제를 막기 위해
+//    "항상 먼저 싹 제거"하는 용도
 static void DestroyAllEdits(void)
 {
-    if (g_edStartId) { DestroyWindow(g_edStartId); g_edStartId = NULL; }
-    if (g_edStartPw) { DestroyWindow(g_edStartPw); g_edStartPw = NULL; }
+    if (g_edStartId) { DestroyWindow(g_edStartId);   g_edStartId = NULL; }
+    if (g_edStartPw) { DestroyWindow(g_edStartPw);   g_edStartPw = NULL; }
 
-    if (g_edSignName) { DestroyWindow(g_edSignName); g_edSignName = NULL; }
-    if (g_edSignId) { DestroyWindow(g_edSignId);   g_edSignId = NULL; }
-    if (g_edSignPw) { DestroyWindow(g_edSignPw);   g_edSignPw = NULL; }
-    if (g_edSignTeam) { DestroyWindow(g_edSignTeam); g_edSignTeam = NULL; }
+    if (g_edSignName) { DestroyWindow(g_edSignName);  g_edSignName = NULL; }
+    if (g_edSignId) { DestroyWindow(g_edSignId);    g_edSignId = NULL; }
+    if (g_edSignPw) { DestroyWindow(g_edSignPw);    g_edSignPw = NULL; }
+    if (g_edSignTeam) { DestroyWindow(g_edSignTeam);  g_edSignTeam = NULL; }
 }
 
+// ✅ UI 폰트 1회 생성 후 재사용
 static HFONT GetUIFont(void)
 {
     if (!g_uiFont) {
@@ -78,23 +95,39 @@ static HFONT GetUIFont(void)
     return g_uiFont;
 }
 
+// ✅ Edit 생성(텍스트필드)
+// - BMP에 입력 박스 테두리가 이미 있으면 WS_BORDER는 빼는 게 더 자연스러움
+// - ES_AUTOHSCROLL: 길게 입력하면 옆으로 스크롤
+// - ES_PASSWORD: 비밀번호 가림(PW용)
 static HWND CreateEdit(HWND parent, int ctrlId, DWORD extraStyle)
 {
     HWND h = CreateWindowExW(
         0, L"EDIT", L"",
-        WS_CHILD | WS_BORDER | ES_AUTOHSCROLL | extraStyle,
+        WS_CHILD /*| WS_BORDER*/ | ES_AUTOHSCROLL | extraStyle, // ✅ 필요하면 WS_BORDER 주석 해제
         10, 10, 100, 30,
         parent, (HMENU)(INT_PTR)ctrlId,
         GetModuleHandleW(NULL), NULL
     );
+
+    // ✅ 폰트 적용
     HFONT f = GetUIFont();
     if (f) SendMessageW(h, WM_SETFONT, (WPARAM)f, TRUE);
+
     return h;
 }
 
+// ✅ 화면에서 Edit의 위치를 UI 좌표에 맞춰 재배치 + show/hide까지 담당
 static void RelayoutControls(HWND hWnd)
 {
-    // ✅ Edit 없는 화면들(추가: BOARD도 없음)
+    // ✅ [핵심] 먼저 전부 숨김 → 필요한 화면에서만 다시 Show
+    if (g_edStartId)   ShowWindow(g_edStartId, SW_HIDE);
+    if (g_edStartPw)   ShowWindow(g_edStartPw, SW_HIDE);
+    if (g_edSignName)  ShowWindow(g_edSignName, SW_HIDE);
+    if (g_edSignId)    ShowWindow(g_edSignId, SW_HIDE);
+    if (g_edSignPw)    ShowWindow(g_edSignPw, SW_HIDE);
+    if (g_edSignTeam)  ShowWindow(g_edSignTeam, SW_HIDE);
+
+    // ✅ Edit 없는 화면들(BOARD 포함) → 숨긴 상태로 끝
     if (g_screen == SCR_MAIN || g_screen == SCR_FINDPW || g_screen == SCR_DEADLINE ||
         g_screen == SCR_TODO || g_screen == SCR_MYTEAM || g_screen == SCR_DONE ||
         g_screen == SCR_TEAM_CREATE || g_screen == SCR_TEAM_JOIN ||
@@ -104,6 +137,10 @@ static void RelayoutControls(HWND hWnd)
     }
 
     if (g_screen == SCR_START) {
+        // ✅ START에서만 표시
+        if (g_edStartId) ShowWindow(g_edStartId, SW_SHOW);
+        if (g_edStartPw) ShowWindow(g_edStartPw, SW_SHOW);
+
         MoveEdit(g_edStartId,
             SX(R_START_ID_X1), SY(R_START_ID_Y1),
             SX(R_START_ID_X2), SY(R_START_ID_Y2),
@@ -115,6 +152,12 @@ static void RelayoutControls(HWND hWnd)
             65, 6, 12, 6);
     }
     else if (g_screen == SCR_SIGNUP) {
+        // ✅ SIGNUP에서만 표시
+        if (g_edSignName) ShowWindow(g_edSignName, SW_SHOW);
+        if (g_edSignId)   ShowWindow(g_edSignId, SW_SHOW);
+        if (g_edSignPw)   ShowWindow(g_edSignPw, SW_SHOW);
+        if (g_edSignTeam) ShowWindow(g_edSignTeam, SW_SHOW);
+
         MoveEdit(g_edSignName,
             SX(R_SIGN_NAME_X1), SY(R_SIGN_NAME_Y1),
             SX(R_SIGN_NAME_X2), SY(R_SIGN_NAME_Y2),
@@ -137,6 +180,7 @@ static void RelayoutControls(HWND hWnd)
     }
 }
 
+// ✅ bmp 크기에 맞춰 창 client 영역 사이즈 조정
 static void ResizeToBitmap(HWND hWnd, HBITMAP bmp)
 {
     if (!bmp) return;
@@ -149,10 +193,13 @@ static void ResizeToBitmap(HWND hWnd, HBITMAP bmp)
     g_clientH = bm.bmHeight;
 }
 
+// ✅ 화면별로 필요한 Edit 생성
 static void CreateControlsForScreen(HWND hWnd, Screen s)
 {
+    // ✅ [중요] SwitchScreen()에서 DestroyAllEdits()가 먼저 호출되어야 함
+    //         (안 그러면 화면 전환할 때 Edit가 계속 누적 생성됨)
 
-    // ✅ Edit 없는 화면들(추가: BOARD도 없음)
+    // ✅ Edit 없는 화면들(BOARD 포함)
     if (s == SCR_MAIN || s == SCR_FINDPW || s == SCR_DEADLINE || s == SCR_TODO ||
         s == SCR_MYTEAM || s == SCR_DONE || s == SCR_TEAM_CREATE || s == SCR_TEAM_JOIN ||
         s == SCR_TASK_ADD || s == SCR_BOARD) {
@@ -160,25 +207,20 @@ static void CreateControlsForScreen(HWND hWnd, Screen s)
     }
 
     if (s == SCR_START) {
-        g_edStartId = CreateEdit(hWnd, 101, 0);
-        g_edStartPw = CreateEdit(hWnd, 102, ES_PASSWORD);
-
-
-     
+        g_edStartId = CreateEdit(hWnd, 101, 50);
+        g_edStartPw = CreateEdit(hWnd, 100, ES_PASSWORD);
     }
     else if (s == SCR_SIGNUP) {
-  
-        g_edSignName = CreateEdit(hWnd, 201, 0);
-        g_edSignId = CreateEdit(hWnd, 202, 0);
-        g_edSignPw = CreateEdit(hWnd, 203, ES_PASSWORD);
-        g_edSignTeam = CreateEdit(hWnd, 204, 0);
 
- 
     }
 }
 
+// ✅ 화면 전환
 static void SwitchScreen(HWND hWnd, Screen next)
 {
+    // ✅ [핵심] 기존 Edit 제거 (전환할 때마다 누적 생성 방지)
+    DestroyAllEdits();
+
     g_screen = next;
 
     if (next == SCR_START)             ResizeToBitmap(hWnd, g_bmpStart);
@@ -190,14 +232,20 @@ static void SwitchScreen(HWND hWnd, Screen next)
     else if (next == SCR_DONE)         ResizeToBitmap(hWnd, g_bmpDone);
     else if (next == SCR_TEAM_CREATE)  ResizeToBitmap(hWnd, g_bmpTeamCreate);
     else if (next == SCR_TEAM_JOIN)    ResizeToBitmap(hWnd, g_bmpTeamJoin);
-    else if (next == SCR_TASK_ADD)     ResizeToBitmap(hWnd, g_bmpTaskAdd);   // ✅
-    else if (next == SCR_BOARD)        ResizeToBitmap(hWnd, g_bmpBoard);     // ✅
+    else if (next == SCR_TASK_ADD)     ResizeToBitmap(hWnd, g_bmpTaskAdd);   
+    else if (next == SCR_BOARD)        ResizeToBitmap(hWnd, g_bmpBoard);     
     else                               ResizeToBitmap(hWnd, g_bmpMain);
 
+    // ✅ 새 화면에 필요한 Edit 생성
     CreateControlsForScreen(hWnd, next);
+
+    // ✅ [중요] 생성 직후 즉시 배치 + show/hide 반영
+    RelayoutControls(hWnd);
+
     InvalidateRect(hWnd, NULL, FALSE);
 }
 
+// ✅ 디버그(라스트 클릭 표시)
 static void DrawDebugOverlay(HDC hdc)
 {
     SetBkMode(hdc, TRANSPARENT);
@@ -263,7 +311,10 @@ void App_OnSize(HWND hWnd, int w, int h)
 {
     g_clientW = w;
     g_clientH = h;
+
+    // ✅ 창 크기 바뀌면 Edit도 현재 스케일에 맞게 다시 배치
     RelayoutControls(hWnd);
+
     InvalidateRect(hWnd, NULL, FALSE);
     (void)hWnd;
 }
@@ -305,7 +356,7 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
     int r_ta_x1 = SX(R_MAIN_BTN_TASK_ADD_X1), r_ta_y1 = SY(R_MAIN_BTN_TASK_ADD_Y1);
     int r_ta_x2 = SX(R_MAIN_BTN_TASK_ADD_X2), r_ta_y2 = SY(R_MAIN_BTN_TASK_ADD_Y2);
 
-    // ✅ BOARD 버튼 좌표(너 ui_coords.h에 추가해줘야 함)
+    // ✅ BOARD 버튼 좌표(너 ui_coords.h에 추가돼 있어야 함)
     int r_bd_x1 = SX(R_MAIN_BTN_BOARD_X1), r_bd_y1 = SY(R_MAIN_BTN_BOARD_Y1);
     int r_bd_x2 = SX(R_MAIN_BTN_BOARD_X2), r_bd_y2 = SY(R_MAIN_BTN_BOARD_Y2);
 
@@ -349,19 +400,18 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
         if (PtInRectXY(x, y, r_tj_x1, r_tj_y1, r_tj_x2, r_tj_y2)) { SwitchScreen(hWnd, SCR_TEAM_JOIN); return; }
         if (PtInRectXY(x, y, r_ta_x1, r_ta_y1, r_ta_x2, r_ta_y2)) { SwitchScreen(hWnd, SCR_TASK_ADD); return; } // ✅
         if (PtInRectXY(x, y, r_bd_x1, r_bd_y1, r_bd_x2, r_bd_y2)) { SwitchScreen(hWnd, SCR_BOARD); return; }    // ✅ 게시판
-
         return;
     }
 
     // 임시 복귀: 다른 화면에서 아무 곳 클릭하면 메인/시작으로
-    if (g_screen == SCR_DEADLINE) { SwitchScreen(hWnd, SCR_MAIN); return; }
-    if (g_screen == SCR_TODO) { SwitchScreen(hWnd, SCR_MAIN); return; }
-    if (g_screen == SCR_MYTEAM) { SwitchScreen(hWnd, SCR_MAIN); return; }
-    if (g_screen == SCR_DONE) { SwitchScreen(hWnd, SCR_MAIN); return; }
-    if (g_screen == SCR_TEAM_CREATE) { SwitchScreen(hWnd, SCR_MAIN); return; }
-    if (g_screen == SCR_TEAM_JOIN) { SwitchScreen(hWnd, SCR_MAIN); return; }
-    if (g_screen == SCR_TASK_ADD) { SwitchScreen(hWnd, SCR_MAIN); return; }
-    if (g_screen == SCR_BOARD) { SwitchScreen(hWnd, SCR_MAIN); return; } // ✅
+    if (g_screen == SCR_DEADLINE) { SwitchScreen(hWnd, SCR_MAIN);  return; }
+    if (g_screen == SCR_TODO) { SwitchScreen(hWnd, SCR_MAIN);  return; }
+    if (g_screen == SCR_MYTEAM) { SwitchScreen(hWnd, SCR_MAIN);  return; }
+    if (g_screen == SCR_DONE) { SwitchScreen(hWnd, SCR_MAIN);  return; }
+    if (g_screen == SCR_TEAM_CREATE) { SwitchScreen(hWnd, SCR_MAIN);  return; }
+    if (g_screen == SCR_TEAM_JOIN) { SwitchScreen(hWnd, SCR_MAIN);  return; }
+    if (g_screen == SCR_TASK_ADD) { SwitchScreen(hWnd, SCR_MAIN);  return; }
+    if (g_screen == SCR_BOARD) { SwitchScreen(hWnd, SCR_MAIN);  return; } // ✅
     if (g_screen == SCR_FINDPW) { SwitchScreen(hWnd, SCR_START); return; }
 }
 
@@ -406,8 +456,10 @@ void App_OnPaint(HWND hWnd, HDC hdc)
 
 void App_OnDestroy(void)
 {
+    // ✅ Edit 컨트롤 제거
     DestroyAllEdits();
-     
+
+    // ✅ BMP 해제
     if (g_bmpStart) { DeleteObject(g_bmpStart);      g_bmpStart = NULL; }
     if (g_bmpSignup) { DeleteObject(g_bmpSignup);     g_bmpSignup = NULL; }
     if (g_bmpMain) { DeleteObject(g_bmpMain);       g_bmpMain = NULL; }
@@ -421,5 +473,6 @@ void App_OnDestroy(void)
     if (g_bmpTaskAdd) { DeleteObject(g_bmpTaskAdd);    g_bmpTaskAdd = NULL; }
     if (g_bmpBoard) { DeleteObject(g_bmpBoard);      g_bmpBoard = NULL; } // ✅
 
+    // ✅ 폰트 해제
     if (g_uiFont) { DeleteObject(g_uiFont); g_uiFont = NULL; }
 }
