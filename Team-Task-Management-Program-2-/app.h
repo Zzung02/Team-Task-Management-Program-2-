@@ -2,6 +2,9 @@
 #include <windows.h>
 #include <wchar.h>
 
+
+void App_GoToStart(HWND hWnd);
+
 typedef enum {
     SCR_START = 0,
     SCR_SIGNUP = 1,

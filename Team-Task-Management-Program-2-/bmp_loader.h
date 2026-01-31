@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include <windows.h>
 
 HBITMAP LoadBmpFromExeDir(HWND hWnd, const wchar_t* filename, int* outW, int* outH);
