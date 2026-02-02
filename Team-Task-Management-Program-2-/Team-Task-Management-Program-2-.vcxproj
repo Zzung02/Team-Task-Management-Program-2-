@@ -132,17 +132,21 @@
     <ClCompile Include="auth.c" />
     <ClCompile Include="bmp_loader.c" />
     <ClCompile Include="main.c" />
+    <ClCompile Include="team.c" />
     <ClCompile Include="ui_layout.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="app.h" />
     <ClInclude Include="auth.h" />
     <ClInclude Include="bmp_loader.h" />
+    <ClInclude Include="team.h" />
     <ClInclude Include="ui_coords.h" />
     <ClInclude Include="ui_layout.h" />
   </ItemGroup>
   <ItemGroup>
-    <Text Include="user.txt" />
+    <Text Include="teams.txt" />
+    <Text Include="team_members.txt" />
+    <Text Include="users.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

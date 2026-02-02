@@ -30,6 +30,9 @@
     <ClCompile Include="auth.c">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="team.c">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="app.h">
@@ -47,8 +50,13 @@
     <ClInclude Include="auth.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
+    <ClInclude Include="team.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <Text Include="user.txt" />
+    <Text Include="users.txt" />
+    <Text Include="team_members.txt" />
+    <Text Include="teams.txt" />
   </ItemGroup>
 </Project>

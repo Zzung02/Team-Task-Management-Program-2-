@@ -86,6 +86,11 @@ static int GetPanelRectForScreen(Screen s, RECT* outRc)
     return 1;
 }
 
+// app.c (전역, 함수 밖)
+wchar_t g_currentUserId[128] = L"";
+wchar_t g_currentTeamName[128] = L"";
+wchar_t g_currentTaskName[128] = L"";
+wchar_t g_currentJoinCode[128] = L"";
 
 
 
@@ -162,9 +167,9 @@ static HWND g_edFindId = NULL;
 static HWND g_edFindResult = NULL;
 
 
-static HWND g_edTcTeamName = NULL;   
-static HWND g_edTcTaskName = NULL;  
-static HWND g_edTcJoinCode = NULL;   
+static HWND g_edTcTeamName = NULL;
+static HWND g_edTcTaskName = NULL;
+static HWND g_edTcJoinCode = NULL;
 
 static HWND g_edTjTeamName = NULL;   // 팀참여: 팀명
 static HWND g_edTjJoinCode = NULL;   // 팀참여: 참여코드
@@ -220,7 +225,8 @@ static void DestroyAllEdits(void)
     if (g_edTaDetail) { RemovePropW(g_edTaDetail, PROP_OLDPROC); DestroyWindow(g_edTaDetail); g_edTaDetail = NULL; }
     if (g_edTaFile) { RemovePropW(g_edTaFile, PROP_OLDPROC); DestroyWindow(g_edTaFile);   g_edTaFile = NULL; }
     if (g_edSearch) { RemovePropW(g_edSearch, PROP_OLDPROC); DestroyWindow(g_edSearch); g_edSearch = NULL; }
-    if (g_edTaSubDetail) { RemovePropW(g_edTaSubDetail, PROP_OLDPROC);DestroyWindow(g_edTaSubDetail);g_edTaSubDetail = NULL;
+    if (g_edTaSubDetail) {
+        RemovePropW(g_edTaSubDetail, PROP_OLDPROC); DestroyWindow(g_edTaSubDetail); g_edTaSubDetail = NULL;
     }
 
     // BOARD
@@ -304,7 +310,7 @@ static void CreateControlsForScreen(HWND hWnd, Screen s)
         g_edMainTeamName = CreateEdit(hWnd, 601, 0);
         g_edMainTaskName = CreateEdit(hWnd, 602, 0);
         g_edSearch = CreateEdit(hWnd, 603, 0);
-        RelayoutControls(hWnd);
+      
         return;
 
     case SCR_TASK_ADD:
@@ -318,7 +324,7 @@ static void CreateControlsForScreen(HWND hWnd, Screen s)
         g_edTaFile = CreateEdit(hWnd, 707, 0);
 
         g_edTaSubDetail = CreateEdit(hWnd, 708, 0); // ✅ 상세사항(한 줄)
-        g_edSearch = CreateEdit(hWnd, 709, 0); // ✅ 조회(검색) (ID는 709로 분리)
+      
 
         RelayoutControls(hWnd);
         return;
@@ -366,7 +372,7 @@ static void RelayoutControls(HWND hWnd)
     if (g_edMainTeamName) ShowWindow(g_edMainTeamName, SW_HIDE);
     if (g_edMainTaskName) ShowWindow(g_edMainTaskName, SW_HIDE);
 
-   
+
 
     if (g_edTaItem1)  ShowWindow(g_edTaItem1, SW_HIDE);
     if (g_edTaItem2)  ShowWindow(g_edTaItem2, SW_HIDE);
@@ -439,17 +445,24 @@ static void RelayoutControls(HWND hWnd)
         return;
     }
 
-    // =========================
-    // TEAM_JOIN
-    // =========================
+    // ✅ TEAM_JOIN 배치 (이 블록만 남겨!)
     if (g_screen == SCR_TEAM_JOIN) {
         ShowWindow(g_edTjTeamName, SW_SHOW);
         ShowWindow(g_edTjJoinCode, SW_SHOW);
 
-        MoveEdit(g_edTjTeamName, SX(R_TJ_TEAM_X1), SY(R_TJ_TEAM_Y1), SX(R_TJ_TEAM_X2), SY(R_TJ_TEAM_Y2), 0, 0, 0, 0);
-        MoveEdit(g_edTjJoinCode, SX(R_TJ_CODE_X1), SY(R_TJ_CODE_Y1), SX(R_TJ_CODE_X2), SY(R_TJ_CODE_Y2), 0, 0, 0, 0);
+        MoveEdit(g_edTjTeamName,
+            SX(R_TJ_TEAM_X1), SY(R_TJ_TEAM_Y1),
+            SX(R_TJ_TEAM_X2), SY(R_TJ_TEAM_Y2),
+            0, 0, 0, 0);
+
+        MoveEdit(g_edTjJoinCode,
+            SX(R_TJ_CODE_X1), SY(R_TJ_CODE_Y1),
+            SX(R_TJ_CODE_X2), SY(R_TJ_CODE_Y2),
+            0, 0, 0, 0);
+
         return;
     }
+
 
     // =========================
     // MAIN (TeamName/TaskName만 사용)
@@ -457,11 +470,10 @@ static void RelayoutControls(HWND hWnd)
     if (g_screen == SCR_MAIN) {
         ShowWindow(g_edMainTeamName, SW_SHOW);
         ShowWindow(g_edMainTaskName, SW_SHOW);
-        ShowWindow(g_edSearch, SW_SHOW);  // ✅ 추가
+        ShowWindow(g_edSearch, SW_SHOW);
 
         MoveEdit(g_edMainTeamName, SX(R_MAIN_TEAM_X1), SY(R_MAIN_TEAM_Y1), SX(R_MAIN_TEAM_X2), SY(R_MAIN_TEAM_Y2), 0, 0, 0, 0);
         MoveEdit(g_edMainTaskName, SX(R_MAIN_TASK_X1), SY(R_MAIN_TASK_Y1), SX(R_MAIN_TASK_X2), SY(R_MAIN_TASK_Y2), 0, 0, 0, 0);
-
 
         return;
     }
@@ -478,7 +490,6 @@ static void RelayoutControls(HWND hWnd)
         ShowWindow(g_edTaTitle, SW_SHOW);
         ShowWindow(g_edTaDetail, SW_SHOW);
         ShowWindow(g_edTaFile, SW_SHOW);
-        ShowWindow(g_edSearch, SW_SHOW);
         ShowWindow(g_edTaSubDetail, SW_SHOW);
 
 
@@ -490,8 +501,7 @@ static void RelayoutControls(HWND hWnd)
         MoveEdit(g_edTaTitle, SX(R_TA_TITLE_X1), SY(R_TA_TITLE_Y1), SX(R_TA_TITLE_X2), SY(R_TA_TITLE_Y2), 0, 0, 0, 0);
         MoveEdit(g_edTaDetail, SX(R_TA_DETAIL_X1), SY(R_TA_DETAIL_Y1), SX(R_TA_DETAIL_X2), SY(R_TA_DETAIL_Y2), 0, 0, 0, 0);
         MoveEdit(g_edTaFile, SX(R_TA_FILE_X1), SY(R_TA_FILE_Y1), SX(R_TA_FILE_X2), SY(R_TA_FILE_Y2), 0, 0, 0, 0);
-        MoveEdit(g_edSearch, SX(R_TA_SEARCH_X1), SY(R_TA_SEARCH_Y1),SX(R_TA_SEARCH_X2), SY(R_TA_SEARCH_Y2) , 0, 0, 0, 0);
-        MoveEdit(g_edTaSubDetail, SX(R_TA_SUBDETAIL_X1), SY(R_TA_SUBDETAIL_Y1),SX(R_TA_SUBDETAIL_X2), SY(R_TA_SUBDETAIL_Y2), 0, 0, 0, 0);
+        MoveEdit(g_edTaSubDetail, SX(R_TA_SUBDETAIL_X1), SY(R_TA_SUBDETAIL_Y1), SX(R_TA_SUBDETAIL_X2), SY(R_TA_SUBDETAIL_Y2), 0, 0, 0, 0);
         return;
     }
     if (g_screen == SCR_BOARD) {
@@ -527,50 +537,46 @@ static void RelayoutControls(HWND hWnd)
     };
 
 
-    } // ✅ RelayoutControls 끝
+} // ✅ RelayoutControls 끝
 
 
-    static void ResizeToBitmap(HWND hWnd, HBITMAP bmp)
-    {
-        if (!bmp) return;
+static void ResizeToBitmap(HWND hWnd, HBITMAP bmp)
+{
+    if (!bmp) return;
 
-        BITMAP bm;
-        GetObject(bmp, sizeof(bm), &bm);
+    BITMAP bm;
+    GetObject(bmp, sizeof(bm), &bm);
 
-        SetWindowClientSize(hWnd, bm.bmWidth, bm.bmHeight);
-        g_clientW = bm.bmWidth;
-        g_clientH = bm.bmHeight;
-    }
+    SetWindowClientSize(hWnd, bm.bmWidth, bm.bmHeight);
+    g_clientW = bm.bmWidth;
+    g_clientH = bm.bmHeight;
+}
 
-    static void SwitchScreen(HWND hWnd, Screen next)
-    {
-        DestroyAllEdits();
-        g_screen = next;
+static void SwitchScreen(HWND hWnd, Screen next)
+{
+    DestroyAllEdits();
+    g_screen = next;
 
-        if (next == SCR_START)             ResizeToBitmap(hWnd, g_bmpStart);
-        else if (next == SCR_SIGNUP)       ResizeToBitmap(hWnd, g_bmpSignup);
-        else if (next == SCR_FINDPW)       ResizeToBitmap(hWnd, g_bmpFindPw);
-        else if (next == SCR_DEADLINE)     ResizeToBitmap(hWnd, g_bmpDeadline);
-        else if (next == SCR_TODO)         ResizeToBitmap(hWnd, g_bmpTodo);
-        else if (next == SCR_MYTEAM)       ResizeToBitmap(hWnd, g_bmpMyTeam);
-        else if (next == SCR_DONE)         ResizeToBitmap(hWnd, g_bmpDone);
-        else if (next == SCR_TEAM_CREATE)  ResizeToBitmap(hWnd, g_bmpTeamCreate);
-        else if (next == SCR_TEAM_JOIN)    ResizeToBitmap(hWnd, g_bmpTeamJoin);
-        else if (next == SCR_TASK_ADD)     ResizeToBitmap(hWnd, g_bmpTaskAdd);
-        else if (next == SCR_BOARD)        ResizeToBitmap(hWnd, g_bmpBoard);
-        else                               ResizeToBitmap(hWnd, g_bmpMain);
+    if (next == SCR_START)             ResizeToBitmap(hWnd, g_bmpStart);
+    else if (next == SCR_SIGNUP)       ResizeToBitmap(hWnd, g_bmpSignup);
+    else if (next == SCR_FINDPW)       ResizeToBitmap(hWnd, g_bmpFindPw);
+    else if (next == SCR_DEADLINE)     ResizeToBitmap(hWnd, g_bmpDeadline);
+    else if (next == SCR_TODO)         ResizeToBitmap(hWnd, g_bmpTodo);
+    else if (next == SCR_MYTEAM)       ResizeToBitmap(hWnd, g_bmpMyTeam);
+    else if (next == SCR_DONE)         ResizeToBitmap(hWnd, g_bmpDone);
+    else if (next == SCR_TEAM_CREATE)  ResizeToBitmap(hWnd, g_bmpTeamCreate);
+    else if (next == SCR_TEAM_JOIN)    ResizeToBitmap(hWnd, g_bmpTeamJoin);
+    else if (next == SCR_TASK_ADD)     ResizeToBitmap(hWnd, g_bmpTaskAdd);
+    else if (next == SCR_BOARD)        ResizeToBitmap(hWnd, g_bmpBoard);
+    else                               ResizeToBitmap(hWnd, g_bmpMain);
 
-        UpdateTopLoginRect();
+    UpdateTopLoginRect();
 
-        CreateControlsForScreen(hWnd, next);
-        RelayoutControls(hWnd);
+    CreateControlsForScreen(hWnd, next);
+    RelayoutControls(hWnd);
 
-        InvalidateRect(hWnd, NULL, FALSE);
-    }
-
-
-       
-    
+    InvalidateRect(hWnd, NULL, FALSE);
+}
 
 static void DrawDebugOverlay(HDC hdc)
 {
@@ -588,6 +594,9 @@ static void DrawDebugOverlay(HDC hdc)
     SelectObject(hdc, old);
     DeleteObject(f);
 }
+
+
+
 
 // =========================================================
 // 라이프사이클
@@ -664,6 +673,76 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
 
     int m_done_x1 = SX(R_MAIN_BTN_DONE_X1), m_done_y1 = SY(R_MAIN_BTN_DONE_Y1);
     int m_done_x2 = SX(R_MAIN_BTN_DONE_X2), m_done_y2 = SY(R_MAIN_BTN_DONE_Y2);
+
+   
+    // ---------------------------------------------------------
+    // 6) TEAM_JOIN 저장 버튼 (팀 참여)
+    // ---------------------------------------------------------
+    if (g_screen == SCR_TEAM_JOIN) {
+
+        // ✅ 입력칸 클릭 포커스
+        if (PtInRectXY(x, y,
+            SX(R_TJ_TEAM_X1), SY(R_TJ_TEAM_Y1),
+            SX(R_TJ_TEAM_X2), SY(R_TJ_TEAM_Y2))) {
+            SetFocus(g_edTjTeamName);
+            return;
+        }
+
+        if (PtInRectXY(x, y,
+            SX(R_TJ_CODE_X1), SY(R_TJ_CODE_Y1),
+            SX(R_TJ_CODE_X2), SY(R_TJ_CODE_Y2))) {
+            SetFocus(g_edTjJoinCode);
+            return;
+        }
+
+        // ✅ 저장 버튼 좌표 (팀등록 저장 버튼이랑 위치 같으면 이거 그대로 쓰면 됨)
+        int save_x1 = SX(R_TC_SAVE_X1), save_y1 = SY(R_TC_SAVE_Y1);
+        int save_x2 = SX(R_TC_SAVE_X2), save_y2 = SY(R_TC_SAVE_Y2);
+
+        if (PtInRectXY(x, y, save_x1, save_y1, save_x2, save_y2)) {
+
+            wchar_t joinCode[128] = { 0 };
+            GetWindowTextW(g_edTjJoinCode, joinCode, 128);
+
+            if (joinCode[0] == 0) {
+                MessageBoxW(hWnd, L"참여 코드를 입력해 주세요.", L"팀 참여", MB_OK | MB_ICONWARNING);
+                return;
+            }
+
+            wchar_t team[128] = { 0 };
+            wchar_t task[128] = { 0 };
+
+            // 1) teams.txt에서 코드로 팀/과제 찾기
+            if (!Team_FindByCode(joinCode, team, 128, task, 128)) {
+                MessageBoxW(hWnd, L"존재하지 않는 참여 코드입니다.", L"팀 참여", MB_OK | MB_ICONERROR);
+                return;
+            }
+
+            // 2) team_members.txt에 멤버 등록
+            if (!Team_AddMember(g_currentUserId, joinCode)) {
+                MessageBoxW(hWnd, L"참여 저장 실패(파일 오류).", L"팀 참여", MB_OK | MB_ICONERROR);
+                return;
+            }
+
+            // 3) 현재 선택 팀 갱신 + 메인으로
+            wcsncpy_s(g_currentTeamName, 128, team, _TRUNCATE);
+            wcsncpy_s(g_currentTaskName, 128, task, _TRUNCATE);
+            wcsncpy_s(g_currentJoinCode, 128, joinCode, _TRUNCATE);
+
+            SwitchScreen(hWnd, SCR_MAIN);
+
+            if (g_edMainTeamName) SetWindowTextW(g_edMainTeamName, g_currentTeamName);
+            if (g_edMainTaskName) SetWindowTextW(g_edMainTaskName, g_currentTaskName);
+
+            MessageBoxW(hWnd, L"팀 참여 완료!", L"팀 참여", MB_OK | MB_ICONINFORMATION);
+            return;
+        }
+
+        return;
+    }
+
+
+
 
     // =========================================================
     // 0) 폼 화면(팀등록/팀참여) : 패널 바깥 클릭 -> MAIN 복귀

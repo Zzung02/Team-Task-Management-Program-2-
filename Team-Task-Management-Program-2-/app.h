@@ -33,8 +33,13 @@ extern const wchar_t* BMP_TODO;
 extern const wchar_t* BMP_MYTEAM;
 extern const wchar_t* BMP_DONE;
 extern const wchar_t* BMP_TEAM_CREATE;
-extern const wchar_t* BMP_TEAM_JOIN; 
+extern const wchar_t* BMP_TEAM_JOIN;
 extern const wchar_t* BMP_TASK_ADD;
+extern wchar_t g_currentUserId[128];
+extern wchar_t g_currentTeamName[128];
+extern wchar_t g_currentTaskName[128];
+extern wchar_t g_currentJoinCode[128];
+
 extern HBITMAP g_bmpTaskAdd;
 extern const wchar_t* BMP_BOARD;
 

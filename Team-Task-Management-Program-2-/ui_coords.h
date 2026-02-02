@@ -23,7 +23,7 @@ extern int g_clientH;
 #define R_START_PW_X1   129
 #define R_START_PW_Y1   515
 #define R_START_PW_X2   540
-#define R_START_PW_Y2   545   // ✅ 너가 470로 넣은거 수정 (PW박스 아래쪽 좌표)
+#define R_START_PW_Y2   545   
 
 // =========================================================
 // START 버튼들
@@ -89,6 +89,14 @@ extern int g_clientH;
 #define R_FIND_RESULT_X2  1105
 #define R_FIND_RESULT_Y2  300
 
+// FINDPW "찾기" 버튼 (
+#define R_FIND_BTN_X1   363
+#define R_FIND_BTN_Y1   375
+#define R_FIND_BTN_X2   549
+#define R_FIND_BTN_Y2   413
+
+
+
 // =========================================================
 // MAIN 왼쪽 필터 버튼
 // =========================================================
@@ -135,6 +143,7 @@ extern int g_clientH;
 #define R_MAIN_BTN_BOARD_X2        1265
 #define R_MAIN_BTN_BOARD_Y2        302
 
+
 // =========================================================
 // TEAM_CREATE(팀등록) 필드
 // =========================================================
@@ -153,18 +162,35 @@ extern int g_clientH;
 #define R_TC_CODE_X2   1030
 #define R_TC_CODE_Y2   401
 
+// TEAM_CREATE: 저장 버튼
+#define R_TC_SAVE_X1  994
+#define R_TC_SAVE_Y1  140
+#define R_TC_SAVE_X2  1106
+#define R_TC_SAVE_Y2  178
+
+
+
 // =========================================================
 // TEAM_JOIN(팀참여) 필드
 // =========================================================
-#define R_TJ_TEAM_X1   787
-#define R_TJ_TEAM_Y1   230
-#define R_TJ_TEAM_X2   1040
-#define R_TJ_TEAM_Y2   250
+#define R_TJ_TEAM_X1   792
+#define R_TJ_TEAM_Y1   227
+#define R_TJ_TEAM_X2   1038
+#define R_TJ_TEAM_Y2   252
 
-#define R_TJ_CODE_X1   859
-#define R_TJ_CODE_Y1   308
-#define R_TJ_CODE_X2   1015
-#define R_TJ_CODE_Y2   328
+#define R_TJ_CODE_X1   852
+#define R_TJ_CODE_Y1   304
+#define R_TJ_CODE_X2   1038
+#define R_TJ_CODE_Y2   330
+
+#define R_TJ_SAVE_X1  995
+#define R_TJ_SAVE_Y1  138
+#define R_TJ_SAVE_X2  1105
+#define R_TJ_SAVE_Y2  177
+
+
+
+
 
 // =========================================================
 // MAIN 상단 팀명/과제명 텍스트박스
