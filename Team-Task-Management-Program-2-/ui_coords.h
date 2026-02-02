@@ -89,7 +89,7 @@ extern int g_clientH;
 #define R_FIND_RESULT_X2  1105
 #define R_FIND_RESULT_Y2  300
 
-// FINDPW "찾기" 버튼 (
+// FINDPW "찾기" 버튼 
 #define R_FIND_BTN_X1   363
 #define R_FIND_BTN_Y1   375
 #define R_FIND_BTN_X2   549
@@ -168,6 +168,11 @@ extern int g_clientH;
 #define R_TC_SAVE_X2  1106
 #define R_TC_SAVE_Y2  178
 
+// MAIN - 내 팀 목록(ListBox) 영역(원본 디자인 기준)
+#define R_MYTEAM_LIST_X1   140
+#define R_MYTEAM_LIST_Y1   210
+#define R_MYTEAM_LIST_X2   520
+#define R_MYTEAM_LIST_Y2   760
 
 
 // =========================================================
@@ -206,23 +211,22 @@ extern int g_clientH;
 #define R_MAIN_TASK_Y2   95
 
 
-
 // ===============================
 // 과제 화면(SCR_TASK_ADD) Edit들
 // ===============================
-static HWND g_edTaItem1 = NULL;
-static HWND g_edTaItem2 = NULL;
-static HWND g_edTaItem3 = NULL;
-static HWND g_edTaItem4 = NULL;
+extern HWND g_edTaItem1;
+extern HWND g_edTaItem2;
+extern HWND g_edTaItem3;
+extern HWND g_edTaItem4;
 
-static HWND g_edTaTitle = NULL;
-static HWND g_edTaDetail = NULL;
-static HWND g_edTaFile = NULL;
+extern HWND g_edTaTitle;
+extern HWND g_edTaDetail;
+extern HWND g_edTaFile;
 
 
 
 // =========================================================
-// TASK_ADD 좌표 (너가 실제 좌표로 채워야 함)
+// TASK_ADD 좌표 
 // =========================================================
 #define R_TA_ITEM1_X1  123
 #define R_TA_ITEM1_Y1  253
@@ -295,25 +299,10 @@ static HWND g_edTaFile = NULL;
 #define R_BD_DETAIL_X2   1197
 #define R_BD_DETAIL_Y2   597
 
-// =========================================================
-// 폼(패널) 화면들의 "패널 영역"
-// =========================================================
-#define R_TC_PANEL_X1   610
-#define R_TC_PANEL_Y1   90
-#define R_TC_PANEL_X2   1135
-#define R_TC_PANEL_Y2   660
 
-#define R_TJ_PANEL_X1   610
-#define R_TJ_PANEL_Y1   90
-#define R_TJ_PANEL_X2   1135
-#define R_TJ_PANEL_Y2   660
 
-#define R_TA_PANEL_X1   40
-#define R_TA_PANEL_Y1   120
-#define R_TA_PANEL_X2   1280
-#define R_TA_PANEL_Y2   690
-
-#define R_BD_PANEL_X1   610
-#define R_BD_PANEL_Y1   90
-#define R_BD_PANEL_X2   1135
-#define R_BD_PANEL_Y2   660
+//뒤로가기버튼
+#define R_BACK_HIT_X1 1113   
+#define R_BACK_HIT_Y1 21
+#define R_BACK_HIT_X2 1301
+#define R_BACK_HIT_Y2 53

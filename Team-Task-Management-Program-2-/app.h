@@ -67,9 +67,21 @@ int  App_OnCreate(HWND hWnd);
 void App_OnSize(HWND hWnd, int w, int h);
 void App_OnLButtonDown(HWND hWnd, int x, int y);
 void App_OnPaint(HWND hWnd, HDC hdc);
-void App_OnDestroy(void);
-
+void App_OnDestroy(void); 
+void App_GoToStart(HWND hWnd);
 
 // 전역 Edit HWND 선언
 extern HWND g_edStartId;
 extern HWND g_edStartPw;
+extern HWND g_lbMyTeams;
+// 현재 선택된 팀(캘린더에 보여줄 팀)
+extern wchar_t g_currentTeamId[64];
+// 내 팀 목록 갱신 + 팀 전환
+void RefreshMyTeamList(HWND hWnd);
+void SwitchToTeam(HWND hWnd, const wchar_t* teamId);
+#pragma once
+#include <windows.h>
+
+// ... (기존 선언들)
+
+

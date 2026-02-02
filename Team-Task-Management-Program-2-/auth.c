@@ -3,88 +3,144 @@
 #include <stdio.h>
 #include <wchar.h>
 
-static void BuildUserFilePath(wchar_t* outPath, int cch)
-{
-    GetModuleFileNameW(NULL, outPath, cch);
-    wchar_t* p = wcsrchr(outPath, L'\\');
-    if (p) *(p + 1) = 0;
-    wcscat_s(outPath, cch, L"users.txt");
-}
+static const wchar_t* USERS_FILE = L"users.txt";
 
-static void TrimNewlineW(wchar_t* s)
+// 줄 끝 개행 제거
+static void TrimNewline(wchar_t* s)
 {
     if (!s) return;
     size_t n = wcslen(s);
-    while (n && (s[n - 1] == L'\n' || s[n - 1] == L'\r')) s[--n] = 0;
+    while (n > 0 && (s[n - 1] == L'\n' || s[n - 1] == L'\r')) {
+        s[n - 1] = 0;
+        n--;
+    }
 }
 
-static int ParseLine(const wchar_t* line,
-    wchar_t* id, int idCch,
-    wchar_t* pw, int pwCch,
-    wchar_t* name, int nameCch)
+// "id|pw|name" 파싱
+static int ParseUserLine(const wchar_t* line,
+    wchar_t* outId, int idLen,
+    wchar_t* outPw, int pwLen,
+    wchar_t* outName, int nameLen)
 {
-    // format: id|pw|name
-    if (!line) return 0;
-    const wchar_t* p1 = wcschr(line, L'|');
+    if (!line || !outId || !outPw || !outName) return 0;
+
+    wchar_t buf[512];
+    wcsncpy(buf, line, 511);
+    buf[511] = 0;
+    TrimNewline(buf);
+
+    wchar_t* p1 = wcschr(buf, L'|');
     if (!p1) return 0;
-    const wchar_t* p2 = wcschr(p1 + 1, L'|');
+    *p1++ = 0;
+
+    wchar_t* p2 = wcschr(p1, L'|');
     if (!p2) return 0;
+    *p2++ = 0;
 
-    wcsncpy_s(id, idCch, line, p1 - line);
-    wcsncpy_s(pw, pwCch, p1 + 1, p2 - (p1 + 1));
-    wcsncpy_s(name, nameCch, p2 + 1, _TRUNCATE);
-    TrimNewlineW(name);
+    wcsncpy(outId, buf, idLen - 1);    outId[idLen - 1] = 0;
+    wcsncpy(outPw, p1, pwLen - 1);     outPw[pwLen - 1] = 0;
+    wcsncpy(outName, p2, nameLen - 1); outName[nameLen - 1] = 0;
     return 1;
 }
 
-static int ExistsId(const wchar_t* targetId)
+// 파일 열기(UTF-8 권장)
+static FILE* OpenUsersFileRead(void)
 {
-    wchar_t path[MAX_PATH];
-    BuildUserFilePath(path, MAX_PATH);
-
-    FILE* fp = _wfopen(path, L"r, ccs=UTF-8");
-    if (!fp) return 0;
-
-    wchar_t line[512], id[128], pw[128], name[128];
-    while (fgetws(line, 512, fp)) {
-        if (!ParseLine(line, id, 128, pw, 128, name, 128)) continue;
-        if (wcscmp(id, targetId) == 0) { fclose(fp); return 1; }
-    }
-    fclose(fp);
-    return 0;
+    FILE* fp = _wfopen(USERS_FILE, L"r, ccs=UTF-8");
+    if (!fp) fp = _wfopen(USERS_FILE, L"r");
+    return fp;
 }
 
-int Auth_Signup(const wchar_t* id, const wchar_t* pw, const wchar_t* name)
+static FILE* OpenUsersFileAppend(void)
 {
-    if (!id || !pw || !name) return 0;
-    if (id[0] == 0 || pw[0] == 0 || name[0] == 0) return 0;
-
-    if (ExistsId(id)) return -1;
-
-    wchar_t path[MAX_PATH];
-    BuildUserFilePath(path, MAX_PATH);
-
-    FILE* fp = _wfopen(path, L"a, ccs=UTF-8");
-    if (!fp) return 0;
-
-    fwprintf(fp, L"%s|%s|%s\n", id, pw, name);
-    fclose(fp);
-    return 1;
+    FILE* fp = _wfopen(USERS_FILE, L"a, ccs=UTF-8");
+    if (!fp) fp = _wfopen(USERS_FILE, L"a");
+    return fp;
 }
 
-int Auth_Login(const wchar_t* id, const wchar_t* pw)
+BOOL Auth_Login(const wchar_t* id, const wchar_t* pw)
 {
-    wchar_t path[MAX_PATH];
-    BuildUserFilePath(path, MAX_PATH);
+    if (!id || !pw || !id[0] || !pw[0]) return FALSE;
 
-    FILE* fp = _wfopen(path, L"r, ccs=UTF-8");
-    if (!fp) return 0;
+    FILE* fp = OpenUsersFileRead();
+    if (!fp) return FALSE;
 
-    wchar_t line[512], fid[128], fpw[128], fname[128];
-    while (fgetws(line, 512, fp)) {
-        if (!ParseLine(line, fid, 128, fpw, 128, fname, 128)) continue;
-        if (wcscmp(fid, id) == 0 && wcscmp(fpw, pw) == 0) { fclose(fp); return 1; }
+    wchar_t line[512];
+    wchar_t fid[128], fpw[128], fname[128];
+
+    while (fgetws(line, 512, fp))
+    {
+        if (!ParseUserLine(line, fid, 128, fpw, 128, fname, 128))
+            continue;
+
+        if (wcscmp(fid, id) == 0 && wcscmp(fpw, pw) == 0) {
+            fclose(fp);
+            return TRUE;
+        }
     }
+
     fclose(fp);
-    return 0;
+    return FALSE;
+}
+
+BOOL Auth_Signup(const wchar_t* id, const wchar_t* pw, const wchar_t* name)
+{
+    if (!id || !pw || !name || !id[0] || !pw[0] || !name[0]) return FALSE;
+
+    // 1) 중복 아이디 체크
+    FILE* fp = OpenUsersFileRead();
+    if (fp) {
+        wchar_t line[512];
+        wchar_t fid[128], fpw[128], fname[128];
+
+        while (fgetws(line, 512, fp))
+        {
+            if (!ParseUserLine(line, fid, 128, fpw, 128, fname, 128))
+                continue;
+
+            if (wcscmp(fid, id) == 0) {
+                fclose(fp);
+                return FALSE; // 이미 존재
+            }
+        }
+        fclose(fp);
+    }
+
+    // 2) 저장(append)
+    FILE* fa = OpenUsersFileAppend();
+    if (!fa) return FALSE;
+
+    // 한 줄 형식: id|pw|name
+    fwprintf(fa, L"%ls|%ls|%ls\n", id, pw, name);
+    fclose(fa);
+    return TRUE;
+}
+
+BOOL Auth_FindPassword(const wchar_t* id, const wchar_t* name, wchar_t* outPw, int outPwLen)
+{
+    if (!id || !name || !outPw || outPwLen <= 0) return FALSE;
+    outPw[0] = 0;
+
+    FILE* fp = OpenUsersFileRead();
+    if (!fp) return FALSE;
+
+    wchar_t line[512];
+    wchar_t fid[128], fpw[128], fname[128];
+
+    while (fgetws(line, 512, fp))
+    {
+        if (!ParseUserLine(line, fid, 128, fpw, 128, fname, 128))
+            continue;
+
+        if (wcscmp(fid, id) == 0 && wcscmp(fname, name) == 0)
+        {
+            wcsncpy(outPw, fpw, outPwLen - 1);
+            outPw[outPwLen - 1] = 0;
+            fclose(fp);
+            return TRUE;
+        }
+    }
+
+    fclose(fp);
+    return FALSE;
 }
