@@ -44,7 +44,7 @@ extern int g_clientH;
 #define R_BTN_FINDPW_Y2      659
 
 // =========================================================
-// SIGNUP 버튼/필드
+// SIGNUP  회원가입 버튼/필드
 // =========================================================
 #define R_BTN_BACK_X1        265
 #define R_BTN_BACK_Y1        40
@@ -57,9 +57,9 @@ extern int g_clientH;
 #define R_SIGN_NAME_Y2       230
 
 #define R_SIGN_ID_X1         436
-#define R_SIGN_ID_Y1         285
-#define R_SIGN_ID_X2         720
-#define R_SIGN_ID_Y2         300
+#define R_SIGN_ID_Y1         288
+#define R_SIGN_ID_X2         861
+#define R_SIGN_ID_Y2         310
 
 #define R_SIGN_PW_X1         450
 #define R_SIGN_PW_Y1         365

@@ -3,6 +3,8 @@
 #include "ui_coords.h"
 #include "ui_layout.h"
 #include "bmp_loader.h"
+#include "auth.h"
+
 
 #include <windows.h>
 #include <wchar.h>
@@ -310,16 +312,17 @@ static void CreateControlsForScreen(HWND hWnd, Screen s)
         g_edTaItem2 = CreateEdit(hWnd, 702, ES_READONLY);
         g_edTaItem3 = CreateEdit(hWnd, 703, ES_READONLY);
         g_edTaItem4 = CreateEdit(hWnd, 704, ES_READONLY);
-        g_edTaSubDetail = CreateEdit(hWnd, 708, 0);
 
         g_edTaTitle = CreateEdit(hWnd, 705, 0);
         g_edTaDetail = CreateEdit(hWnd, 706, ES_MULTILINE | ES_AUTOVSCROLL | WS_VSCROLL);
         g_edTaFile = CreateEdit(hWnd, 707, 0);
 
-        g_edSearch = CreateEdit(hWnd, 708, 0);   // ✅ 조회 텍스트박스(과제등록 상단)
-        g_edTaSubDetail = CreateEdit(hWnd, 708, 0);
+        g_edTaSubDetail = CreateEdit(hWnd, 708, 0); // ✅ 상세사항(한 줄)
+        g_edSearch = CreateEdit(hWnd, 709, 0); // ✅ 조회(검색) (ID는 709로 분리)
+
         RelayoutControls(hWnd);
         return;
+
 
     case SCR_BOARD:
         g_edBdSearch = CreateEdit(hWnd, 801, 0); // 한줄
@@ -521,9 +524,10 @@ static void RelayoutControls(HWND hWnd)
             0, 0, 0, 0
         );
         return;
-    }
+    };
 
-}
+
+    } // ✅ RelayoutControls 끝
 
 
     static void ResizeToBitmap(HWND hWnd, HBITMAP bmp)
@@ -536,7 +540,8 @@ static void RelayoutControls(HWND hWnd)
         SetWindowClientSize(hWnd, bm.bmWidth, bm.bmHeight);
         g_clientW = bm.bmWidth;
         g_clientH = bm.bmHeight;
- }
+    }
+
     static void SwitchScreen(HWND hWnd, Screen next)
     {
         DestroyAllEdits();
@@ -555,13 +560,17 @@ static void RelayoutControls(HWND hWnd)
         else if (next == SCR_BOARD)        ResizeToBitmap(hWnd, g_bmpBoard);
         else                               ResizeToBitmap(hWnd, g_bmpMain);
 
-        UpdateTopLoginRect();  // ✅ 여기 추가 (ResizeToBitmap 이후!)
+        UpdateTopLoginRect();
 
         CreateControlsForScreen(hWnd, next);
         RelayoutControls(hWnd);
 
         InvalidateRect(hWnd, NULL, FALSE);
     }
+
+
+       
+    
 
 static void DrawDebugOverlay(HDC hdc)
 {
@@ -610,17 +619,6 @@ int App_OnCreate(HWND hWnd)
     return 0;
 }
 
-void App_OnSize(HWND hWnd, int w, int h)
-{
-    g_clientW = w;
-    g_clientH = h;
-
-    UpdateTopLoginRect();
-
-    RelayoutControls(hWnd);
-    InvalidateRect(hWnd, NULL, FALSE);
-}
-
 void App_OnLButtonDown(HWND hWnd, int x, int y)
 {
     g_lastX = x;
@@ -630,21 +628,18 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
     // START 영역
     int s_login_x1 = SX(R_BTN_LOGIN_X1), s_login_y1 = SY(R_BTN_LOGIN_Y1);
     int s_login_x2 = SX(R_BTN_LOGIN_X2), s_login_y2 = SY(R_BTN_LOGIN_Y2);
-
     int s_to_signup_x1 = SX(R_BTN_TO_SIGNUP_X1), s_to_signup_y1 = SY(R_BTN_TO_SIGNUP_Y1);
     int s_to_signup_x2 = SX(R_BTN_TO_SIGNUP_X2), s_to_signup_y2 = SY(R_BTN_TO_SIGNUP_Y2);
-
     int s_find_x1 = SX(R_BTN_FINDPW_X1), s_find_y1 = SY(R_BTN_FINDPW_Y1);
     int s_find_x2 = SX(R_BTN_FINDPW_X2), s_find_y2 = SY(R_BTN_FINDPW_Y2);
 
-    // SIGNUP
+    // SIGNUP 버튼
     int b_back_x1 = SX(R_BTN_BACK_X1), b_back_y1 = SY(R_BTN_BACK_Y1);
     int b_back_x2 = SX(R_BTN_BACK_X2), b_back_y2 = SY(R_BTN_BACK_Y2);
-
     int b_cr_x1 = SX(R_BTN_CREATE_X1), b_cr_y1 = SY(R_BTN_CREATE_Y1);
     int b_cr_x2 = SX(R_BTN_CREATE_X2), b_cr_y2 = SY(R_BTN_CREATE_Y2);
 
-    // MAIN 오른쪽 메뉴(모든 화면에서 공통으로 쓰기)
+    // MAIN 오른쪽 메뉴(공통)
     int r_tc_x1 = SX(R_MAIN_BTN_TEAM_CREATE_X1), r_tc_y1 = SY(R_MAIN_BTN_TEAM_CREATE_Y1);
     int r_tc_x2 = SX(R_MAIN_BTN_TEAM_CREATE_X2), r_tc_y2 = SY(R_MAIN_BTN_TEAM_CREATE_Y2);
 
@@ -671,15 +666,13 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
     int m_done_x2 = SX(R_MAIN_BTN_DONE_X2), m_done_y2 = SY(R_MAIN_BTN_DONE_Y2);
 
     // =========================================================
-    // 0) 폼 화면(팀등록/팀참여/과제등록/게시판)일 때:
-    //    - 패널 바깥 클릭 -> MAIN 복귀
-    //    - 오른쪽 메뉴는 계속 동작
+    // 0) 폼 화면(팀등록/팀참여) : 패널 바깥 클릭 -> MAIN 복귀
+    //    + 오른쪽 메뉴는 공통 동작
     // =========================================================
     {
         RECT rcPanel;
         if (GetPanelRectForScreen(g_screen, &rcPanel)) {
 
-            // ✅ 오른쪽 메뉴는 어디서든 클릭 가능
             if (PtInRectXY(x, y, r_tc_x1, r_tc_y1, r_tc_x2, r_tc_y2)) { SwitchScreen(hWnd, SCR_TEAM_CREATE); return; }
             if (PtInRectXY(x, y, r_tj_x1, r_tj_y1, r_tj_x2, r_tj_y2)) { SwitchScreen(hWnd, SCR_TEAM_JOIN); return; }
             if (PtInRectXY(x, y, r_ta_x1, r_ta_y1, r_ta_x2, r_ta_y2)) { SwitchScreen(hWnd, SCR_TASK_ADD); return; }
@@ -690,32 +683,79 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
                 SwitchScreen(hWnd, SCR_MAIN);
                 return;
             }
-           
         }
     }
 
     // =========================================================
-    // 1) START
+    // 1) START (로그인 화면)
     // =========================================================
     if (g_screen == SCR_START) {
+
         if (PtInRectXY(x, y, SX(R_START_ID_X1), SY(R_START_ID_Y1), SX(R_START_ID_X2), SY(R_START_ID_Y2))) { SetFocus(g_edStartId); return; }
         if (PtInRectXY(x, y, SX(R_START_PW_X1), SY(R_START_PW_Y1), SX(R_START_PW_X2), SY(R_START_PW_Y2))) { SetFocus(g_edStartPw); return; }
 
         if (PtInRectXY(x, y, s_find_x1, s_find_y1, s_find_x2, s_find_y2)) { SwitchScreen(hWnd, SCR_FINDPW); return; }
         if (PtInRectXY(x, y, s_to_signup_x1, s_to_signup_y1, s_to_signup_x2, s_to_signup_y2)) { SwitchScreen(hWnd, SCR_SIGNUP); return; }
-        if (PtInRectXY(x, y, s_login_x1, s_login_y1, s_login_x2, s_login_y2)) { SwitchScreen(hWnd, SCR_MAIN); return; }
+
+        // ✅ 로그인 버튼 기능
+        if (PtInRectXY(x, y, s_login_x1, s_login_y1, s_login_x2, s_login_y2)) {
+            wchar_t id[128] = { 0 }, pw[128] = { 0 };
+            GetWindowTextW(g_edStartId, id, 128);
+            GetWindowTextW(g_edStartPw, pw, 128);
+
+            if (id[0] == 0 || pw[0] == 0) {
+                MessageBoxW(hWnd, L"아이디/비밀번호 입력해 주세요.", L"로그인", MB_OK | MB_ICONWARNING);
+                return;
+            }
+
+            if (Auth_Login(id, pw)) {
+                SwitchScreen(hWnd, SCR_MAIN);
+            }
+            else {
+                MessageBoxW(hWnd, L"로그인 실패! 아이디/비밀번호 확인해 주세요.", L"로그인", MB_OK | MB_ICONERROR);
+            }
+            return;
+        }
+
         return;
     }
 
     // =========================================================
-    // 2) SIGNUP
+    // 2) SIGNUP (회원가입 화면)
     // =========================================================
     if (g_screen == SCR_SIGNUP) {
         POINT pt = { x, y };
         if (PtInRect(&g_rcTopLogin, pt)) { SwitchScreen(hWnd, SCR_START); return; }
 
         if (PtInRectXY(x, y, b_back_x1, b_back_y1, b_back_x2, b_back_y2)) { SwitchScreen(hWnd, SCR_START); return; }
-        if (PtInRectXY(x, y, b_cr_x1, b_cr_y1, b_cr_x2, b_cr_y2)) { SwitchScreen(hWnd, SCR_MAIN); return; }
+
+        // ✅ 생성하기(회원가입) 버튼 기능
+        if (PtInRectXY(x, y, b_cr_x1, b_cr_y1, b_cr_x2, b_cr_y2)) {
+            wchar_t name[128] = { 0 }, id[128] = { 0 }, pw[128] = { 0 };
+            GetWindowTextW(g_edSignName, name, 128);
+            GetWindowTextW(g_edSignId, id, 128);
+            GetWindowTextW(g_edSignPw, pw, 128);
+
+            if (name[0] == 0 || id[0] == 0 || pw[0] == 0) {
+                MessageBoxW(hWnd, L"NAME/ID/PW를 다 입력해 주세요.", L"회원가입", MB_OK | MB_ICONWARNING);
+                return;
+            }
+
+            // Auth_Signup: 1 성공, -1 중복ID, 0 실패 (너 auth.c 기준에 맞춰 조정해도 됨)
+            int r = Auth_Signup(id, pw, name);
+            if (r == 1) {
+                MessageBoxW(hWnd, L"생성되었습니다.", L"회원가입", MB_OK | MB_ICONINFORMATION);
+                SwitchScreen(hWnd, SCR_START);   // ✅ 캘린더(SCR_MAIN)로 안 넘어가게!
+            }
+            else if (r == -1) {
+                MessageBoxW(hWnd, L"이미 존재하는 ID입니다.", L"회원가입", MB_OK | MB_ICONWARNING);
+            }
+            else {
+                MessageBoxW(hWnd, L"회원가입 실패.", L"회원가입", MB_OK | MB_ICONERROR);
+            }
+            return;
+        }
+
         return;
     }
 
@@ -727,7 +767,7 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
         if (PtInRect(&g_rcTopLogin, pt)) { SwitchScreen(hWnd, SCR_START); return; }
 
         if (PtInRectXY(x, y, SX(R_FIND_NAME_X1), SY(R_FIND_NAME_Y1), SX(R_FIND_NAME_X2), SY(R_FIND_NAME_Y2))) { SetFocus(g_edFindName); return; }
-        if (PtInRectXY(x, y, SX(R_FIND_ID_X1), SY(R_FIND_ID_Y1), SX(R_FIND_ID_X2), SY(R_FIND_ID_Y2))) { SetFocus(g_edFindId); return; }
+        if (PtInRectXY(x, y, SX(R_FIND_ID_X1), SY(R_FIND_ID_Y1), SX(R_FIND_ID_X2), SY(R_FIND_ID_Y2))) { SetFocus(g_edFindId);   return; }
         return;
     }
 
@@ -736,7 +776,6 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
     // =========================================================
     if (g_screen == SCR_MAIN) {
 
-        // ✅ 마감 오버레이 떠있을 때: X / 바깥 클릭으로 닫기
         if (g_overlay == OVR_DEADLINE) {
             POINT pt = { x, y };
 
@@ -745,24 +784,21 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
                 InvalidateRect(hWnd, NULL, FALSE);
                 return;
             }
-
             if (!PtInRect(&g_rcDeadlinePanel, pt)) {
                 g_overlay = OVR_NONE;
                 InvalidateRect(hWnd, NULL, FALSE);
                 return;
             }
-
-            // 패널 내부 클릭은 일단 무시
             return;
         }
 
-        // ✅ 왼쪽 버튼들
+        // 왼쪽 버튼
         if (PtInRectXY(x, y, m_dead_x1, m_dead_y1, m_dead_x2, m_dead_y2)) { SwitchScreen(hWnd, SCR_DEADLINE); return; }
         if (PtInRectXY(x, y, m_todo_x1, m_todo_y1, m_todo_x2, m_todo_y2)) { SwitchScreen(hWnd, SCR_TODO); return; }
         if (PtInRectXY(x, y, m_my_x1, m_my_y1, m_my_x2, m_my_y2)) { SwitchScreen(hWnd, SCR_MYTEAM); return; }
         if (PtInRectXY(x, y, m_done_x1, m_done_y1, m_done_x2, m_done_y2)) { SwitchScreen(hWnd, SCR_DONE); return; }
 
-        // ✅ 오른쪽 메뉴
+        // 오른쪽 메뉴
         if (PtInRectXY(x, y, r_tc_x1, r_tc_y1, r_tc_x2, r_tc_y2)) { SwitchScreen(hWnd, SCR_TEAM_CREATE); return; }
         if (PtInRectXY(x, y, r_tj_x1, r_tj_y1, r_tj_x2, r_tj_y2)) { SwitchScreen(hWnd, SCR_TEAM_JOIN); return; }
         if (PtInRectXY(x, y, r_ta_x1, r_ta_y1, r_ta_x2, r_ta_y2)) { SwitchScreen(hWnd, SCR_TASK_ADD); return; }
@@ -771,9 +807,8 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
         return;
     }
 
-    // 나머지 화면들은 일단 아무 동작 없음
+    // 나머지 화면
 }
-
 
 
 
@@ -858,3 +893,12 @@ void App_GoToStart(HWND hWnd)
 }
 
 
+void App_OnSize(HWND hWnd, int w, int h)
+{
+    g_clientW = w;
+    g_clientH = h;
+
+    UpdateTopLoginRect();
+    RelayoutControls(hWnd);
+    InvalidateRect(hWnd, NULL, FALSE);
+}
