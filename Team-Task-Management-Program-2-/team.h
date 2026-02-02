@@ -1,16 +1,39 @@
-#pragma once
-#include <wchar.h>
+ï»¿#pragma once
+#include <windows.h>
 
-// teams.txt : team|task|code
-int Team_Create(const wchar_t* team, const wchar_t* task, const wchar_t* code);
+#ifndef TEAMS_FILE
+#define TEAMS_FILE          L"teams.txt"
+#endif
 
-// team_members.txt : userId|joinCode
-int Team_AddMember(const wchar_t* userId, const wchar_t* code);
+#ifndef TEAM_MEMBERS_FILE
+#define TEAM_MEMBERS_FILE   L"team_members.txt"
+#endif
 
-// ³»°¡ ¼ÓÇÑ ÆÀ ÄÚµåµé
-int Team_GetMyTeams(const wchar_t* userId, wchar_t outCodes[][128], int max);
+typedef struct TeamInfo {
+    wchar_t teamId[32];
+    wchar_t teamName[128];
+    wchar_t taskName[128];
+    wchar_t joinCode[64];
+    wchar_t ownerUserId[128];
+} TeamInfo;
 
-// Âü¿©ÄÚµå·Î ÆÀ/°úÁ¦ Ã£±â (teams.txt¿¡¼­ Ã£À½)
-int Team_FindByCode(const wchar_t* joinCode,
-    wchar_t* outTeam, int outTeamCap,
-    wchar_t* outTask, int outTaskCap);
+// âœ… íŒ€ ìƒì„±(teams.txt + team_members.txt ì €ì¥)
+// - joinCode ì¤‘ë³µì´ë©´ ì‹¤íŒ¨
+BOOL Team_Create(const wchar_t* teamName,
+    const wchar_t* taskName,
+    const wchar_t* joinCode,
+    const wchar_t* ownerUserId,
+    TeamInfo* outTeam); // outTeam NULL ê°€ëŠ¥
+
+// âœ… íŒ€ ì°¸ì—¬(teams.txtì—ì„œ joinCodeë¡œ teamId ì°¾ê³ ,
+//            team_members.txtì— ë©¤ë²„ ì¶”ê°€)
+// - ì´ë¯¸ ê°€ì…í•œ ë©¤ë²„ë©´ ì‹¤íŒ¨(ì¤‘ë³µ ë°©ì§€)
+BOOL Team_JoinByCode(const wchar_t* joinCode,
+    const wchar_t* userId,
+    TeamInfo* outTeam); // outTeam NULL ê°€ëŠ¥
+
+// âœ… joinCodeë¡œ íŒ€ ì •ë³´ ì°¾ê¸°
+BOOL Team_FindByJoinCode(const wchar_t* joinCode, TeamInfo* outTeam);
+
+// âœ… teamIdë¡œ íŒ€ ì •ë³´ ì°¾ê¸°
+BOOL Team_FindByTeamId(const wchar_t* teamId, TeamInfo* outTeam);

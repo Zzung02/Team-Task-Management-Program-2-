@@ -259,10 +259,10 @@ extern HWND g_edTaFile;
 #define R_TA_DETAIL_Y2  523
 
 
-#define R_TA_SEARCH_X1  912
-#define R_TA_SEARCH_Y1  53
-#define R_TA_SEARCH_X2  1268
-#define R_TA_SEARCH_Y2  79
+#define R_TA_SEARCH_X1  0   // 조회가 메인에 겹쳐보임
+#define R_TA_SEARCH_Y1  0
+#define R_TA_SEARCH_X2  0
+#define R_TA_SEARCH_Y2  0
 
 
 #define R_TA_FILE_X1  782

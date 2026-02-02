@@ -244,26 +244,6 @@ static HWND g_edTcCode = NULL;
 static HWND g_edTjTeam = NULL;
 static HWND g_edTjCode = NULL;
 
-// TASK_ADD(과제등록) Edit들
-static HWND g_edTaItem1 = NULL;
-static HWND g_edTaItem2 = NULL;
-static HWND g_edTaItem3 = NULL;
-static HWND g_edTaItem4 = NULL;
-
-static HWND g_edTaSearch = NULL;   
-static HWND g_edTaTitle = NULL;   
-static HWND g_edTaContent = NULL; 
-static HWND g_edTaSubDetail = NULL;
-static HWND g_edTaFile = NULL;  
-
-// ===== BOARD(게시판) =====
-static HWND g_edBdTitle = NULL;  
-static HWND g_edBdContent = NULL;  
-static HWND g_edBdDetail = NULL;  
-static HWND g_edBdSearch = NULL; 
-
-
-
 // =========================================================
 // 내팀 ListBox (1번만 생성)
 // =========================================================
@@ -298,26 +278,6 @@ static void DestroyAllEdits(void)
 
     if (g_edTjTeam) { RemovePropW(g_edTjTeam, PROP_OLDPROC); DestroyWindow(g_edTjTeam); g_edTjTeam = NULL; }
     if (g_edTjCode) { RemovePropW(g_edTjCode, PROP_OLDPROC); DestroyWindow(g_edTjCode); g_edTjCode = NULL; }
-
-    // ===== TASK_ADD =====
-    if (g_edTaItem1) { RemovePropW(g_edTaItem1, PROP_OLDPROC); DestroyWindow(g_edTaItem1); g_edTaItem1 = NULL; }
-    if (g_edTaItem2) { RemovePropW(g_edTaItem2, PROP_OLDPROC); DestroyWindow(g_edTaItem2); g_edTaItem2 = NULL; }
-    if (g_edTaItem3) { RemovePropW(g_edTaItem3, PROP_OLDPROC); DestroyWindow(g_edTaItem3); g_edTaItem3 = NULL; }
-    if (g_edTaItem4) { RemovePropW(g_edTaItem4, PROP_OLDPROC); DestroyWindow(g_edTaItem4); g_edTaItem4 = NULL; }
-
-    if (g_edTaSearch) { RemovePropW(g_edTaSearch, PROP_OLDPROC); DestroyWindow(g_edTaSearch);   g_edTaSearch = NULL; }
-    if (g_edTaTitle) { RemovePropW(g_edTaTitle, PROP_OLDPROC); DestroyWindow(g_edTaTitle);     g_edTaTitle = NULL; }
-    if (g_edTaContent) { RemovePropW(g_edTaContent, PROP_OLDPROC); DestroyWindow(g_edTaContent); g_edTaContent = NULL; }
-    if (g_edTaSubDetail) { RemovePropW(g_edTaSubDetail, PROP_OLDPROC); DestroyWindow(g_edTaSubDetail); g_edTaSubDetail = NULL; }
-    if (g_edTaFile) { RemovePropW(g_edTaFile, PROP_OLDPROC); DestroyWindow(g_edTaFile);       g_edTaFile = NULL; }
-
-    
-    // ===== BOARD =====
-    if (g_edBdTitle) { RemovePropW(g_edBdTitle, PROP_OLDPROC);   DestroyWindow(g_edBdTitle);   g_edBdTitle = NULL; }
-    if (g_edBdContent) { RemovePropW(g_edBdContent, PROP_OLDPROC); DestroyWindow(g_edBdContent); g_edBdContent = NULL; }
-    if (g_edBdDetail) { RemovePropW(g_edBdDetail, PROP_OLDPROC);  DestroyWindow(g_edBdDetail);  g_edBdDetail = NULL; }
-    if (g_edBdSearch) { RemovePropW(g_edBdSearch, PROP_OLDPROC);  DestroyWindow(g_edBdSearch);  g_edBdSearch = NULL; }
-
 }
 
 // =========================================================
@@ -368,43 +328,6 @@ static void CreateControlsForScreen(HWND hWnd, Screen s)
         g_edTjCode = CreateEdit(hWnd, 802, 0);
         break;
 
-    case SCR_TASK_ADD:
-        // 과제 1~4 (단일라인)
-        g_edTaItem1 = CreateEdit(hWnd, 801, 0);
-        g_edTaItem2 = CreateEdit(hWnd, 802, 0);
-        g_edTaItem3 = CreateEdit(hWnd, 803, 0);
-        g_edTaItem4 = CreateEdit(hWnd, 804, 0);
-
-        // 조회(단일라인)
-        g_edTaSearch = CreateEdit(hWnd, 805, 0);
-
-        // 제목(단일라인)  ✅ 멀티라인 없음
-        g_edTaTitle = CreateEdit(hWnd, 806, 0);
-
-        // 내용(멀티라인 + 스크롤) ✅ 여기만 멀티라인
-        g_edTaContent = CreateEdit(hWnd, 807, ES_MULTILINE | ES_AUTOVSCROLL | WS_VSCROLL);
-
-        // 상세사항(멀티라인 + 스크롤) ✅ 멀티라인
-        g_edTaSubDetail = CreateEdit(hWnd, 808, ES_MULTILINE | ES_AUTOVSCROLL | WS_VSCROLL);
-
-        // 파일(단일라인)
-        g_edTaFile = CreateEdit(hWnd, 809, 0);
-        break;
-
-
-    case SCR_BOARD:
-        // 게시판: 조회(단일라인)
-        g_edBdSearch = CreateEdit(hWnd, 1001, 0);
-
-        // 제/내용(멀티라인 + 스크롤)
-        g_edBdTitle = CreateEdit(hWnd, 1002, 0);
-        g_edBdContent = CreateEdit(hWnd, 1003, ES_MULTILINE | ES_AUTOVSCROLL | WS_VSCROLL);
-
-        // 상세사항(단일라인)
-        g_edBdDetail = CreateEdit(hWnd, 1004, 0);
-        break;
-
-
     default:
         break;
     }
@@ -445,24 +368,6 @@ static void RelayoutControls(HWND hWnd)
     if (g_edTjCode) ShowWindow(g_edTjCode, SW_HIDE);
 
     if (g_lbMyTeams) ShowWindow(g_lbMyTeams, SW_HIDE);
-
-    // TASK_ADD
-    if (g_edTaItem1) ShowWindow(g_edTaItem1, SW_HIDE);
-    if (g_edTaItem2) ShowWindow(g_edTaItem2, SW_HIDE);
-    if (g_edTaItem3) ShowWindow(g_edTaItem3, SW_HIDE);
-    if (g_edTaItem4) ShowWindow(g_edTaItem4, SW_HIDE);
-
-    if (g_edTaSearch)    ShowWindow(g_edTaSearch, SW_HIDE);
-    if (g_edTaTitle)     ShowWindow(g_edTaTitle, SW_HIDE);
-    if (g_edTaContent)   ShowWindow(g_edTaContent, SW_HIDE);
-    if (g_edTaSubDetail) ShowWindow(g_edTaSubDetail, SW_HIDE);
-    if (g_edTaFile)      ShowWindow(g_edTaFile, SW_HIDE);
-
-
-    if (g_edBdSearch)  ShowWindow(g_edBdSearch, SW_HIDE);
-    if (g_edBdTitle)   ShowWindow(g_edBdTitle, SW_HIDE);
-    if (g_edBdContent) ShowWindow(g_edBdContent, SW_HIDE);
-    if (g_edBdDetail)  ShowWindow(g_edBdDetail, SW_HIDE);
 
     // START
     if (g_screen == SCR_START) {
@@ -568,61 +473,6 @@ static void RelayoutControls(HWND hWnd)
             SX(R_TJ_CODE_X2), SY(R_TJ_CODE_Y2), 0, 0, 0, 0);
         return;
     }
-
-
-// TASK_ADD(과제등록) 
-    if (g_screen == SCR_TASK_ADD) {
-
-        ShowWindow(g_edTaItem1, SW_SHOW);
-        ShowWindow(g_edTaItem2, SW_SHOW);
-        ShowWindow(g_edTaItem3, SW_SHOW);
-        ShowWindow(g_edTaItem4, SW_SHOW);
-
-        ShowWindow(g_edTaSearch, SW_SHOW);
-        ShowWindow(g_edTaTitle, SW_SHOW);
-        ShowWindow(g_edTaContent, SW_SHOW);
-        ShowWindow(g_edTaSubDetail, SW_SHOW);
-        ShowWindow(g_edTaFile, SW_SHOW);
-
-        // 과제 1~4
-        MoveEdit(g_edTaItem1, SX(R_TA_ITEM1_X1), SY(R_TA_ITEM1_Y1), SX(R_TA_ITEM1_X2), SY(R_TA_ITEM1_Y2), 0, 0, 0, 0);
-        MoveEdit(g_edTaItem2, SX(R_TA_ITEM2_X1), SY(R_TA_ITEM2_Y1), SX(R_TA_ITEM2_X2), SY(R_TA_ITEM2_Y2), 0, 0, 0, 0);
-        MoveEdit(g_edTaItem3, SX(R_TA_ITEM3_X1), SY(R_TA_ITEM3_Y1), SX(R_TA_ITEM3_X2), SY(R_TA_ITEM3_Y2), 0, 0, 0, 0);
-        MoveEdit(g_edTaItem4, SX(R_TA_ITEM4_X1), SY(R_TA_ITEM4_Y1), SX(R_TA_ITEM4_X2), SY(R_TA_ITEM4_Y2), 0, 0, 0, 0);
-
-        // 조회
-        MoveEdit(g_edTaSearch, SX(R_TA_SEARCH_X1), SY(R_TA_SEARCH_Y1), SX(R_TA_SEARCH_X2), SY(R_TA_SEARCH_Y2), 0, 0, 0, 0);
-
-        // 제목(단일라인)
-        MoveEdit(g_edTaTitle, SX(R_TA_TITLE_X1), SY(R_TA_TITLE_Y1), SX(R_TA_TITLE_X2), SY(R_TA_TITLE_Y2), 0, 0, 0, 0);
-
-        // 내용(멀티라인)  ✅ 너 ui_coords.h에 있는 R_TA_DETAIL을 "내용"으로 사용
-        MoveEdit(g_edTaContent, SX(R_TA_DETAIL_X1), SY(R_TA_DETAIL_Y1), SX(R_TA_DETAIL_X2), SY(R_TA_DETAIL_Y2), 0, 0, 0, 0);
-
-        // 상세사항(멀티라인)
-        MoveEdit(g_edTaSubDetail, SX(R_TA_SUBDETAIL_X1), SY(R_TA_SUBDETAIL_Y1), SX(R_TA_SUBDETAIL_X2), SY(R_TA_SUBDETAIL_Y2), 0, 0, 0, 0);
-
-        // 파일(단일라인)
-        MoveEdit(g_edTaFile, SX(R_TA_FILE_X1), SY(R_TA_FILE_Y1), SX(R_TA_FILE_X2), SY(R_TA_FILE_Y2), 0, 0, 0, 0);
-
-        return;
-    }
-
-
-    // BOARD
-    if (g_screen == SCR_BOARD) {
-        ShowWindow(g_edBdSearch, SW_SHOW);
-        ShowWindow(g_edBdTitle, SW_SHOW);
-        ShowWindow(g_edBdContent, SW_SHOW);
-        ShowWindow(g_edBdDetail, SW_SHOW);
-
-        MoveEdit(g_edBdSearch, SX(R_BD_SEARCH_X1), SY(R_BD_SEARCH_Y1), SX(R_BD_SEARCH_X2), SY(R_BD_SEARCH_Y2), 0, 0, 0, 0);
-        MoveEdit(g_edBdTitle, SX(R_BD_TITLE_X1), SY(R_BD_TITLE_Y1), SX(R_BD_TITLE_X2), SY(R_BD_TITLE_Y2), 0, 0, 0, 0);
-        MoveEdit(g_edBdContent, SX(R_BD_CONTENT_X1), SY(R_BD_CONTENT_Y1), SX(R_BD_CONTENT_X2), SY(R_BD_CONTENT_Y2), 0, 0, 0, 0);
-        MoveEdit(g_edBdDetail, SX(R_BD_DETAIL_X1), SY(R_BD_DETAIL_Y1), SX(R_BD_DETAIL_X2), SY(R_BD_DETAIL_Y2), 0, 0, 0, 0);
-        return;
-    }
-
 }
 
 // =========================================================
