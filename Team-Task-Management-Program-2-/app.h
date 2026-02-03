@@ -79,9 +79,8 @@ extern wchar_t g_currentTeamId[64];
 // 내 팀 목록 갱신 + 팀 전환
 void RefreshMyTeamList(HWND hWnd);
 void SwitchToTeam(HWND hWnd, const wchar_t* teamId);
-#pragma once
-#include <windows.h>
 
-// ... (기존 선언들)
+HWND App_CreateEdit(HWND parent, int ctrlId, DWORD extraStyle);
+
 
 

@@ -131,6 +131,7 @@
     <ClCompile Include="app.c" />
     <ClCompile Include="auth.c" />
     <ClCompile Include="bmp_loader.c" />
+    <ClCompile Include="board.c" />
     <ClCompile Include="main.c" />
     <ClCompile Include="team.c" />
     <ClCompile Include="ui_layout.c" />
@@ -139,9 +140,11 @@
     <ClInclude Include="app.h" />
     <ClInclude Include="auth.h" />
     <ClInclude Include="bmp_loader.h" />
+    <ClInclude Include="board.h" />
     <ClInclude Include="team.h" />
     <ClInclude Include="ui_coords.h" />
     <ClInclude Include="ui_layout.h" />
+    <ClInclude Include="새 폴더\board.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="teams.txt" />

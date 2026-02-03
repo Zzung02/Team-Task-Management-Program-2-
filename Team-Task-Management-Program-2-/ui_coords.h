@@ -276,28 +276,38 @@ extern HWND g_edTaFile;
 #define R_TA_SUBDETAIL_X2  1151
 #define R_TA_SUBDETAIL_Y2  564
 
-// =========================
-// BOARD (게시판)
-// =========================
-#define R_BD_SEARCH_X1   692
-#define R_BD_SEARCH_Y1   54
-#define R_BD_SEARCH_X2   1272
-#define R_BD_SEARCH_Y2   79
+/// ================================
+// BOARD 
+// ================================
+#define R_BD_SEARCH_X1  696
+#define R_BD_SEARCH_Y1  54
+#define R_BD_SEARCH_X2  1171
+#define R_BD_SEARCH_Y2  77
 
-#define R_BD_TITLE_X1    174
-#define R_BD_TITLE_Y1    186
-#define R_BD_TITLE_X2    690
-#define R_BD_TITLE_Y2    214
+#define R_BD_TITLE_X1   178
+#define R_BD_TITLE_Y1   182
+#define R_BD_TITLE_X2   1002
+#define R_BD_TITLE_Y2   204
 
-#define R_BD_CONTENT_X1  175
-#define R_BD_CONTENT_Y1  279
-#define R_BD_CONTENT_X2  1175
-#define R_BD_CONTENT_Y2  487
+#define R_BD_CONTENT_X1 176
+#define R_BD_CONTENT_Y1 276
+#define R_BD_CONTENT_X2 1182
+#define R_BD_CONTENT_Y2 481
 
-#define R_BD_DETAIL_X1   205
-#define R_BD_DETAIL_Y1   506
-#define R_BD_DETAIL_X2   1197
-#define R_BD_DETAIL_Y2   597
+#define R_BD_BTN_ADD_X1   187
+#define R_BD_BTN_ADD_Y1   39
+#define R_BD_BTN_ADD_X2   378
+#define R_BD_BTN_ADD_Y2   82
+
+#define R_BD_BTN_EDIT_X1  404
+#define R_BD_BTN_EDIT_Y1  60
+#define R_BD_BTN_EDIT_X2  593
+#define R_BD_BTN_EDIT_Y2  84
+
+#define R_BD_BTN_DONE_X1  790
+#define R_BD_BTN_DONE_Y1  60
+#define R_BD_BTN_DONE_X2  1040
+#define R_BD_BTN_DONE_Y2  120
 
 
 
