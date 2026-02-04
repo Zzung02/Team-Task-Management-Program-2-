@@ -35,7 +35,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
         App_OnLButtonDown(hWnd, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
         return 0;
 
-      
+
     case WM_CTLCOLORSTATIC:
     {
         HDC hdc = (HDC)wParam;
@@ -69,7 +69,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
         PostQuitMessage(0);
         return 0;
     }
-  
+
 
     return DefWindowProcW(hWnd, msg, wParam, lParam);
 }

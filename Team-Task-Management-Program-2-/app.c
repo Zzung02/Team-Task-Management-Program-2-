@@ -23,6 +23,8 @@
 #include <windowsx.h>
 #include <string.h>
 
+
+
 // =========================================================
 // [DO NOT TOUCH] 좌표/히트테스트 유틸
 // =========================================================
@@ -263,55 +265,75 @@ static HWND g_edTaFile = NULL;     // 단일라인
 // =========================================================
 #define MYTEAM_SLOT_MAX 8
 static HWND    g_stMyTeam[MYTEAM_SLOT_MAX] = { 0 };
-static wchar_t g_myTeamNames[MYTEAM_SLOT_MAX][128] = { 0 };
+typedef struct {
+    wchar_t team[128];
+    wchar_t task[128];
+    wchar_t teamId[64];
+} MyTeamInfo;
+
+static MyTeamInfo g_myTeams[MYTEAM_SLOT_MAX];
+
+
 
 static int g_myTeamSelected = -1;
 
 // teams.txt: (둘 다 지원)
 // 1) team|task|code
 // 2) userId|team|task|code
-static int LoadMyTeams_UpTo5(const wchar_t* userId)
+static int LoadMyTeams_FromMembers(const wchar_t* userId)
 {
-    for (int i = 0; i < MYTEAM_SLOT_MAX; i++) g_myTeamNames[i][0] = 0;
+    // 초기화
+    for (int i = 0; i < MYTEAM_SLOT_MAX; i++) {
+        g_myTeams[i].team[0] = 0;
+        g_myTeams[i].task[0] = 0;
+        g_myTeams[i].teamId[0] = 0;
+    }
+
+    if (!userId || !userId[0]) return 0;
 
     FILE* fp = NULL;
-    _wfopen_s(&fp, L"teams.txt", L"r, ccs=UTF-8");
-    if (!fp) return 0;
+    _wfopen_s(&fp, L"team_members.txt", L"r, ccs=UTF-8");
+    if (!fp) {
+        // 파일 없으면 팀 없음
+        return 0;
+    }
 
     wchar_t line[512];
     int count = 0;
 
     while (fgetws(line, 512, fp) && count < MYTEAM_SLOT_MAX)
     {
-        // 개행 제거
-        size_t n = wcslen(line);
-        while (n > 0 && (line[n - 1] == L'\n' || line[n - 1] == L'\r')) line[--n] = 0;
-        if (line[0] == 0) continue;
+        // tid|uid|role
+        wchar_t tid[32] = { 0 }, uid[128] = { 0 }, role[32] = { 0 };
+        int m = swscanf(line, L"%31[^|]|%127[^|]|%31[^|\r\n]", tid, uid, role);
+        if (m != 3) continue;
 
-        wchar_t a[128] = { 0 }, b[128] = { 0 }, c[128] = { 0 }, d[128] = { 0 };
+        if (wcscmp(uid, userId) != 0) continue;
 
-        // 4필드 먼저 시도: user|team|task|code
-        int m4 = swscanf(line, L"%127[^|]|%127[^|]|%127[^|]|%127[^|]", a, b, c, d);
-        if (m4 == 4) {
-            // user 필터
-            if (userId && userId[0] && wcscmp(a, userId) != 0) continue;
-            lstrcpynW(g_myTeamNames[count], b, 128); // team
-            count++;
-            continue;
+        // 중복 teamId 방지
+        int dup = 0;
+        for (int k = 0; k < count; k++) {
+            if (wcscmp(g_myTeams[k].teamId, tid) == 0) { // code칸을 임시로 teamId 저장해도 되고
+                dup = 1; break;
+            }
         }
+        if (dup) continue;
 
-        // 3필드: team|task|code
-        int m3 = swscanf(line, L"%127[^|]|%127[^|]|%127[^|]", a, b, c);
-        if (m3 >= 1) {
-            lstrcpynW(g_myTeamNames[count], a, 128); // team
+        // teamId로 팀정보 조회
+        TeamInfo t = { 0 };
+        if (Team_FindByTeamId(tid, &t)) {
+            lstrcpynW(g_myTeams[count].team, t.teamName, 128);
+            lstrcpynW(g_myTeams[count].task, t.taskName, 128);
+            lstrcpynW(g_myTeams[count].teamId, t.teamId, 64);
+            // ✅ 여기엔 teamId 저장(중요)
             count++;
-            continue;
         }
     }
 
     fclose(fp);
     return count;
 }
+
 
 static void EnsureMyTeamStatics(HWND hWnd, HFONT font)
 {
@@ -339,7 +361,17 @@ static void ApplyMyTeamTextsToUI(void)
     for (int i = 0; i < MYTEAM_SLOT_MAX; i++)
     {
         if (!g_stMyTeam[i]) continue;
-        SetWindowTextW(g_stMyTeam[i], g_myTeamNames[i]);
+
+        wchar_t buf[260] = { 0 };
+
+        if (g_myTeams[i].team[0] == 0) {
+            buf[0] = 0;
+        }
+        else {
+            // 팀명 (과제명)
+            swprintf(buf, 260, L"%s  (%s)", g_myTeams[i].team, g_myTeams[i].task);
+        }
+        SetWindowTextW(g_stMyTeam[i], buf);
     }
 }
 
@@ -356,7 +388,7 @@ static void MyTeam_RefreshUI(HWND hWnd)
 {
     (void)hWnd;
     EnsureMyTeamStatics(hWnd, GetUIFont());
-    LoadMyTeams_UpTo5(g_currentUserId);
+    LoadMyTeams_FromMembers(g_currentUserId);
     ApplyMyTeamTextsToUI();
     LayoutMyTeamStatics();
     ShowMyTeamStatics(1);
@@ -924,9 +956,10 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
             lstrcpynW(g_mainTeamText, team, 128);
             lstrcpynW(g_mainTaskText, task, 128);
 
-            // ✅ MYTEAM 슬롯 갱신(다음에 들어가면 보이게, 지금도 있으면 갱신)
-            LoadMyTeams_UpTo5(g_currentUserId);
+            // ✅슬롯 갱신(다음에 들어가면 보이게, 지금도 있으면 갱신)
+            LoadMyTeams_FromMembers(g_currentUserId);
             ApplyMyTeamTextsToUI();
+
 
             MessageBoxW(hWnd, L"팀 등록 완료!", L"팀 등록", MB_OK | MB_ICONINFORMATION);
             SwitchScreen(hWnd, SCR_MAIN);
@@ -936,9 +969,54 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
         return;
     }
 
-    // MYTEAM: 슬롯 선택(테두리 표시용)
+    // MYTEAM: 슬롯 선택(테두리 표시용) + 저장 버튼
     if (g_screen == SCR_MYTEAM)
     {
+        // 0) 저장 버튼
+        if (HitScaled(R_MYTEAM_SAVE_X1, R_MYTEAM_SAVE_Y1, R_MYTEAM_SAVE_X2, R_MYTEAM_SAVE_Y2, x, y))
+        {
+            if (g_myTeamSelected < 0 || g_myTeamSelected >= MYTEAM_SLOT_MAX ||
+                g_myTeams[g_myTeamSelected].team[0] == 0)
+            {
+                MessageBoxW(hWnd, L"팀을 먼저 선택해 주세요.", L"내 팀", MB_OK | MB_ICONWARNING);
+                return;
+            }
+
+            // 선택된 팀 확정 (메인 상단 텍스트 + 현재 팀 ID)
+            lstrcpynW(g_mainTeamText, g_myTeams[g_myTeamSelected].team, 128);
+            lstrcpynW(g_mainTaskText, g_myTeams[g_myTeamSelected].task, 128);
+            lstrcpynW(g_currentTeamId, g_myTeams[g_myTeamSelected].teamId, 64);
+
+            SwitchScreen(hWnd, SCR_MAIN);
+            ApplyMainHeaderTextsReal();
+            return;
+        }
+
+        // 1) 슬롯 클릭 -> 선택만 한다 (화면 전환 X)
+        RECT rc = MakeRcScaled(R_MYTEAM_LIST_X1, R_MYTEAM_LIST_Y1, R_MYTEAM_LIST_X2, R_MYTEAM_LIST_Y2);
+        POINT pt = { x, y };
+
+        if (PtInRect(&rc, pt))
+        {
+            int hh = rc.bottom - rc.top;
+            int slotH = (hh > 0) ? (hh / MYTEAM_SLOT_MAX) : 0;
+
+            if (slotH > 0) {
+                int idx = (y - rc.top) / slotH;
+                if (idx < 0) idx = 0;
+                if (idx >= MYTEAM_SLOT_MAX) idx = MYTEAM_SLOT_MAX - 1;
+
+                if (g_myTeams[idx].team[0] != 0) {
+                    g_myTeamSelected = idx;
+                    InvalidateRect(hWnd, NULL, FALSE); // 테두리 갱신
+                }
+            }
+        }
+        return;
+    }
+
+
+        // ✅ 1) (기존) 슬롯 클릭 처리
         RECT rc = MakeRcScaled(R_MYTEAM_LIST_X1, R_MYTEAM_LIST_Y1, R_MYTEAM_LIST_X2, R_MYTEAM_LIST_Y2);
         POINT pt = { x, y };
 
@@ -953,18 +1031,23 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
                 if (idx >= MYTEAM_SLOT_MAX) idx = MYTEAM_SLOT_MAX - 1;
 
                 // 빈 슬롯 클릭 방지
-                if (g_myTeamNames[idx][0] != 0) {
+                if (g_myTeams[idx].team[0] != 0) {
                     g_myTeamSelected = idx;
 
-                    // ✅ 선택된 팀을 MAIN 상단 텍스트에도 반영(팀명만이라도)
-                    lstrcpynW(g_mainTeamText, g_myTeamNames[idx], 128);
+                    // ✅ 로그인 성공 -> 메인으로만 이동 (헤더/선택팀은 건드리지 않음)
+                    SwitchScreen(hWnd, SCR_MAIN);
+                    ApplyMainHeaderTextsReal(); // (있으면 유지, 없어도 됨)
+                    return;
+
 
                     InvalidateRect(hWnd, NULL, FALSE);
                 }
+
+                }
             }
-        }
-        return;
-    }
+        
+      return;
+    
 
     // TEAM_JOIN
     if (g_screen == SCR_TEAM_JOIN)

@@ -174,6 +174,12 @@ extern int g_clientH;
 #define R_MYTEAM_LIST_X2   517
 #define R_MYTEAM_LIST_Y2   658
 
+#define R_MYTEAM_SAVE_X1  430
+#define R_MYTEAM_SAVE_Y1  140
+#define R_MYTEAM_SAVE_X2  519
+#define R_MYTEAM_SAVE_Y2  184
+
+
 
 // =========================================================
 // TEAM_JOIN(팀참여) 필드

@@ -34,7 +34,7 @@ BOOL Team_JoinByCode(const wchar_t* joinCode,
 
 // ✅ joinCode로 팀 정보 찾기
 BOOL Team_FindByJoinCode(const wchar_t* joinCode, TeamInfo* outTeam);
- 
+
 // ✅ teamId로 팀 정보 찾기
 BOOL Team_FindByTeamId(const wchar_t* teamId, TeamInfo* outTeam);
 int Team_Create(const wchar_t* team, const wchar_t* task, const wchar_t* code);
