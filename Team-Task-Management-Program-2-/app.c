@@ -438,12 +438,48 @@ static void DestroyAllEdits(void)
     ShowMyTeamStatics(0);
 }
 
+
+
+
+static int ScreenHasHeader(Screen s)
+{
+    switch (s) {
+    case SCR_MAIN:
+    case SCR_DEADLINE:
+    case SCR_TODO:
+    case SCR_MYTEAM:
+    case SCR_DONE:
+    case SCR_TEAM_CREATE:
+    case SCR_TEAM_JOIN:
+        return 1;
+
+        // ✅ 제외 (너가 말한 것들)
+    case SCR_START:
+    case SCR_SIGNUP:
+    case SCR_FINDPW:
+    case SCR_TASK_ADD:
+    case SCR_BOARD:
+    default:
+        return 0;
+    }
+}
+
 // =========================================================
 // [DO NOT TOUCH] 화면별 컨트롤 생성
 // =========================================================
 static void CreateControlsForScreen(HWND hWnd, Screen s)
 {
     DestroyAllEdits();
+
+    // ✅ [추가] 헤더가 필요한 화면이면 팀명/과제명 Edit를 항상 만든다
+    if (ScreenHasHeader(s))
+    {
+        g_edMainTeamName = CreateEdit(hWnd, 601, 0);
+        g_edMainTaskName = CreateEdit(hWnd, 602, 0);
+
+        if (g_edMainTeamName) SetWindowTextW(g_edMainTeamName, g_mainTeamText);
+        if (g_edMainTaskName) SetWindowTextW(g_edMainTaskName, g_mainTaskText);
+    }
 
     switch (s)
     {
@@ -465,12 +501,8 @@ static void CreateControlsForScreen(HWND hWnd, Screen s)
         break;
 
     case SCR_MAIN:
-        g_edMainTeamName = CreateEdit(hWnd, 601, 0);
-        g_edMainTaskName = CreateEdit(hWnd, 602, 0);
+        // ✅ 헤더는 위에서 만들었으니 여기서는 검색창만 생성
         g_edSearch = CreateEdit(hWnd, 603, 0);
-
-        if (g_edMainTeamName) SetWindowTextW(g_edMainTeamName, g_mainTeamText);
-        if (g_edMainTaskName) SetWindowTextW(g_edMainTaskName, g_mainTaskText);
         break;
 
     case SCR_TEAM_CREATE:
@@ -485,6 +517,7 @@ static void CreateControlsForScreen(HWND hWnd, Screen s)
         break;
 
     case SCR_TASK_ADD:
+        // ✅ (제외 유지) 헤더 안 만들고 과제등록 컨트롤만
         g_edTaSearch = CreateEdit(hWnd, 901, 0);
         g_edTaTask1 = CreateEdit(hWnd, 902, 0);
         g_edTaTask2 = CreateEdit(hWnd, 903, 0);
@@ -498,13 +531,20 @@ static void CreateControlsForScreen(HWND hWnd, Screen s)
         break;
 
     case SCR_BOARD:
+        // ✅ (제외 유지)
         Board_CreateControls(hWnd);
         break;
 
     case SCR_MYTEAM:
-        // ✅ MYTEAM은 edit가 아니라 STATIC 슬롯
+        // ✅ MYTEAM 슬롯
         EnsureMyTeamStatics(hWnd, GetUIFont());
         MyTeam_RefreshUI(hWnd);
+        break;
+
+        // ✅ 이 화면들에도 헤더가 필요하므로 따로 만들 건 없음(헤더는 위에서 생성됨)
+    case SCR_DEADLINE:
+    case SCR_TODO:
+    case SCR_DONE:
         break;
 
     default:
@@ -513,6 +553,7 @@ static void CreateControlsForScreen(HWND hWnd, Screen s)
 
     RelayoutControls(hWnd);
 }
+
 
 // =========================================================
 // [DO NOT TOUCH] 레이아웃
@@ -554,9 +595,26 @@ static void RelayoutControls(HWND hWnd)
     if (g_edTaDetail) ShowWindow(g_edTaDetail, SW_HIDE);
     if (g_edTaFile) ShowWindow(g_edTaFile, SW_HIDE);
 
+    // ✅ 헤더가 필요한 화면이면 상단 팀명/과제명은 항상 보이게
+    if (ScreenHasHeader(g_screen))
+    {
+        if (g_edMainTeamName) ShowWindow(g_edMainTeamName, SW_SHOW);
+        if (g_edMainTaskName) ShowWindow(g_edMainTaskName, SW_SHOW);
+
+        MoveEdit(g_edMainTeamName, SX(R_MAIN_TEAM_X1), SY(R_MAIN_TEAM_Y1),
+            SX(R_MAIN_TEAM_X2), SY(R_MAIN_TEAM_Y2), 0, 0, 0, 0);
+
+        MoveEdit(g_edMainTaskName, SX(R_MAIN_TASK_X1), SY(R_MAIN_TASK_Y1),
+            SX(R_MAIN_TASK_X2), SY(R_MAIN_TASK_Y2), 0, 0, 0, 0);
+    }
+
+
     // MYTEAM 슬롯도 기본은 숨김 (해당 화면에서만 보이게)
     ShowMyTeamStatics(0);
 
+
+
+    
     // START
     if (g_screen == SCR_START) {
         ShowWindow(g_edStartId, SW_SHOW);
