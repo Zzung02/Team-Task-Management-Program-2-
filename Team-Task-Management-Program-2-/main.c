@@ -1,8 +1,4 @@
-﻿// main.c  (원샷 덮어쓰기)
-// - STATIC(내팀 슬롯) 배경 흰색 처리 (WM_CTLCOLORSTATIC)
-// - 윈도우 클래스 배경도 흰색으로 지정
-// - 나머지 흐름은 기존 그대로
-
+﻿// main.c
 #include <windows.h>
 #include <windowsx.h>
 #include "app.h"
@@ -22,19 +18,14 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
         return 0;
 
     case WM_DRAWITEM:
-        if (App_OnDrawItem(hWnd, (const DRAWITEMSTRUCT*)lParam))
-            return TRUE;
-        break;
-
+        return App_OnDrawItemWndProc(hWnd, wParam, lParam);
 
     case WM_MOUSEMOVE:
-        App_OnMouseMove(hWnd, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
-        break;
+        return App_OnMouseMoveWndProc(hWnd, wParam, lParam);
 
     case WM_LBUTTONDOWN:
         App_OnLButtonDown(hWnd, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
         return 0;
-
 
     case WM_CTLCOLORSTATIC:
     {
@@ -44,7 +35,6 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
         return (LRESULT)(g_brWhite ? g_brWhite : (HBRUSH)GetStockObject(WHITE_BRUSH));
     }
 
-    // ✅ EDIT는 그대로 두되, 흰 배경 원하면 여기서 처리 가능
     case WM_CTLCOLOREDIT:
     {
         HDC hdc = (HDC)wParam;
@@ -64,12 +54,10 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
 
     case WM_DESTROY:
         App_OnDestroy();
-        // g_brWhite는 stock object라 DeleteObject 하면 안 됨
         g_brWhite = NULL;
         PostQuitMessage(0);
         return 0;
     }
-
 
     return DefWindowProcW(hWnd, msg, wParam, lParam);
 }
@@ -85,8 +73,6 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrev, PWSTR lpCmdLine, int nCmdS
     wc.hInstance = hInst;
     wc.lpszClassName = L"TTM_APP";
     wc.hCursor = LoadCursor(NULL, IDC_ARROW);
-
-    // ✅ 창 기본 배경을 흰색으로
     wc.hbrBackground = g_brWhite;
 
     RegisterClassW(&wc);

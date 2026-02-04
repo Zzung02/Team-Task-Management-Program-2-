@@ -1,4 +1,7 @@
-﻿#include "bmp_loader.h"
+﻿// bmp_loader.c
+
+
+#include "bmp_loader.h"
 #include <wchar.h>
 
 static void GetExeDir(wchar_t* outDir, int outCap)

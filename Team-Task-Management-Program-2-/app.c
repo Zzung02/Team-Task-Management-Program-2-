@@ -1,12 +1,4 @@
-﻿// =========================================================
-// app.c  (원샷 덮어쓰기/복붙용)  ✅ ListBox 제거 + MYTEAM bmp 복구 + 5칸 슬롯
-// - 내 팀 버튼: 토글/더블클릭/리스트박스 ❌ -> SCR_MYTEAM 화면전환 ✅
-// - SCR_MYTEAM: myteam.bmp 위에 STATIC 5칸 팀 목록 표시 ✅
-// - teams.txt에서 최대 5개 로드 ✅
-// - 팀 생성 저장 시 Team_Create로 파일 저장 + MYTEAM 슬롯 갱신 ✅
-// - Last Click 디버그 오버레이 유지 ✅
-// =========================================================
-
+﻿// app.c
 #define _CRT_SECURE_NO_WARNINGS
 
 #include "app.h"
@@ -1004,11 +996,30 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
                 return;
             }
 
-            // ✅ 파일 저장 (team.c 사용)
-            if (!Team_Create(team, task, code)) {
-                MessageBoxW(hWnd, L"teams.txt 저장 실패!", L"팀 등록", MB_OK | MB_ICONERROR);
+        
+            // ✅ 파일 저장 (team.c 사용) - 진짜 Team_Create(5인자) 호출
+            TeamInfo out = { 0 };
+            if (!Team_Create(team, task, code, g_currentUserId, &out)) {
+                MessageBoxW(hWnd, L"팀 등록 실패!\n(코드 중복이거나 파일 저장 오류일 수 있음)", L"팀 등록", MB_OK | MB_ICONERROR);
                 return;
             }
+
+            // ✅ 현재 팀 ID 저장
+            lstrcpynW(g_currentTeamId, out.teamId, 64);
+
+            // ✅ MAIN 상단 반영
+            lstrcpynW(g_mainTeamText, team, 128);
+            lstrcpynW(g_mainTaskText, task, 128);
+
+            // ✅ 슬롯 갱신
+            LoadMyTeams_FromMembers(g_currentUserId);
+            ApplyMyTeamTextsToUI();
+
+            MessageBoxW(hWnd, L"팀 등록 완료!", L"팀 등록", MB_OK | MB_ICONINFORMATION);
+            SwitchScreen(hWnd, SCR_MAIN);
+            ApplyMainHeaderTextsReal();
+            return;
+
 
             // ✅ MAIN 상단 반영
             lstrcpynW(g_mainTeamText, team, 128);
@@ -1050,28 +1061,7 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
             return;
         }
 
-        // 1) 슬롯 클릭 -> 선택만 한다 (화면 전환 X)
-        RECT rc = MakeRcScaled(R_MYTEAM_LIST_X1, R_MYTEAM_LIST_Y1, R_MYTEAM_LIST_X2, R_MYTEAM_LIST_Y2);
-        POINT pt = { x, y };
 
-        if (PtInRect(&rc, pt))
-        {
-            int hh = rc.bottom - rc.top;
-            int slotH = (hh > 0) ? (hh / MYTEAM_SLOT_MAX) : 0;
-
-            if (slotH > 0) {
-                int idx = (y - rc.top) / slotH;
-                if (idx < 0) idx = 0;
-                if (idx >= MYTEAM_SLOT_MAX) idx = MYTEAM_SLOT_MAX - 1;
-
-                if (g_myTeams[idx].team[0] != 0) {
-                    g_myTeamSelected = idx;
-                    InvalidateRect(hWnd, NULL, FALSE); // 테두리 갱신
-                }
-            }
-        }
-        return;
-    }
 
 
         // ✅ 1) (기존) 슬롯 클릭 처리
@@ -1101,11 +1091,11 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
                     InvalidateRect(hWnd, NULL, FALSE);
                 }
 
-                }
             }
-        
-      return;
-    
+        }
+
+        return;
+    }
 
     // TEAM_JOIN
     if (g_screen == SCR_TEAM_JOIN)
@@ -1129,89 +1119,90 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
 // =========================================================
 // Paint
 // =========================================================
-void App_OnPaint(HWND hWnd, HDC hdc)
-{
-    RECT rc;
-    GetClientRect(hWnd, &rc);
-
-    int w = rc.right - rc.left;
-    int h = rc.bottom - rc.top;
-    g_clientW = w;
-    g_clientH = h;
-
-    HDC mem = CreateCompatibleDC(hdc);
-    HBITMAP back = CreateCompatibleBitmap(hdc, w, h);
-    HBITMAP oldBack = (HBITMAP)SelectObject(mem, back);
-
-    FillRect(mem, &rc, (HBRUSH)GetStockObject(WHITE_BRUSH));
-
-    // 화면 BMP
-    if (g_screen == SCR_START)            DrawBitmapFit(mem, g_bmpStart, w, h);
-    else if (g_screen == SCR_SIGNUP)      DrawBitmapFit(mem, g_bmpSignup, w, h);
-    else if (g_screen == SCR_FINDPW)      DrawBitmapFit(mem, g_bmpFindPw, w, h);
-    else if (g_screen == SCR_DEADLINE)    DrawBitmapFit(mem, g_bmpDeadline, w, h);
-    else if (g_screen == SCR_TODO)        DrawBitmapFit(mem, g_bmpTodo, w, h);
-    else if (g_screen == SCR_MYTEAM)      DrawBitmapFit(mem, g_bmpMyTeam, w, h);
-    else if (g_screen == SCR_DONE)        DrawBitmapFit(mem, g_bmpDone, w, h);
-    else if (g_screen == SCR_TEAM_CREATE) DrawBitmapFit(mem, g_bmpTeamCreate, w, h);
-    else if (g_screen == SCR_TEAM_JOIN)   DrawBitmapFit(mem, g_bmpTeamJoin, w, h);
-    else if (g_screen == SCR_TASK_ADD)    DrawBitmapFit(mem, g_bmpTaskAdd, w, h);
-    else if (g_screen == SCR_BOARD)       DrawBitmapFit(mem, g_bmpBoard, w, h);
-    else                                  DrawBitmapFit(mem, g_bmpMain, w, h);
-
-    // MYTEAM: 선택된 슬롯 테두리(검정) + 전체 슬롯 테두리(연한)
-    if (g_screen == SCR_MYTEAM)
+    void App_OnPaint(HWND hWnd, HDC hdc)
     {
-        // 1) 슬롯 각각 연한 테두리
-        for (int i = 0; i < MYTEAM_SLOT_MAX; i++)
+        RECT rc;
+        GetClientRect(hWnd, &rc);
+
+        int w = rc.right - rc.left;
+        int h = rc.bottom - rc.top;
+        g_clientW = w;
+        g_clientH = h;
+
+        HDC mem = CreateCompatibleDC(hdc);
+        HBITMAP back = CreateCompatibleBitmap(hdc, w, h);
+        HBITMAP oldBack = (HBITMAP)SelectObject(mem, back);
+
+        FillRect(mem, &rc, (HBRUSH)GetStockObject(WHITE_BRUSH));
+
+        // 화면 BMP
+        if (g_screen == SCR_START)            DrawBitmapFit(mem, g_bmpStart, w, h);
+        else if (g_screen == SCR_SIGNUP)      DrawBitmapFit(mem, g_bmpSignup, w, h);
+        else if (g_screen == SCR_FINDPW)      DrawBitmapFit(mem, g_bmpFindPw, w, h);
+        else if (g_screen == SCR_DEADLINE)    DrawBitmapFit(mem, g_bmpDeadline, w, h);
+        else if (g_screen == SCR_TODO)        DrawBitmapFit(mem, g_bmpTodo, w, h);
+        else if (g_screen == SCR_MYTEAM)      DrawBitmapFit(mem, g_bmpMyTeam, w, h);
+        else if (g_screen == SCR_DONE)        DrawBitmapFit(mem, g_bmpDone, w, h);
+        else if (g_screen == SCR_TEAM_CREATE) DrawBitmapFit(mem, g_bmpTeamCreate, w, h);
+        else if (g_screen == SCR_TEAM_JOIN)   DrawBitmapFit(mem, g_bmpTeamJoin, w, h);
+        else if (g_screen == SCR_TASK_ADD)    DrawBitmapFit(mem, g_bmpTaskAdd, w, h);
+        else if (g_screen == SCR_BOARD)       DrawBitmapFit(mem, g_bmpBoard, w, h);
+        else                                  DrawBitmapFit(mem, g_bmpMain, w, h);
+
+        // MYTEAM: 선택된 슬롯 테두리(검정) + 전체 슬롯 테두리(연한)
+        if (g_screen == SCR_MYTEAM)
         {
-            if (!g_stMyTeam[i]) continue;
+            // 1) 슬롯 각각 연한 테두리
+            for (int i = 0; i < MYTEAM_SLOT_MAX; i++)
+            {
+                if (!g_stMyTeam[i]) continue;
 
-            RECT r;
-            GetWindowRect(g_stMyTeam[i], &r);
+                RECT r;
+                GetWindowRect(g_stMyTeam[i], &r);
 
-            POINT p1 = { r.left, r.top };
-            POINT p2 = { r.right, r.bottom };
-            ScreenToClient(hWnd, &p1);
-            ScreenToClient(hWnd, &p2);
+                POINT p1 = { r.left, r.top };
+                POINT p2 = { r.right, r.bottom };
+                ScreenToClient(hWnd, &p1);
+                ScreenToClient(hWnd, &p2);
 
-            RECT rcSlot = { p1.x, p1.y, p2.x, p2.y };
+                RECT rcSlot = { p1.x, p1.y, p2.x, p2.y };
 
-            HPEN pen1 = CreatePen(PS_SOLID, 1, RGB(180, 200, 215));
-            HGDIOBJ oldPen = SelectObject(mem, pen1);
-            HGDIOBJ oldBrush = SelectObject(mem, GetStockObject(HOLLOW_BRUSH));
+                HPEN pen1 = CreatePen(PS_SOLID, 1, RGB(180, 200, 215));
+                HGDIOBJ oldPen = SelectObject(mem, pen1);
+                HGDIOBJ oldBrush = SelectObject(mem, GetStockObject(HOLLOW_BRUSH));
 
-            Rectangle(mem, rcSlot.left, rcSlot.top, rcSlot.right, rcSlot.bottom);
+                Rectangle(mem, rcSlot.left, rcSlot.top, rcSlot.right, rcSlot.bottom);
 
-            SelectObject(mem, oldBrush);
-            SelectObject(mem, oldPen);
-            DeleteObject(pen1);
+                SelectObject(mem, oldBrush);
+                SelectObject(mem, oldPen);
+                DeleteObject(pen1);
+            }
+
+            // 2) 선택된 슬롯만 검은 두꺼운 테두리
+            if (g_myTeamSelected >= 0 && g_myTeamSelected < MYTEAM_SLOT_MAX && g_stMyTeam[g_myTeamSelected])
+            {
+                RECT r;
+                GetWindowRect(g_stMyTeam[g_myTeamSelected], &r);
+
+                POINT p1 = { r.left, r.top };
+                POINT p2 = { r.right, r.bottom };
+                ScreenToClient(hWnd, &p1);
+                ScreenToClient(hWnd, &p2);
+
+                RECT rcSel = { p1.x, p1.y, p2.x, p2.y };
+
+                HPEN pen2 = CreatePen(PS_SOLID, 2, RGB(0, 0, 0));
+                HGDIOBJ oldPen = SelectObject(mem, pen2);
+                HGDIOBJ oldBrush = SelectObject(mem, GetStockObject(HOLLOW_BRUSH));
+
+                Rectangle(mem, rcSel.left - 2, rcSel.top - 2, rcSel.right + 2, rcSel.bottom + 2);
+
+                SelectObject(mem, oldBrush);
+                SelectObject(mem, oldPen);
+                DeleteObject(pen2);
+            }
         }
-
-        // 2) 선택된 슬롯만 검은 두꺼운 테두리
-        if (g_myTeamSelected >= 0 && g_myTeamSelected < MYTEAM_SLOT_MAX && g_stMyTeam[g_myTeamSelected])
-        {
-            RECT r;
-            GetWindowRect(g_stMyTeam[g_myTeamSelected], &r);
-
-            POINT p1 = { r.left, r.top };
-            POINT p2 = { r.right, r.bottom };
-            ScreenToClient(hWnd, &p1);
-            ScreenToClient(hWnd, &p2);
-
-            RECT rcSel = { p1.x, p1.y, p2.x, p2.y };
-
-            HPEN pen2 = CreatePen(PS_SOLID, 2, RGB(0, 0, 0));
-            HGDIOBJ oldPen = SelectObject(mem, pen2);
-            HGDIOBJ oldBrush = SelectObject(mem, GetStockObject(HOLLOW_BRUSH));
-
-            Rectangle(mem, rcSel.left - 2, rcSel.top - 2, rcSel.right + 2, rcSel.bottom + 2);
-
-            SelectObject(mem, oldBrush);
-            SelectObject(mem, oldPen);
-            DeleteObject(pen2);
-        }
-    }
+    
 
     // 디버그(라스트 클릭)
     DrawDebugOverlay(mem);

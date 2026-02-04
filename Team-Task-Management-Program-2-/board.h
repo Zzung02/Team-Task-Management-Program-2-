@@ -1,4 +1,6 @@
-﻿#pragma once
+﻿//board.h
+
+#pragma once
 #include <windows.h>
 
 // 게시판 컨트롤 생성/삭제/배치

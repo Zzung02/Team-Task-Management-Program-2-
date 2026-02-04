@@ -1,4 +1,6 @@
-﻿#pragma once
+﻿//ui_coords.h
+
+#pragma once
 
 // 현재 창의 client 크기(app.c에서 관리)
 extern int g_clientW;
@@ -215,20 +217,6 @@ extern int g_clientH;
 #define R_MAIN_TASK_Y1   78
 #define R_MAIN_TASK_X2   1109
 #define R_MAIN_TASK_Y2   95
-
-
-// ===============================
-// 과제 화면(SCR_TASK_ADD) Edit들
-// ===============================
-extern HWND g_edTaItem1;
-extern HWND g_edTaItem2;
-extern HWND g_edTaItem3;
-extern HWND g_edTaItem4;
-
-extern HWND g_edTaTitle;
-extern HWND g_edTaDetail;
-extern HWND g_edTaFile;
-
 
 
 // =========================================================

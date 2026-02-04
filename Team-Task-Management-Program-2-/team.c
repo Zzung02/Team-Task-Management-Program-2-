@@ -1,4 +1,6 @@
-﻿#define _CRT_SECURE_NO_WARNINGS
+﻿//team.c
+
+#define _CRT_SECURE_NO_WARNINGS
 #include "team.h"
 #include <stdio.h>
 #include <wchar.h>

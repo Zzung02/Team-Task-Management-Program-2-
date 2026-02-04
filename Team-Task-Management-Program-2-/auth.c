@@ -1,4 +1,7 @@
-﻿#define _CRT_SECURE_NO_WARNINGS
+﻿
+//auth.c
+
+#define _CRT_SECURE_NO_WARNINGS
 #include "auth.h"
 #include <stdio.h>
 #include <wchar.h>

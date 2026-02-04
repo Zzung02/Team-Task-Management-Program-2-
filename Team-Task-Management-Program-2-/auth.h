@@ -1,4 +1,7 @@
-﻿#pragma once
+﻿//auth.h
+
+
+#pragma once
 #include <windows.h>
 
 BOOL Auth_Login(const wchar_t* id, const wchar_t* pw);

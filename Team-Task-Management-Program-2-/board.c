@@ -1,4 +1,6 @@
-﻿#define _CRT_SECURE_NO_WARNINGS
+﻿//board.c
+
+#define _CRT_SECURE_NO_WARNINGS
 #include "board.h"
 
 #include "app.h"        // App_CreateEdit 사용하려고 포함

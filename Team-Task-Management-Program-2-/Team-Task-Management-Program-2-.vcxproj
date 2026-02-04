@@ -144,7 +144,6 @@
     <ClInclude Include="team.h" />
     <ClInclude Include="ui_coords.h" />
     <ClInclude Include="ui_layout.h" />
-    <ClInclude Include="새 폴더\board.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="teams.txt" />
