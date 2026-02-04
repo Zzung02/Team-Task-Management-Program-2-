@@ -169,10 +169,10 @@ extern int g_clientH;
 #define R_TC_SAVE_Y2  178
 
 // MAIN - 내 팀 목록(ListBox) 영역(원본 디자인 기준)
-#define R_MYTEAM_LIST_X1   140
-#define R_MYTEAM_LIST_Y1   210
-#define R_MYTEAM_LIST_X2   520
-#define R_MYTEAM_LIST_Y2   760
+#define R_MYTEAM_LIST_X1   160
+#define R_MYTEAM_LIST_Y1   205
+#define R_MYTEAM_LIST_X2   517
+#define R_MYTEAM_LIST_Y2   658
 
 
 // =========================================================
