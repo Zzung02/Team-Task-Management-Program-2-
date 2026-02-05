@@ -405,9 +405,8 @@ static int LoadMyTeams_FromMembers(const wchar_t* userId)
         TeamInfo t = { 0 };
         if (Team_FindByTeamId(tid, &t)) {
             lstrcpynW(g_myTeams[count].team, t.teamName, 128);
-            lstrcpynW(g_myTeams[count].task, t.taskName, 128);
-            lstrcpynW(g_myTeams[count].teamId, t.teamId, 64);
-            lstrcpynW(g_myTeams[count].joinCode, t.joinCode, 64);
+            lstrcpynW(g_myTeams[count].teamId, t.teamId, 64); 
+             lstrcpynW(g_myTeams[count].joinCode, t.joinCode, 64);
             count++;
 
         }
@@ -598,7 +597,6 @@ static void CreateControlsForScreen(HWND hWnd, Screen s)
 
     case SCR_TEAM_CREATE:
         g_edTcTeam = CreateEdit(hWnd, 701, 0);
-        g_edTcTask = CreateEdit(hWnd, 702, 0);
         g_edTcCode = CreateEdit(hWnd, 703, 0);
         break;
 
@@ -645,7 +643,7 @@ static void CreateControlsForScreen(HWND hWnd, Screen s)
         g_taskSelectedSlot = -1;
         g_taskSelectedId = 0;
 
-   
+
         Task_RefreshLeftList();
         Task_RestorePageStateForPage(g_taskPage);
         break;
@@ -789,7 +787,7 @@ static void RelayoutControls(HWND hWnd)
         MoveEdit(g_edMainTeamName, SX(R_MAIN_TEAM_X1), SY(R_MAIN_TEAM_Y1),
             SX(R_MAIN_TEAM_X2), SY(R_MAIN_TEAM_Y2), 0, 0, 0, 0);
 
-     
+
 
         return;
     }
@@ -1123,26 +1121,19 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
         if (HitScaled(R_TC_SAVE_X1, R_TC_SAVE_Y1, R_TC_SAVE_X2, R_TC_SAVE_Y2, x, y))
         {
             wchar_t team[128] = { 0 };
-            wchar_t task[128] = { 0 };
             wchar_t code[128] = { 0 };
 
             GetWindowTextW(g_edTcTeam, team, 128);
-            GetWindowTextW(g_edTcTask, task, 128);
             GetWindowTextW(g_edTcCode, code, 128);
 
-            if (team[0] == 0 || task[0] == 0 || code[0] == 0) {
+            if (team[0] == 0 || code[0] == 0) {
                 MessageBoxW(hWnd, L"팀명/코드를 모두 입력해 주세요.", L"팀 등록", MB_OK | MB_ICONWARNING);
                 SAFE_LEAVE();
             }
 
-            if (g_currentUserId[0] == 0) {
-                MessageBoxW(hWnd, L"로그인 정보가 없습니다. 다시 로그인해 주세요.", L"팀 등록", MB_OK | MB_ICONERROR);
-                SAFE_LEAVE();
-            }
-         
 
             TeamInfo out = { 0 };
-            if (!Team_Create(team, task, code, g_currentUserId, &out)) {
+            if (!Team_Create(team, code, g_currentUserId, &out)) {
                 MessageBoxW(hWnd, L"팀 등록 실패!\n(코드 중복이거나 파일 저장 오류일 수 있음)", L"팀 등록", MB_OK | MB_ICONERROR);
                 SAFE_LEAVE();
             }
@@ -1260,7 +1251,7 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
 // -----------------------------------------------------
     if (g_screen == SCR_TASK_ADD)
     {
-       
+
 
         if (HitScaled(R_TA_PAGE_PREV_X1, R_TA_PAGE_PREV_Y1, R_TA_PAGE_PREV_X2, R_TA_PAGE_PREV_Y2, x, y)) {
             // 현재 페이지 상태 저장
@@ -1273,7 +1264,7 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
             g_taskSelectedId = 0;          // ✅ 추가 
             Task_RefreshLeftList();
 
-         
+
             // 왼쪽으로 돌아왔으면 이전에 있던 내용 복원
             Task_RestorePageStateForPage(g_taskPage);
 
@@ -1341,7 +1332,7 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
 
 
         // 여기부터는 buf 더 이상 필요 없음
- 
+
 
         // 파일 비우기
         if (HitScaled(R_TA_BTN_FILE_CLEAR_X1, R_TA_BTN_FILE_CLEAR_Y1, R_TA_BTN_FILE_CLEAR_X2, R_TA_BTN_FILE_CLEAR_Y2, x, y)) {
@@ -1473,7 +1464,7 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
             }
 
             g_taskSelectedSlot = -1;
-           Task_RefreshLeftList();
+            Task_RefreshLeftList();
             MessageBoxW(hWnd, L"삭제 완료!", L"삭제", MB_OK | MB_ICONINFORMATION);
             SAFE_LEAVE();
         }

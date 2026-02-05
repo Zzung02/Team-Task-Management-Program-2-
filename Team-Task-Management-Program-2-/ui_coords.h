@@ -149,13 +149,13 @@ extern int g_clientH;
 // =========================================================
 // TEAM_CREATE(팀등록) 필드
 // =========================================================
-#define R_TC_TEAM_X1   793
-#define R_TC_TEAM_Y1   238
+#define R_TC_TEAM_X1   787
+#define R_TC_TEAM_Y1   242
 #define R_TC_TEAM_X2   1025
 #define R_TC_TEAM_Y2   266
 
-#define R_TC_CODE_X1   845
-#define R_TC_CODE_Y1   310
+#define R_TC_CODE_X1   848
+#define R_TC_CODE_Y1   321
 #define R_TC_CODE_X2   984
 #define R_TC_CODE_Y2   345
 
