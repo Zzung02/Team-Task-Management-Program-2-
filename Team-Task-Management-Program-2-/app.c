@@ -623,20 +623,30 @@ static void CreateControlsForScreen(HWND hWnd, Screen s)
         ShowWindow(g_edTaTask3, SW_SHOW);
         ShowWindow(g_edTaTask4, SW_SHOW);
 
+        // ✅ 조회 입력칸(검색어)
+        g_edTaSearch = CreateEdit(hWnd, 901, 0);
 
+        // ✅ 오른쪽: 제목(한 줄)
+        g_edTaTitle = CreateEdit(hWnd, 906, 0);
 
+        // ✅ 오른쪽: 내용(멀티라인 + 스크롤)
+        g_edTaContent = CreateEdit(hWnd, 907, ES_MULTILINE | ES_AUTOVSCROLL | WS_VSCROLL);
 
-        // ✅ 팀 바뀌면 페이지 저장상태 리셋 (먼저!)
+        // ✅ 오른쪽: 상세사항(너가 원하면 한 줄로 유지 / 멀티라인 원하면 위처럼)
+        g_edTaDetail = CreateEdit(hWnd, 908, 0);
+
+        // ✅ 오른쪽: 파일(한 줄)
+        g_edTaFile = CreateEdit(hWnd, 909, 0);
+
+        // ✅ 팀 바뀌면 페이지 저장상태 리셋
         Task_ResetPageStatesIfTeamChanged();
 
-        // ✅ 첫 진입은 0페이지
         g_taskPage = 0;
         g_taskSelectedSlot = -1;
         g_taskSelectedId = 0;
 
-     
-
-        // ✅ 0페이지에 저장된 상태 있으면 복원
+   
+        Task_RefreshLeftList();
         Task_RestorePageStateForPage(g_taskPage);
         break;
 
@@ -1346,7 +1356,8 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
         }
 
         // 조회
-        if (HitScaled(R_TA_SEARCH_X1, R_TA_SEARCH_Y1, R_TA_SEARCH_X2, R_TA_SEARCH_Y2, x, y))
+        if (HitScaled(R_TA_SEARCH_ICON_X1, R_TA_SEARCH_ICON_Y1,
+            R_TA_SEARCH_ICON_X2, R_TA_SEARCH_ICON_Y2, x, y))
         {
             wchar_t key[128] = { 0 };
             if (g_edTaSearch) GetWindowTextW(g_edTaSearch, key, 128);

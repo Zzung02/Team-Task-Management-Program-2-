@@ -227,6 +227,10 @@ extern int g_clientH;
 #define R_TA_BTN_DONE_X2  808
 #define R_TA_BTN_DONE_Y2  82
 
+#define R_TA_SEARCH_ICON_X1  1225
+#define R_TA_SEARCH_ICON_Y1  20
+#define R_TA_SEARCH_ICON_X2  1285
+#define R_TA_SEARCH_ICON_Y2  75
 
 
 // 삭제 버튼(너 BMP에 있으면)
