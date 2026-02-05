@@ -15,6 +15,11 @@
 #include <windowsx.h>
 #include <string.h>
 
+
+// task_add helper (forward decl)
+static void Task_LoadToRightEdits(const TaskItem* t);
+static void Task_RefreshLeftList(void);
+
 // =========================================================
 // [DO NOT TOUCH] 좌표/히트테스트 유틸
 // =========================================================
@@ -40,6 +45,83 @@ static int HitScaled(int x1, int y1, int x2, int y2, int x, int y)
 static void LayoutMyTeamStatics(void);
 
 
+static int g_taskSelectedSlot = -1;
+
+// =========================================================
+// ✅ TASK_ADD: 이 파일에서 먼저 필요(페이지 상태 저장/복원에서 사용)
+//   - 아래쪽에 있던 TASK_ADD 전역 정의는 "삭제"할 것
+// =========================================================
+static HWND g_edTaTitle = NULL;
+static HWND g_edTaContent = NULL;
+static HWND g_edTaDetail = NULL;
+static HWND g_edTaFile = NULL;
+
+static int  g_taskSelectedId = 0;
+static int  g_taskPage = 0;
+
+
+
+// =========================================================
+// TASK_ADD: 페이지별 선택/오른쪽 내용 "복원"용 상태
+// =========================================================
+#define TASK_PAGE_STATE_MAX 128
+
+typedef struct {
+    int used;            // 0/1
+    int selectedSlot;    // 0~3
+    TaskItem item;       // 오른쪽에 보이던 내용(선택한 과제)
+} TaskPageState;
+
+static TaskPageState g_taskPageState[TASK_PAGE_STATE_MAX];
+static wchar_t g_taskStateTeamId[64] = L"";
+
+// 팀 바뀌면 페이지 상태 초기화
+static void Task_ResetPageStatesIfTeamChanged(void)
+{
+    if (wcscmp(g_taskStateTeamId, g_currentTeamId) != 0) {
+        for (int i = 0; i < TASK_PAGE_STATE_MAX; i++) g_taskPageState[i].used = 0;
+        lstrcpynW(g_taskStateTeamId, g_currentTeamId, 64);
+    }
+}
+
+// 현재 페이지 상태 저장(선택된 게 있을 때만)
+static void Task_SaveCurrentPageState(void)
+{
+    if (g_taskPage < 0 || g_taskPage >= TASK_PAGE_STATE_MAX) return;
+
+    if (g_taskSelectedId == 0 || g_taskSelectedSlot < 0 || g_taskSelectedSlot >= 4) {
+        g_taskPageState[g_taskPage].used = 0;
+        return;
+    }
+
+    TaskItem t = { 0 };
+    t.id = g_taskSelectedId;
+
+    if (g_edTaTitle)   GetWindowTextW(g_edTaTitle, t.title, TASK_TITLE_MAX);
+    if (g_edTaContent) GetWindowTextW(g_edTaContent, t.content, TASK_TEXT_MAX);
+    if (g_edTaDetail)  GetWindowTextW(g_edTaDetail, t.detail, TASK_TEXT_MAX);
+    if (g_edTaFile)    GetWindowTextW(g_edTaFile, t.file, TASK_FILE_MAX);
+
+    g_taskPageState[g_taskPage].used = 1;
+    g_taskPageState[g_taskPage].selectedSlot = g_taskSelectedSlot;
+    g_taskPageState[g_taskPage].item = t;
+}
+
+// 해당 페이지 상태 복원(없으면 초기화 유지)
+static void Task_RestorePageStateForPage(int page)
+{
+    if (page < 0 || page >= TASK_PAGE_STATE_MAX) return;
+
+    if (!g_taskPageState[page].used) {
+        g_taskSelectedSlot = -1;
+        g_taskSelectedId = 0;
+        return;
+    }
+
+    g_taskSelectedSlot = g_taskPageState[page].selectedSlot;
+    Task_LoadToRightEdits(&g_taskPageState[page].item);
+}
+
 
 
 // =========================================================
@@ -50,6 +132,7 @@ static void ResizeToBitmap(HWND hWnd, HBITMAP bmp);
 static void SwitchScreen(HWND hWnd, Screen next);
 static void SwitchScreen_NoHistory(HWND hWnd, Screen next);
 static void DrawDebugOverlay(HDC hdc);
+
 static HFONT GetUIFont(void);
 
 
@@ -109,6 +192,8 @@ int g_clientW = 0, g_clientH = 0;
 // 로그인/팀 상태
 wchar_t g_currentUserId[128] = L"";
 wchar_t g_currentTeamId[64] = L"";
+
+
 
 // =========================================================
 // [DO NOT TOUCH] MAIN 상단 팀명/과제명 유지용 전역
@@ -246,19 +331,12 @@ static HWND g_edTcCode = NULL;
 static HWND g_edTjTeam = NULL;
 static HWND g_edTjCode = NULL;
 
-// TASK_ADD
 static HWND g_edTaSearch = NULL;
 static HWND g_edTaTask1 = NULL;
 static HWND g_edTaTask2 = NULL;
 static HWND g_edTaTask3 = NULL;
 static HWND g_edTaTask4 = NULL;
-static HWND g_edTaTitle = NULL;
-static HWND g_edTaContent = NULL;  // 멀티라인
-static HWND g_edTaDetail = NULL;   // 단일라인
-static HWND g_edTaFile = NULL;     // 단일라인
 
-static int g_taskSelectedId = 0;
-static int g_taskPage = 0;
 
 
 // =========================================================
@@ -530,18 +608,39 @@ static void CreateControlsForScreen(HWND hWnd, Screen s)
         break;
 
     case SCR_TASK_ADD:
-        // ✅ (제외 유지) 헤더 안 만들고 과제등록 컨트롤만
-        g_edTaSearch = CreateEdit(hWnd, 901, 0);
-        g_edTaTask1 = CreateEdit(hWnd, 902, 0);
-        g_edTaTask2 = CreateEdit(hWnd, 903, 0);
-        g_edTaTask3 = CreateEdit(hWnd, 904, 0);
-        g_edTaTask4 = CreateEdit(hWnd, 905, 0);
+        g_edTaTask1 = CreateWindowExW(0, L"STATIC", L"", WS_CHILD | SS_LEFT, 0, 0, 10, 10, hWnd, (HMENU)(INT_PTR)902, GetModuleHandleW(NULL), NULL);
+        g_edTaTask2 = CreateWindowExW(0, L"STATIC", L"", WS_CHILD | SS_LEFT, 0, 0, 10, 10, hWnd, (HMENU)(INT_PTR)903, GetModuleHandleW(NULL), NULL);
+        g_edTaTask3 = CreateWindowExW(0, L"STATIC", L"", WS_CHILD | SS_LEFT, 0, 0, 10, 10, hWnd, (HMENU)(INT_PTR)904, GetModuleHandleW(NULL), NULL);
+        g_edTaTask4 = CreateWindowExW(0, L"STATIC", L"", WS_CHILD | SS_LEFT, 0, 0, 10, 10, hWnd, (HMENU)(INT_PTR)905, GetModuleHandleW(NULL), NULL);
 
-        g_edTaTitle = CreateEdit(hWnd, 906, 0);
-        g_edTaContent = CreateEdit(hWnd, 907, ES_MULTILINE | ES_AUTOVSCROLL | WS_VSCROLL);
-        g_edTaDetail = CreateEdit(hWnd, 908, 0);
-        g_edTaFile = CreateEdit(hWnd, 909, 0);
+        SendMessageW(g_edTaTask1, WM_SETFONT, (WPARAM)GetUIFont(), TRUE);
+        SendMessageW(g_edTaTask2, WM_SETFONT, (WPARAM)GetUIFont(), TRUE);
+        SendMessageW(g_edTaTask3, WM_SETFONT, (WPARAM)GetUIFont(), TRUE);
+        SendMessageW(g_edTaTask4, WM_SETFONT, (WPARAM)GetUIFont(), TRUE);
+
+        ShowWindow(g_edTaTask1, SW_SHOW);
+        ShowWindow(g_edTaTask2, SW_SHOW);
+        ShowWindow(g_edTaTask3, SW_SHOW);
+        ShowWindow(g_edTaTask4, SW_SHOW);
+
+
+
+
+        // ✅ 팀 바뀌면 페이지 저장상태 리셋 (먼저!)
+        Task_ResetPageStatesIfTeamChanged();
+
+        // ✅ 첫 진입은 0페이지
+        g_taskPage = 0;
+        g_taskSelectedSlot = -1;
+        g_taskSelectedId = 0;
+
+     
+
+        // ✅ 0페이지에 저장된 상태 있으면 복원
+        Task_RestorePageStateForPage(g_taskPage);
         break;
+
+
 
     case SCR_BOARD:
         // ✅ (제외 유지)
@@ -618,22 +717,10 @@ static void RelayoutControls(HWND hWnd)
 
         MoveEdit(g_edMainTeamName, SX(R_MAIN_TEAM_X1), SY(R_MAIN_TEAM_Y1),
             SX(R_MAIN_TEAM_X2), SY(R_MAIN_TEAM_Y2), 0, 0, 0, 0);
-
-        MoveEdit(g_edMainTaskName, SX(R_MAIN_TASK_X1), SY(R_MAIN_TASK_Y1),
-            SX(R_MAIN_TASK_X2), SY(R_MAIN_TASK_Y2), 0, 0, 0, 0);
-
-        MoveWindow(g_stMainCode, SX(R_MAIN_TASK_X1), SY(R_MAIN_TASK_Y2 + 6),
-            SX(R_MAIN_TASK_X2) - SX(R_MAIN_TASK_X1),
-            SY(R_MAIN_TASK_Y2 + 28) - SY(R_MAIN_TASK_Y2 + 6),
-            TRUE
-        );
-    }
-
+    };
 
     // MYTEAM 슬롯도 기본은 숨김 (해당 화면에서만 보이게)
     ShowMyTeamStatics(0);
-
-
 
 
     // START
@@ -692,9 +779,7 @@ static void RelayoutControls(HWND hWnd)
         MoveEdit(g_edMainTeamName, SX(R_MAIN_TEAM_X1), SY(R_MAIN_TEAM_Y1),
             SX(R_MAIN_TEAM_X2), SY(R_MAIN_TEAM_Y2), 0, 0, 0, 0);
 
-        MoveEdit(g_edMainTaskName, SX(R_MAIN_TASK_X1), SY(R_MAIN_TASK_Y1),
-            SX(R_MAIN_TASK_X2), SY(R_MAIN_TASK_Y2), 0, 0, 0, 0);
-
+     
 
         return;
     }
@@ -753,17 +838,13 @@ static void RelayoutControls(HWND hWnd)
         MoveEdit(g_edTaTask4, SX(R_TA_ITEM4_X1), SY(R_TA_ITEM4_Y1),
             SX(R_TA_ITEM4_X2), SY(R_TA_ITEM4_Y2), 0, 0, 0, 0);
 
-        MoveEdit(g_edTaTitle, SX(R_TA_TITLE_X1), SY(R_TA_TITLE_Y1),
-            SX(R_TA_TITLE_X2), SY(R_TA_TITLE_Y2), 0, 0, 0, 0);
+        MoveEdit(g_edTaTitle, SX(R_TA_TITLE_X1), SY(R_TA_TITLE_Y1), SX(R_TA_TITLE_X2), SY(R_TA_TITLE_Y2), 0, 0, 0, 0);
+        MoveEdit(g_edTaContent, SX(R_TA_CONTENT_X1), SY(R_TA_CONTENT_Y1), SX(R_TA_CONTENT_X2), SY(R_TA_CONTENT_Y2), 0, 0, 0, 0);
+        MoveEdit(g_edTaDetail, SX(R_TA_DETAIL_X1), SY(R_TA_DETAIL_Y1), SX(R_TA_DETAIL_X2), SY(R_TA_DETAIL_Y2), 0, 0, 0, 0);
+        MoveEdit(g_edTaFile, SX(R_TA_FILE_X1), SY(R_TA_FILE_Y1), SX(R_TA_FILE_X2), SY(R_TA_FILE_Y2), 0, 0, 0, 0);
 
-        MoveEdit(g_edTaContent, SX(R_TA_SUBDETAIL_X1), SY(R_TA_SUBDETAIL_Y1),
-            SX(R_TA_SUBDETAIL_X2), SY(R_TA_SUBDETAIL_Y2), 0, 0, 0, 0);
 
-        MoveEdit(g_edTaDetail, SX(R_TA_DETAIL_X1), SY(R_TA_DETAIL_Y1),
-            SX(R_TA_DETAIL_X2), SY(R_TA_DETAIL_Y2), 0, 0, 0, 0);
 
-        MoveEdit(g_edTaFile, SX(R_TA_FILE_X1), SY(R_TA_FILE_Y1),
-            SX(R_TA_FILE_X2), SY(R_TA_FILE_Y2), 0, 0, 0, 0);
         return;
     }
 
@@ -864,21 +945,6 @@ void App_OnSize(HWND hWnd, int w, int h)
     InvalidateRect(hWnd, NULL, FALSE);
 }
 
-// =========================================================
-// [DO NOT TOUCH] 공통 뒤로가기
-// =========================================================
-static int HandleCommonBack(HWND hWnd, int x, int y)
-{
-    if (g_screen == SCR_START) return 0;
-
-    if (HitScaled(R_BACK_HIT_X1, R_BACK_HIT_Y1, R_BACK_HIT_X2, R_BACK_HIT_Y2, x, y) ||
-        HitScaled(R_BTN_BACK_X1, R_BTN_BACK_Y1, R_BTN_BACK_X2, R_BTN_BACK_Y2, x, y))
-    {
-        GoBack(hWnd);
-        return 1;
-    }
-    return 0;
-}
 
 static void ApplyMainHeaderTextsReal(void)
 {
@@ -897,9 +963,10 @@ static void ApplyMainHeaderTextsReal(void)
 
 
 // task_add helper (forward decl)
-static void Task_ClearRightEdits(void);
+
 static void Task_LoadToRightEdits(const TaskItem* t);
 static void Task_RefreshLeftList(void);
+
 
 
 void App_OnLButtonDown(HWND hWnd, int x, int y)
@@ -1062,6 +1129,7 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
                 MessageBoxW(hWnd, L"로그인 정보가 없습니다. 다시 로그인해 주세요.", L"팀 등록", MB_OK | MB_ICONERROR);
                 SAFE_LEAVE();
             }
+         
 
             TeamInfo out = { 0 };
             if (!Team_Create(team, task, code, g_currentUserId, &out)) {
@@ -1178,49 +1246,107 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
     }
 
     // -----------------------------------------------------
-    // TASK_ADD
-    // -----------------------------------------------------
+// TASK_ADD
+// -----------------------------------------------------
     if (g_screen == SCR_TASK_ADD)
     {
-        if (!g_currentTeamId[0]) {
-            MessageBoxW(hWnd, L"팀을 먼저 선택해 주세요(내 팀 저장 후)", L"과제", MB_OK | MB_ICONWARNING);
+       
+
+        if (HitScaled(R_TA_PAGE_PREV_X1, R_TA_PAGE_PREV_Y1, R_TA_PAGE_PREV_X2, R_TA_PAGE_PREV_Y2, x, y)) {
+            // 현재 페이지 상태 저장
+            Task_SaveCurrentPageState();
+
+            if (g_taskPage > 0) g_taskPage--;
+
+            // 페이지 이동 시: 일단 초기화(요구사항)
+            g_taskSelectedSlot = -1;
+            g_taskSelectedId = 0;          // ✅ 추가 
+            Task_RefreshLeftList();
+
+         
+            // 왼쪽으로 돌아왔으면 이전에 있던 내용 복원
+            Task_RestorePageStateForPage(g_taskPage);
+
+            InvalidateRect(hWnd, NULL, FALSE);
             SAFE_LEAVE();
         }
 
-        TaskItem* buf = (TaskItem*)calloc(512, sizeof(TaskItem));
-        if (!buf) return;
-        int n = Task_LoadAll(g_currentTeamId, buf, 512);
-        int base = g_taskPage * 4;
+        if (HitScaled(R_TA_PAGE_NEXT_X1, R_TA_PAGE_NEXT_Y1, R_TA_PAGE_NEXT_X2, R_TA_PAGE_NEXT_Y2, x, y)) {
+            // 현재 페이지 상태 저장
+            Task_SaveCurrentPageState();
 
-        if (HitScaled(R_TA_ITEM1_X1, R_TA_ITEM1_Y1, R_TA_ITEM1_X2, R_TA_ITEM1_Y2, x, y)) {
-            int idx = base + 0; if (idx < n) Task_LoadToRightEdits(&buf[idx]);
-            SAFE_LEAVE();
-        }
-        if (HitScaled(R_TA_ITEM2_X1, R_TA_ITEM2_Y1, R_TA_ITEM2_X2, R_TA_ITEM2_Y2, x, y)) {
-            int idx = base + 1; if (idx < n) Task_LoadToRightEdits(&buf[idx]);
-            SAFE_LEAVE();
-        }
-        if (HitScaled(R_TA_ITEM3_X1, R_TA_ITEM3_Y1, R_TA_ITEM3_X2, R_TA_ITEM3_Y2, x, y)) {
-            int idx = base + 2; if (idx < n) Task_LoadToRightEdits(&buf[idx]);
-            SAFE_LEAVE();
-        }
-        if (HitScaled(R_TA_ITEM4_X1, R_TA_ITEM4_Y1, R_TA_ITEM4_X2, R_TA_ITEM4_Y2, x, y)) {
-            int idx = base + 3; if (idx < n) Task_LoadToRightEdits(&buf[idx]);
-            SAFE_LEAVE();
-        }
-        free(buf);
+            if (g_taskPage < TASK_PAGE_STATE_MAX - 1) g_taskPage++;
 
+            // 오른쪽 이동 시: 자동 초기화(요구사항)
+            g_taskSelectedSlot = -1;
+            g_taskSelectedId = 0;
+            Task_RefreshLeftList();
+
+            // 다음 페이지에 저장된 상태가 있으면(이미 갔다온 페이지면) 복원
+            Task_RestorePageStateForPage(g_taskPage);
+
+            InvalidateRect(hWnd, NULL, FALSE);
+            SAFE_LEAVE();
+        }
+        // ✅ 왼쪽 과제 1~4칸 클릭 선택
+        {
+            int slot = -1;
+            if (HitScaled(R_TA_ITEM1_X1, R_TA_ITEM1_Y1, R_TA_ITEM1_X2, R_TA_ITEM1_Y2, x, y)) slot = 0;
+            else if (HitScaled(R_TA_ITEM2_X1, R_TA_ITEM2_Y1, R_TA_ITEM2_X2, R_TA_ITEM2_Y2, x, y)) slot = 1;
+            else if (HitScaled(R_TA_ITEM3_X1, R_TA_ITEM3_Y1, R_TA_ITEM3_X2, R_TA_ITEM3_Y2, x, y)) slot = 2;
+            else if (HitScaled(R_TA_ITEM4_X1, R_TA_ITEM4_Y1, R_TA_ITEM4_X2, R_TA_ITEM4_Y2, x, y)) slot = 3;
+
+            if (slot >= 0) {
+                if (!g_currentTeamId[0]) {
+                    MessageBoxW(hWnd, L"팀을 먼저 선택해 주세요.", L"과제", MB_OK | MB_ICONWARNING);
+                    SAFE_LEAVE();
+                }
+
+                TaskItem* list = (TaskItem*)calloc(512, sizeof(TaskItem));
+                int n = list ? Task_LoadAll(g_currentTeamId, list, 512) : 0;
+
+                int idx = g_taskPage * 4 + slot;
+
+                if (idx < n) {
+                    g_taskSelectedSlot = slot;
+                    g_taskSelectedId = list[idx].id;
+
+                    Task_LoadToRightEdits(&list[idx]);
+
+                    // 선택 상태 저장(페이지 복원용)
+                    Task_SaveCurrentPageState();
+                }
+                else {
+                    // 빈칸 클릭: 선택만 해제하고 오른쪽 비움
+                    g_taskSelectedSlot = -1;
+                    g_taskSelectedId = 0;
+                    Task_SaveCurrentPageState();
+                }
+
+                if (list) free(list);
+                InvalidateRect(hWnd, NULL, FALSE);
+                SAFE_LEAVE();
+            }
+        }
+
+
+        // 여기부터는 buf 더 이상 필요 없음
+ 
+
+        // 파일 비우기
         if (HitScaled(R_TA_BTN_FILE_CLEAR_X1, R_TA_BTN_FILE_CLEAR_Y1, R_TA_BTN_FILE_CLEAR_X2, R_TA_BTN_FILE_CLEAR_Y2, x, y)) {
             if (g_edTaFile) SetWindowTextW(g_edTaFile, L"");
             SAFE_LEAVE();
         }
 
+        // 다운로드
         if (HitScaled(R_TA_BTN_DOWNLOAD_X1, R_TA_BTN_DOWNLOAD_Y1, R_TA_BTN_DOWNLOAD_X2, R_TA_BTN_DOWNLOAD_Y2, x, y)) {
             MessageBoxW(hWnd, L"다운로드 처리 코드를 붙여야 함니다", L"TODO", MB_OK);
             SAFE_LEAVE();
         }
 
-        if (HitScaled(R_TA_BTN_FIND_X1, R_TA_BTN_FIND_Y1, R_TA_BTN_FIND_X2, R_TA_BTN_FIND_Y2, x, y))
+        // 조회
+        if (HitScaled(R_TA_SEARCH_X1, R_TA_SEARCH_Y1, R_TA_SEARCH_X2, R_TA_SEARCH_Y2, x, y))
         {
             wchar_t key[128] = { 0 };
             if (g_edTaSearch) GetWindowTextW(g_edTaSearch, key, 128);
@@ -1231,14 +1357,45 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
 
             TaskItem found = { 0 };
             if (Task_FindByTitle(g_currentTeamId, key, &found)) {
-                Task_LoadToRightEdits(&found);
+
+                // ✅ found가 실제 목록에서 몇 번째인지 찾아서 페이지/슬롯 맞추기
+                TaskItem* list = (TaskItem*)calloc(512, sizeof(TaskItem));
+                int n = list ? Task_LoadAll(g_currentTeamId, list, 512) : 0;
+
+                int idxFound = -1;
+                for (int i = 0; i < n; i++) {
+                    if (list[i].id == found.id) { idxFound = i; break; }
+                }
+
+                if (idxFound >= 0) {
+                    g_taskPage = idxFound / 4;
+                    g_taskSelectedSlot = idxFound % 4;
+
+                    Task_LoadToRightEdits(&found);
+                    Task_SaveCurrentPageState();   // ✅ 페이지 상태 저장
+                    Task_RefreshLeftList();        // ✅ 1~4,5~8 숫자 갱신
+
+                    InvalidateRect(hWnd, NULL, FALSE);
+                }
+                else {
+                    // 못 찾으면 그냥 오른쪽만 채우기
+                    g_taskSelectedSlot = -1;
+                    Task_LoadToRightEdits(&found);
+                    Task_SaveCurrentPageState();
+                    InvalidateRect(hWnd, NULL, FALSE);
+                }
+
+                if (list) free(list);
             }
             else {
                 MessageBoxW(hWnd, L"해당 키워드의 과제가 없습니다.", L"조회", MB_OK | MB_ICONINFORMATION);
             }
+
             SAFE_LEAVE();
         }
 
+
+        // 등록
         if (HitScaled(R_TA_BTN_ADD_X1, R_TA_BTN_ADD_Y1, R_TA_BTN_ADD_X2, R_TA_BTN_ADD_Y2, x, y))
         {
             TaskItem t = { 0 };
@@ -1259,12 +1416,13 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
                 SAFE_LEAVE();
             }
 
-            Task_ClearRightEdits();
+            g_taskSelectedSlot = -1;
             Task_RefreshLeftList();
             MessageBoxW(hWnd, L"등록 완료!", L"등록", MB_OK | MB_ICONINFORMATION);
             SAFE_LEAVE();
         }
 
+        // 수정
         if (HitScaled(R_TA_BTN_EDIT_X1, R_TA_BTN_EDIT_Y1, R_TA_BTN_EDIT_X2, R_TA_BTN_EDIT_Y2, x, y))
         {
             if (g_taskSelectedId == 0) {
@@ -1290,6 +1448,7 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
             SAFE_LEAVE();
         }
 
+        // 삭제
         if (HitScaled(R_TA_BTN_DEL_X1, R_TA_BTN_DEL_Y1, R_TA_BTN_DEL_X2, R_TA_BTN_DEL_Y2, x, y))
         {
             if (g_taskSelectedId == 0) {
@@ -1302,12 +1461,13 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
                 SAFE_LEAVE();
             }
 
-            Task_ClearRightEdits();
-            Task_RefreshLeftList();
+            g_taskSelectedSlot = -1;
+           Task_RefreshLeftList();
             MessageBoxW(hWnd, L"삭제 완료!", L"삭제", MB_OK | MB_ICONINFORMATION);
             SAFE_LEAVE();
         }
 
+        // 완료
         if (HitScaled(R_TA_BTN_DONE_X1, R_TA_BTN_DONE_Y1, R_TA_BTN_DONE_X2, R_TA_BTN_DONE_Y2, x, y))
         {
             if (g_taskSelectedId == 0) {
@@ -1322,17 +1482,6 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
 
             Task_RefreshLeftList();
             MessageBoxW(hWnd, L"완료 처리!", L"완료", MB_OK | MB_ICONINFORMATION);
-            SAFE_LEAVE();
-        }
-
-        if (HitScaled(R_TA_PAGE_PREV_X1, R_TA_PAGE_PREV_Y1, R_TA_PAGE_PREV_X2, R_TA_PAGE_PREV_Y2, x, y)) {
-            if (g_taskPage > 0) g_taskPage--;
-            Task_RefreshLeftList();
-            SAFE_LEAVE();
-        }
-        if (HitScaled(R_TA_PAGE_NEXT_X1, R_TA_PAGE_NEXT_Y1, R_TA_PAGE_NEXT_X2, R_TA_PAGE_NEXT_Y2, x, y)) {
-            g_taskPage++;
-            Task_RefreshLeftList();
             SAFE_LEAVE();
         }
 
@@ -1439,6 +1588,42 @@ void App_OnPaint(HWND hWnd, HDC hdc)
             DeleteObject(pen2);
         }
     }
+    // ✅ TASK_ADD: 왼쪽 선택 테두리 표시
+    if (g_screen == SCR_TASK_ADD)
+    {
+        // 4칸 전체 연한 테두리
+        RECT slots[4] = {
+            MakeRcScaled(R_TA_ITEM1_X1, R_TA_ITEM1_Y1, R_TA_ITEM1_X2, R_TA_ITEM1_Y2),
+            MakeRcScaled(R_TA_ITEM2_X1, R_TA_ITEM2_Y1, R_TA_ITEM2_X2, R_TA_ITEM2_Y2),
+            MakeRcScaled(R_TA_ITEM3_X1, R_TA_ITEM3_Y1, R_TA_ITEM3_X2, R_TA_ITEM3_Y2),
+            MakeRcScaled(R_TA_ITEM4_X1, R_TA_ITEM4_Y1, R_TA_ITEM4_X2, R_TA_ITEM4_Y2),
+        };
+
+        // 연한 테두리
+        HPEN penThin = CreatePen(PS_SOLID, 1, RGB(180, 200, 215));
+        HGDIOBJ oldPen = SelectObject(mem, penThin);
+        HGDIOBJ oldBrush = SelectObject(mem, GetStockObject(HOLLOW_BRUSH));
+        for (int i = 0; i < 4; i++) {
+            Rectangle(mem, slots[i].left, slots[i].top, slots[i].right, slots[i].bottom);
+        }
+        SelectObject(mem, oldBrush);
+        SelectObject(mem, oldPen);
+        DeleteObject(penThin);
+
+        // 선택된 칸 굵은 검정 테두리
+        if (g_taskSelectedSlot >= 0 && g_taskSelectedSlot < 4) {
+            RECT r = slots[g_taskSelectedSlot];
+            HPEN penBold = CreatePen(PS_SOLID, 2, RGB(0, 0, 0));
+            oldPen = SelectObject(mem, penBold);
+            oldBrush = SelectObject(mem, GetStockObject(HOLLOW_BRUSH));
+
+            Rectangle(mem, r.left - 2, r.top - 2, r.right + 2, r.bottom + 2);
+
+            SelectObject(mem, oldBrush);
+            SelectObject(mem, oldPen);
+            DeleteObject(penBold);
+        }
+    }
 
 
     // 디버그(라스트 클릭)
@@ -1505,6 +1690,9 @@ static void LayoutMyTeamStatics(void)
 // LayoutMyTeamStatics 바로 아래
 // =====================================================
 
+// =====================================================
+// TASK_ADD helper 함수들 (복붙용, 여기만 유지)
+// =====================================================
 
 static void Task_ClearRightEdits(void)
 {
@@ -1512,6 +1700,7 @@ static void Task_ClearRightEdits(void)
     if (g_edTaContent) SetWindowTextW(g_edTaContent, L"");
     if (g_edTaDetail)  SetWindowTextW(g_edTaDetail, L"");
     if (g_edTaFile)    SetWindowTextW(g_edTaFile, L"");
+
     g_taskSelectedId = 0;
 }
 
@@ -1529,38 +1718,36 @@ static void Task_LoadToRightEdits(const TaskItem* t)
 
 static void Task_RefreshLeftList(void)
 {
-    // ✅ 스택 대신 힙 사용 (Stack overflow 방지)
+    if (!g_currentTeamId[0]) {
+        if (g_edTaTask1) SetWindowTextW(g_edTaTask1, L"1.");
+        if (g_edTaTask2) SetWindowTextW(g_edTaTask2, L"2.");
+        if (g_edTaTask3) SetWindowTextW(g_edTaTask3, L"3.");
+        if (g_edTaTask4) SetWindowTextW(g_edTaTask4, L"4.");
+        return;
+    }
+
     TaskItem* buf = (TaskItem*)calloc(512, sizeof(TaskItem));
     if (!buf) return;
 
     int n = Task_LoadAll(g_currentTeamId, buf, 512);
     int base = g_taskPage * 4;
 
-    wchar_t t1[128] = L"", t2[128] = L"", t3[128] = L"", t4[128] = L"";
-
     for (int i = 0; i < 4; i++) {
         int idx = base + i;
-        if (idx < n) {
-            wchar_t line[140];
-            swprintf(line, 140, L"%d. %ls%ls",
-                i + 1,
-                buf[idx].title,
-                buf[idx].done ? L" (완료)" : L"");
 
-            if (i == 0) lstrcpynW(t1, line, 128);
-            if (i == 1) lstrcpynW(t2, line, 128);
-            if (i == 2) lstrcpynW(t3, line, 128);
-            if (i == 3) lstrcpynW(t4, line, 128);
-        }
+        wchar_t line[160] = L"";
+        if (idx < n) swprintf(line, 160, L"%d. %ls", idx + 1, buf[idx].title);
+        else         swprintf(line, 160, L"%d.", idx + 1);
+
+        if (i == 0 && g_edTaTask1) SetWindowTextW(g_edTaTask1, line);
+        if (i == 1 && g_edTaTask2) SetWindowTextW(g_edTaTask2, line);
+        if (i == 2 && g_edTaTask3) SetWindowTextW(g_edTaTask3, line);
+        if (i == 3 && g_edTaTask4) SetWindowTextW(g_edTaTask4, line);
     }
-
-    if (g_edTaTask1) SetWindowTextW(g_edTaTask1, t1);
-    if (g_edTaTask2) SetWindowTextW(g_edTaTask2, t2);
-    if (g_edTaTask3) SetWindowTextW(g_edTaTask3, t3);
-    if (g_edTaTask4) SetWindowTextW(g_edTaTask4, t4);
 
     free(buf);
 }
+
 
 // =========================================================
 // 디버그 오버레이
@@ -1604,21 +1791,14 @@ LRESULT App_OnDrawItemWndProc(HWND hWnd, WPARAM wParam, LPARAM lParam)
     }
     return FALSE;
 }
-
-// 마우스 이동 메시지 처리용 (main.c에서 이걸 호출하는 구조일 때)
 LRESULT App_OnMouseMoveWndProc(HWND hWnd, WPARAM wParam, LPARAM lParam)
 {
-    int x = GET_X_LPARAM(lParam);
-    int y = GET_Y_LPARAM(lParam);
-
-    // 필요 없으면 비워둬도 됨(링커용)
-    (void)wParam;
-    (void)x;
-    (void)y;
     (void)hWnd;
-
+    (void)wParam;
+    (void)lParam;
     return 0;
 }
+
 
 
 // =========================================================

@@ -120,7 +120,7 @@ extern int g_clientH;
 #define R_MAIN_BTN_DONE_X1      31
 #define R_MAIN_BTN_DONE_Y1      350
 #define R_MAIN_BTN_DONE_X2      97
-#define R_MAIN_BTN_DONE_Y2      399
+#define R_MAIN_BTN_DONE_Y2      399 
 
 // =========================================================
 // MAIN 오른쪽 메뉴 버튼
@@ -154,11 +154,11 @@ extern int g_clientH;
 #define R_TC_TEAM_X2   1025
 #define R_TC_TEAM_Y2   266
 
-
 #define R_TC_CODE_X1   845
 #define R_TC_CODE_Y1   310
 #define R_TC_CODE_X2   984
 #define R_TC_CODE_Y2   345
+
 // TEAM_CREATE: 저장 버튼
 #define R_TC_SAVE_X1  944
 #define R_TC_SAVE_Y1  151
@@ -198,96 +198,81 @@ extern int g_clientH;
 
 
 
-
-
 // =========================================================
-// MAIN 상단 팀명/과제명 텍스트박스
+// MAIN 상단 팀명/
 // =========================================================
 #define R_MAIN_TEAM_X1   211
 #define R_MAIN_TEAM_Y1   79
 #define R_MAIN_TEAM_X2   568
 #define R_MAIN_TEAM_Y2   104
 
-#define R_MAIN_TASK_X1   699
-#define R_MAIN_TASK_Y1   78
-#define R_MAIN_TASK_X2   1109
-#define R_MAIN_TASK_Y2   95
 
 
 // =========================================================
 // TASK_ADD 좌표 
 // =========================================================
 // TASK_ADD 상단 버튼들(원본 좌표)
-#define R_TA_BTN_ADD_X1   188
-#define R_TA_BTN_ADD_Y1   42
-#define R_TA_BTN_ADD_X2   378
-#define R_TA_BTN_ADD_Y2   84
+#define R_TA_BTN_ADD_X1   185
+#define R_TA_BTN_ADD_Y1   41
+#define R_TA_BTN_ADD_X2   303
+#define R_TA_BTN_ADD_Y2   83
 
-#define R_TA_BTN_EDIT_X1  403
-#define R_TA_BTN_EDIT_Y1  42
-#define R_TA_BTN_EDIT_X2  592
-#define R_TA_BTN_EDIT_Y2  83
+#define R_TA_BTN_EDIT_X1  342
+#define R_TA_BTN_EDIT_Y1  39
+#define R_TA_BTN_EDIT_X2  461
+#define R_TA_BTN_EDIT_Y2  81
 
-#define R_TA_BTN_DONE_X1  620
+#define R_TA_BTN_DONE_X1  650
 #define R_TA_BTN_DONE_Y1  39
-#define R_TA_BTN_DONE_X2  811
+#define R_TA_BTN_DONE_X2  808
 #define R_TA_BTN_DONE_Y2  82
 
-#define R_TA_BTN_FIND_X1  0
-#define R_TA_BTN_FIND_Y1  0
-#define R_TA_BTN_FIND_X2  0
-#define R_TA_BTN_FIND_Y2  0
 
-//파일 X표시
-#define R_TA_BTN_FILE_CLEAR_X1 0
-#define R_TA_BTN_FILE_CLEAR_Y1 0
-#define R_TA_BTN_FILE_CLEAR_X2 0
-#define R_TA_BTN_FILE_CLEAR_Y2 0
-
-#define R_TA_BTN_DOWNLOAD_X1 0
-#define R_TA_BTN_DOWNLOAD_Y1 0
-#define R_TA_BTN_DOWNLOAD_X2 0 
-#define R_TA_BTN_DOWNLOAD_Y2 0
 
 // 삭제 버튼(너 BMP에 있으면)
-#define R_TA_BTN_DEL_X1   0
-#define R_TA_BTN_DEL_Y1   0
-#define R_TA_BTN_DEL_X2   0
-#define R_TA_BTN_DEL_Y2   0
+#define R_TA_BTN_DEL_X1  493
+#define R_TA_BTN_DEL_Y1  40
+#define R_TA_BTN_DEL_X2  612
+#define R_TA_BTN_DEL_Y2  80
+//파일 X표시
+#define R_TA_BTN_FILE_CLEAR_X1 964
+#define R_TA_BTN_FILE_CLEAR_Y1 596
+#define R_TA_BTN_FILE_CLEAR_X2 997
+#define R_TA_BTN_FILE_CLEAR_Y2 619
+
+#define R_TA_BTN_DOWNLOAD_X1 1020
+#define R_TA_BTN_DOWNLOAD_Y1 593
+#define R_TA_BTN_DOWNLOAD_X2 1173
+#define R_TA_BTN_DOWNLOAD_Y2 621
 
 // 페이지 좌/우 화살표(있으면)
-#define R_TA_PAGE_PREV_X1 0
-#define R_TA_PAGE_PREV_Y1 0
-#define R_TA_PAGE_PREV_X2 0
-#define R_TA_PAGE_PREV_Y2 0
+#define R_TA_PAGE_PREV_X1 254
+#define R_TA_PAGE_PREV_Y1 657
+#define R_TA_PAGE_PREV_X2 278
+#define R_TA_PAGE_PREV_Y2 686
 
-#define R_TA_PAGE_NEXT_X1 0
-#define R_TA_PAGE_NEXT_Y1 0
-#define R_TA_PAGE_NEXT_X2 0
-#define R_TA_PAGE_NEXT_Y2 0
+#define R_TA_PAGE_NEXT_X1 329
+#define R_TA_PAGE_NEXT_Y1 656
+#define R_TA_PAGE_NEXT_X2 358
+#define R_TA_PAGE_NEXT_Y2 686
 
-
-
-
-
-
-
-#define R_TA_ITEM1_X1  123
+//과제목록들 1~2
+#define R_TA_ITEM1_X1  92
 #define R_TA_ITEM1_Y1  253
 #define R_TA_ITEM1_X2  544
 #define R_TA_ITEM1_Y2  283
 
-#define R_TA_ITEM2_X1  122
+#define R_TA_ITEM2_X1  92
 #define R_TA_ITEM2_Y1  328
 #define R_TA_ITEM2_X2  547
 #define R_TA_ITEM2_Y2  352
 
-#define R_TA_ITEM3_X1  122
+#define R_TA_ITEM3_X1  92
 #define R_TA_ITEM3_Y1  405
 #define R_TA_ITEM3_X2  548
 #define R_TA_ITEM3_Y2  432
 
-#define R_TA_ITEM4_X1  121
+#define R_TA_ITEM4_X1  92
 #define R_TA_ITEM4_Y1  484
 #define R_TA_ITEM4_X2  546
 #define R_TA_ITEM4_Y2  511
@@ -297,28 +282,36 @@ extern int g_clientH;
 #define R_TA_TITLE_X2  1162
 #define R_TA_TITLE_Y2  203
 
-#define R_TA_DETAIL_X1  759
-#define R_TA_DETAIL_Y1  250
-#define R_TA_DETAIL_X2  1171
-#define R_TA_DETAIL_Y2  528
+// 조회 입력칸
+#define R_TA_SEARCH_X1   912
+#define R_TA_SEARCH_Y1   55
+#define R_TA_SEARCH_X2   1224
+#define R_TA_SEARCH_Y2   75
 
+// 제목
+#define R_TA_TITLE_X1    761
+#define R_TA_TITLE_Y1    186
+#define R_TA_TITLE_X2    1162
+#define R_TA_TITLE_Y2    203
 
-#define R_TA_SEARCH_X1  912  // 조회가 메인에 겹쳐보임
-#define R_TA_SEARCH_Y1  55
-#define R_TA_SEARCH_X2  1262
-#define R_TA_SEARCH_Y2  75
+// 내용(멀티라인 큰 박스)
+#define R_TA_CONTENT_X1  759
+#define R_TA_CONTENT_Y1  250
+#define R_TA_CONTENT_X2  1171
+#define R_TA_CONTENT_Y2  528
 
+// 상세사항(작은 줄)
+#define R_TA_DETAIL_X1   785
+#define R_TA_DETAIL_Y1   544
+#define R_TA_DETAIL_X2   1172
+#define R_TA_DETAIL_Y2   568
 
-#define R_TA_FILE_X1  782
-#define R_TA_FILE_Y1  601
-#define R_TA_FILE_X2  951
-#define R_TA_FILE_Y2  628
+// 파일
+#define R_TA_FILE_X1     754
+#define R_TA_FILE_Y1     601
+#define R_TA_FILE_X2     951
+#define R_TA_FILE_Y2     628
 
-
-#define R_TA_SUBDETAIL_X1  787
-#define R_TA_SUBDETAIL_Y1  541
-#define R_TA_SUBDETAIL_X2  1151
-#define R_TA_SUBDETAIL_Y2  564
 
 /// ================================
 // BOARD 
@@ -353,10 +346,3 @@ extern int g_clientH;
 #define R_BD_BTN_DONE_X2  1040
 #define R_BD_BTN_DONE_Y2  120
 
-
-
-//뒤로가기버튼
-#define R_BACK_HIT_X1 1113   
-#define R_BACK_HIT_Y1 21
-#define R_BACK_HIT_X2 1301
-#define R_BACK_HIT_Y2 53
