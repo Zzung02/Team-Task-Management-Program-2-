@@ -114,6 +114,8 @@ wchar_t g_currentTeamId[64] = L"";
 // =========================================================
 static wchar_t g_mainTeamText[128] = L"";
 static wchar_t g_mainTaskText[128] = L"";
+static wchar_t g_mainCodeText[128] = L"";
+static HWND g_stMainCode = NULL;
 
 // =========================================================
 // [DO NOT TOUCH] 화면 히스토리(뒤로가기)
@@ -261,6 +263,7 @@ typedef struct {
     wchar_t team[128];
     wchar_t task[128];
     wchar_t teamId[64];
+    wchar_t joinCode[64];
 } MyTeamInfo;
 
 static MyTeamInfo g_myTeams[MYTEAM_SLOT_MAX];
@@ -279,6 +282,8 @@ static int LoadMyTeams_FromMembers(const wchar_t* userId)
         g_myTeams[i].team[0] = 0;
         g_myTeams[i].task[0] = 0;
         g_myTeams[i].teamId[0] = 0;
+        g_myTeams[i].joinCode[0] = 0;
+
     }
 
     if (!userId || !userId[0]) return 0;
@@ -317,8 +322,9 @@ static int LoadMyTeams_FromMembers(const wchar_t* userId)
             lstrcpynW(g_myTeams[count].team, t.teamName, 128);
             lstrcpynW(g_myTeams[count].task, t.taskName, 128);
             lstrcpynW(g_myTeams[count].teamId, t.teamId, 64);
-            // ✅ 여기엔 teamId 저장(중요)
+            lstrcpynW(g_myTeams[count].joinCode, t.joinCode, 64);
             count++;
+
         }
     }
 
@@ -360,8 +366,9 @@ static void ApplyMyTeamTextsToUI(void)
             buf[0] = 0;
         }
         else {
-            // 팀명 (과제명)
-            swprintf(buf, 260, L"%s  (%s)", g_myTeams[i].team, g_myTeams[i].task);
+            swprintf(buf, 260, L"%s  (%s)  [코드:%s]",
+                g_myTeams[i].team, g_myTeams[i].task, g_myTeams[i].joinCode);
+
         }
         SetWindowTextW(g_stMyTeam[i], buf);
     }
@@ -468,6 +475,17 @@ static void CreateControlsForScreen(HWND hWnd, Screen s)
     {
         g_edMainTeamName = CreateEdit(hWnd, 601, 0);
         g_edMainTaskName = CreateEdit(hWnd, 602, 0);
+        
+        if (!g_stMainCode) {
+            g_stMainCode = CreateWindowExW(
+                0, L"STATIC", L"",
+                WS_CHILD | SS_LEFT,
+                0, 0, 10, 10,
+                hWnd, (HMENU)(INT_PTR)6501,
+                GetModuleHandleW(NULL), NULL
+            );
+            SendMessageW(g_stMainCode, WM_SETFONT, (WPARAM)GetUIFont(), TRUE);
+        }
 
         if (g_edMainTeamName) SetWindowTextW(g_edMainTeamName, g_mainTeamText);
         if (g_edMainTaskName) SetWindowTextW(g_edMainTaskName, g_mainTaskText);
@@ -598,6 +616,12 @@ static void RelayoutControls(HWND hWnd)
 
         MoveEdit(g_edMainTaskName, SX(R_MAIN_TASK_X1), SY(R_MAIN_TASK_Y1),
             SX(R_MAIN_TASK_X2), SY(R_MAIN_TASK_Y2), 0, 0, 0, 0);
+
+        MoveWindow(g_stMainCode,SX(R_MAIN_TASK_X1), SY(R_MAIN_TASK_Y2 + 6),
+            SX(R_MAIN_TASK_X2) - SX(R_MAIN_TASK_X1),
+            SY(R_MAIN_TASK_Y2 + 28) - SY(R_MAIN_TASK_Y2 + 6),
+            TRUE
+        );
     }
 
 
@@ -859,7 +883,14 @@ static void ApplyMainHeaderTextsReal(void)
 {
     if (g_edMainTeamName) SetWindowTextW(g_edMainTeamName, g_mainTeamText);
     if (g_edMainTaskName) SetWindowTextW(g_edMainTaskName, g_mainTaskText);
+
+    if (g_stMainCode) {
+        wchar_t buf[160];
+        swprintf(buf, 160, L"참여코드: %s", g_mainCodeText);
+        SetWindowTextW(g_stMainCode, buf);
+    }
 }
+
 
 // =========================================================
 // 클릭 처리
@@ -996,39 +1027,27 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
                 return;
             }
 
-        
-            // ✅ 파일 저장 (team.c 사용) - 진짜 Team_Create(5인자) 호출
+            if (g_currentUserId[0] == 0) {
+                MessageBoxW(hWnd, L"로그인 정보가 없습니다. 다시 로그인해 주세요.", L"팀 등록", MB_OK | MB_ICONERROR);
+                return;
+            }
+
             TeamInfo out = { 0 };
             if (!Team_Create(team, task, code, g_currentUserId, &out)) {
                 MessageBoxW(hWnd, L"팀 등록 실패!\n(코드 중복이거나 파일 저장 오류일 수 있음)", L"팀 등록", MB_OK | MB_ICONERROR);
                 return;
             }
 
-            // ✅ 현재 팀 ID 저장
+            // ✅ 현재 팀 확정
             lstrcpynW(g_currentTeamId, out.teamId, 64);
 
-            // ✅ MAIN 상단 반영
-            lstrcpynW(g_mainTeamText, team, 128);
-            lstrcpynW(g_mainTaskText, task, 128);
+            // ✅ 메인 상단: 팀명 + (과제명칸에) 참여코드 표시
+            lstrcpynW(g_mainTeamText, out.teamName, 128);
+            lstrcpynW(g_mainTaskText, out.joinCode, 128);
 
-            // ✅ 슬롯 갱신
+            // ✅ 내 팀 데이터 갱신(다음에 MYTEAM 들어가면 바로 보임)
             LoadMyTeams_FromMembers(g_currentUserId);
             ApplyMyTeamTextsToUI();
-
-            MessageBoxW(hWnd, L"팀 등록 완료!", L"팀 등록", MB_OK | MB_ICONINFORMATION);
-            SwitchScreen(hWnd, SCR_MAIN);
-            ApplyMainHeaderTextsReal();
-            return;
-
-
-            // ✅ MAIN 상단 반영
-            lstrcpynW(g_mainTeamText, team, 128);
-            lstrcpynW(g_mainTaskText, task, 128);
-
-            // ✅슬롯 갱신(다음에 들어가면 보이게, 지금도 있으면 갱신)
-            LoadMyTeams_FromMembers(g_currentUserId);
-            ApplyMyTeamTextsToUI();
-
 
             MessageBoxW(hWnd, L"팀 등록 완료!", L"팀 등록", MB_OK | MB_ICONINFORMATION);
             SwitchScreen(hWnd, SCR_MAIN);
@@ -1038,10 +1057,11 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
         return;
     }
 
-    // MYTEAM: 슬롯 선택(테두리 표시용) + 저장 버튼
+
+    // MYTEAM: 슬롯 선택(테두리 표시용) + 저장 버튼(확정+전환)
     if (g_screen == SCR_MYTEAM)
     {
-        // 0) 저장 버튼
+        // 1) 저장 버튼: 여기서만 확정 + 화면전환
         if (HitScaled(R_MYTEAM_SAVE_X1, R_MYTEAM_SAVE_Y1, R_MYTEAM_SAVE_X2, R_MYTEAM_SAVE_Y2, x, y))
         {
             if (g_myTeamSelected < 0 || g_myTeamSelected >= MYTEAM_SLOT_MAX ||
@@ -1051,9 +1071,9 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
                 return;
             }
 
-            // 선택된 팀 확정 (메인 상단 텍스트 + 현재 팀 ID)
+            // ✅ 선택된 팀 확정 (메인 상단 텍스트 + 현재 팀 ID)
             lstrcpynW(g_mainTeamText, g_myTeams[g_myTeamSelected].team, 128);
-            lstrcpynW(g_mainTaskText, g_myTeams[g_myTeamSelected].task, 128);
+            lstrcpynW(g_mainTaskText, g_myTeams[g_myTeamSelected].joinCode, 128);
             lstrcpynW(g_currentTeamId, g_myTeams[g_myTeamSelected].teamId, 64);
 
             SwitchScreen(hWnd, SCR_MAIN);
@@ -1061,60 +1081,87 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
             return;
         }
 
-
-
-
-        // ✅ 1) (기존) 슬롯 클릭 처리
-        RECT rc = MakeRcScaled(R_MYTEAM_LIST_X1, R_MYTEAM_LIST_Y1, R_MYTEAM_LIST_X2, R_MYTEAM_LIST_Y2);
-        POINT pt = { x, y };
-
-        if (PtInRect(&rc, pt))
+        // 2) 슬롯 클릭: 선택만 (전환 X)
+        for (int i = 0; i < MYTEAM_SLOT_MAX; i++)
         {
-            int hh = rc.bottom - rc.top;
-            int slotH = (hh > 0) ? (hh / MYTEAM_SLOT_MAX) : 0;
+            if (!g_stMyTeam[i]) continue;
+            if (g_myTeams[i].team[0] == 0) continue; // 빈칸 선택 금지
 
-            if (slotH > 0) {
-                int idx = (y - rc.top) / slotH;
-                if (idx < 0) idx = 0;
-                if (idx >= MYTEAM_SLOT_MAX) idx = MYTEAM_SLOT_MAX - 1;
+            RECT r;
+            GetWindowRect(g_stMyTeam[i], &r);
 
-                // 빈 슬롯 클릭 방지
-                if (g_myTeams[idx].team[0] != 0) {
-                    g_myTeamSelected = idx;
+            POINT p1 = { r.left, r.top };
+            POINT p2 = { r.right, r.bottom };
+            ScreenToClient(hWnd, &p1);
+            ScreenToClient(hWnd, &p2);
 
-                    // ✅ 로그인 성공 -> 메인으로만 이동 (헤더/선택팀은 건드리지 않음)
-                    SwitchScreen(hWnd, SCR_MAIN);
-                    ApplyMainHeaderTextsReal(); // (있으면 유지, 없어도 됨)
-                    return;
+            RECT rcSlot = { p1.x, p1.y, p2.x, p2.y };
+            POINT pt = { x, y };
 
-
-                    InvalidateRect(hWnd, NULL, FALSE);
-                }
-
+            if (PtInRect(&rcSlot, pt))
+            {
+                g_myTeamSelected = i;              // ✅ 선택만
+                InvalidateRect(hWnd, NULL, FALSE); // ✅ 검은 테두리 갱신
+                return;
             }
         }
 
+        // ✅ MYTEAM에서는 다른 화면 처리로 넘어가면 안 됨
         return;
     }
 
-    // TEAM_JOIN
-    if (g_screen == SCR_TEAM_JOIN)
-    {
-        if (HitScaled(R_TJ_SAVE_X1, R_TJ_SAVE_Y1, R_TJ_SAVE_X2, R_TJ_SAVE_Y2, x, y))
+
+        // TEAM_JOIN
+        if (g_screen == SCR_TEAM_JOIN)
         {
-            MessageBoxW(hWnd, L"팀 참여 완료!", L"팀 참여", MB_OK | MB_ICONINFORMATION);
-            SwitchScreen(hWnd, SCR_MAIN);
+            if (HitScaled(R_TJ_SAVE_X1, R_TJ_SAVE_Y1, R_TJ_SAVE_X2, R_TJ_SAVE_Y2, x, y))
+            {
+                wchar_t joinCode[128] = { 0 };
+                GetWindowTextW(g_edTjCode, joinCode, 128);
+
+                if (joinCode[0] == 0) {
+                    MessageBoxW(hWnd, L"참여 코드를 입력해 주세요.", L"팀 참여", MB_OK | MB_ICONWARNING);
+                    return;
+                }
+                if (g_currentUserId[0] == 0) {
+                    MessageBoxW(hWnd, L"로그인 정보가 없습니다. 다시 로그인해 주세요.", L"팀 참여", MB_OK | MB_ICONERROR);
+                    return;
+                }
+
+                TeamInfo out = { 0 };
+                if (!Team_JoinByCode(joinCode, g_currentUserId, &out)) {
+                    MessageBoxW(hWnd, L"팀 참여 실패!\n(코드가 없거나 이미 가입했을 수 있음)", L"팀 참여", MB_OK | MB_ICONERROR);
+                    return;
+                }
+
+                // ✅ 현재 팀 확정
+                lstrcpynW(g_mainTeamText, g_myTeams[g_myTeamSelected].team, 128);
+                lstrcpynW(g_mainTaskText, g_myTeams[g_myTeamSelected].task, 128);      // ✅ 과제명 유지
+                lstrcpynW(g_mainCodeText, g_myTeams[g_myTeamSelected].joinCode, 128);  // ✅ 코드 표시
+                SwitchScreen(hWnd, SCR_MAIN);
+                ApplyMainHeaderTextsReal();
+                return;
+
+                // ✅ 내 팀 갱신
+                LoadMyTeams_FromMembers(g_currentUserId);
+                ApplyMyTeamTextsToUI();
+
+                MessageBoxW(hWnd, L"팀 참여 완료!", L"팀 참여", MB_OK | MB_ICONINFORMATION);
+                SwitchScreen(hWnd, SCR_MAIN);
+                ApplyMainHeaderTextsReal();
+                return;
+            }
             return;
         }
-        return;
+
+
+        // BOARD
+        if (g_screen == SCR_BOARD) {
+            if (Board_OnClick(hWnd, x, y)) return;
+            return;
+        }
     }
 
-    // BOARD
-    if (g_screen == SCR_BOARD) {
-        if (Board_OnClick(hWnd, x, y)) return;
-        return;
-    }
-}
 
 // =========================================================
 // Paint
