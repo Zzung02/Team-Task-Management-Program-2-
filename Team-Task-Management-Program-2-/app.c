@@ -1095,6 +1095,7 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
             ScreenToClient(hWnd, &p1);
             ScreenToClient(hWnd, &p2);
 
+
             RECT rcSlot = { p1.x, p1.y, p2.x, p2.y };
             POINT pt = { x, y };
 
