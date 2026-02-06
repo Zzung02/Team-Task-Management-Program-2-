@@ -1,4 +1,4 @@
-// task.h
+ï»¿// task.h
 #pragma once
 #include <windows.h>
 
@@ -7,12 +7,12 @@
 #define TASK_FILE_MAX    260
 
 typedef struct TaskItem {
-    int     id;                 // ³»ºÎ ½Äº°ÀÚ(ÀÚµ¿ Áõ°¡)
+    int     id;                 // ë‚´ë¶€ ì‹ë³„ì(ìë™ ì¦ê°€)
     int     done;               // 0/1
     wchar_t title[TASK_TITLE_MAX];
     wchar_t content[TASK_TEXT_MAX];
     wchar_t detail[TASK_TEXT_MAX];
-    wchar_t file[TASK_FILE_MAX]; // URL ¶Ç´Â attachments\...\xxx.ext
+    wchar_t file[TASK_FILE_MAX]; // URL ë˜ëŠ” attachments\...\xxx.ext
 } TaskItem;
 
 int  Task_LoadAll(const wchar_t* teamId, TaskItem* outArr, int maxCount);
@@ -20,8 +20,8 @@ int  Task_SaveAll(const wchar_t* teamId, const TaskItem* arr, int count);
 
 int  Task_NextId(const TaskItem* arr, int count);
 
-int  Task_Add(const wchar_t* teamId, const TaskItem* item);                 // Ãß°¡
-int  Task_Update(const wchar_t* teamId, const TaskItem* item);              // id ±âÁØ ¼öÁ¤
-int  Task_Delete(const wchar_t* teamId, int id);                            // »èÁ¦
-int  Task_SetDone(const wchar_t* teamId, int id, int done);                 // ¿Ï·á Åä±Û
-int  Task_FindByTitle(const wchar_t* teamId, const wchar_t* keyword, TaskItem* outItem); // Á¶È¸(Á¦¸ñ Æ÷ÇÔ)
+int  Task_Add(const wchar_t* teamId, const TaskItem* item);                 // ì¶”ê°€
+int  Task_Update(const wchar_t* teamId, const TaskItem* item);              // id ê¸°ì¤€ ìˆ˜ì •
+int  Task_Delete(const wchar_t* teamId, int id);                            // ì‚­ì œ
+int  Task_SetDone(const wchar_t* teamId, int id, int done);                 // ì™„ë£Œ í† ê¸€
+int  Task_FindByTitle(const wchar_t* teamId, const wchar_t* keyword, TaskItem* outItem); // ì¡°íšŒ(ì œëª© í¬í•¨)

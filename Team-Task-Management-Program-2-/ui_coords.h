@@ -350,3 +350,12 @@ extern int g_clientH;
 #define R_BD_BTN_DONE_X2  1040
 #define R_BD_BTN_DONE_Y2  120
 
+
+
+// =========================================================
+// 공통 뒤로가기 버튼 (모든 화면)
+// =========================================================
+#define R_BTN_BACK_GLOBAL_X1   1152
+#define R_BTN_BACK_GLOBAL_Y1   4
+#define R_BTN_BACK_GLOBAL_X2   1308    // 버튼 크기는 적당히
+#define R_BTN_BACK_GLOBAL_Y2   36
