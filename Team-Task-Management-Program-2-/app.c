@@ -19,6 +19,7 @@
 // task_add helper (forward decl)
 static void Task_LoadToRightEdits(const TaskItem* t);
 static void Task_RefreshLeftList(void);
+static void Task_ClearRightEdits(void);
 
 // =========================================================
 // [DO NOT TOUCH] 좌표/히트테스트 유틸
@@ -324,7 +325,6 @@ static HWND g_edMainTaskName = NULL;
 static HWND g_edSearch = NULL;
 
 static HWND g_edTcTeam = NULL;
-static HWND g_edTcTask = NULL;
 static HWND g_edTcCode = NULL;
 
 // TEAM_JOIN
@@ -499,7 +499,6 @@ static void DestroyAllEdits(void)
     if (g_edSearch) { RemovePropW(g_edSearch, PROP_OLDPROC); DestroyWindow(g_edSearch); g_edSearch = NULL; }
 
     if (g_edTcTeam) { RemovePropW(g_edTcTeam, PROP_OLDPROC); DestroyWindow(g_edTcTeam); g_edTcTeam = NULL; }
-    if (g_edTcTask) { RemovePropW(g_edTcTask, PROP_OLDPROC); DestroyWindow(g_edTcTask); g_edTcTask = NULL; }
     if (g_edTcCode) { RemovePropW(g_edTcCode, PROP_OLDPROC); DestroyWindow(g_edTcCode); g_edTcCode = NULL; }
 
     if (g_edTjTeam) { RemovePropW(g_edTjTeam, PROP_OLDPROC); DestroyWindow(g_edTjTeam); g_edTjTeam = NULL; }
@@ -616,7 +615,6 @@ static void CreateControlsForScreen(HWND hWnd, Screen s)
         SendMessageW(g_edTaTask3, WM_SETFONT, (WPARAM)GetUIFont(), TRUE);
         SendMessageW(g_edTaTask4, WM_SETFONT, (WPARAM)GetUIFont(), TRUE);
 
-        ShowWindow(g_edTaTask1, SW_SHOW);
         ShowWindow(g_edTaTask2, SW_SHOW);
         ShowWindow(g_edTaTask3, SW_SHOW);
         ShowWindow(g_edTaTask4, SW_SHOW);
@@ -701,7 +699,6 @@ static void RelayoutControls(HWND hWnd)
     if (g_edSearch) ShowWindow(g_edSearch, SW_HIDE);
 
     if (g_edTcTeam) ShowWindow(g_edTcTeam, SW_HIDE);
-    if (g_edTcTask) ShowWindow(g_edTcTask, SW_HIDE);
     if (g_edTcCode) ShowWindow(g_edTcCode, SW_HIDE);
 
     if (g_edTjTeam) ShowWindow(g_edTjTeam, SW_HIDE);
@@ -725,7 +722,7 @@ static void RelayoutControls(HWND hWnd)
 
         MoveEdit(g_edMainTeamName, SX(R_MAIN_TEAM_X1), SY(R_MAIN_TEAM_Y1),
             SX(R_MAIN_TEAM_X2), SY(R_MAIN_TEAM_Y2), 0, 0, 0, 0);
-    };
+    }
 
     // MYTEAM 슬롯도 기본은 숨김 (해당 화면에서만 보이게)
     ShowMyTeamStatics(0);
@@ -795,7 +792,6 @@ static void RelayoutControls(HWND hWnd)
     // TEAM_CREATE
     if (g_screen == SCR_TEAM_CREATE) {
         ShowWindow(g_edTcTeam, SW_SHOW);
-        ShowWindow(g_edTcTask, SW_SHOW);
         ShowWindow(g_edTcCode, SW_SHOW);
 
         MoveEdit(g_edTcTeam, SX(R_TC_TEAM_X1), SY(R_TC_TEAM_Y1),
@@ -1114,8 +1110,8 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
     }
 
     // -----------------------------------------------------
-    // TEAM_CREATE
-    // -----------------------------------------------------
+// TEAM_CREATE
+// -----------------------------------------------------
     if (g_screen == SCR_TEAM_CREATE)
     {
         if (HitScaled(R_TC_SAVE_X1, R_TC_SAVE_Y1, R_TC_SAVE_X2, R_TC_SAVE_Y2, x, y))
@@ -1130,7 +1126,6 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
                 MessageBoxW(hWnd, L"팀명/코드를 모두 입력해 주세요.", L"팀 등록", MB_OK | MB_ICONWARNING);
                 SAFE_LEAVE();
             }
-
 
             TeamInfo out = { 0 };
             if (!Team_Create(team, code, g_currentUserId, &out)) {
@@ -1152,6 +1147,7 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
 
         SAFE_LEAVE();
     }
+
 
     // -----------------------------------------------------
     // MYTEAM
@@ -1247,48 +1243,41 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
     }
 
     // -----------------------------------------------------
-// TASK_ADD
-// -----------------------------------------------------
-    if (g_screen == SCR_TASK_ADD)
+    // TASK_ADD
+    // -----------------------------------------------------
+    // 삭제(텍스트만 비우기: 슬롯은 유지)
+    if (HitScaled(R_TA_BTN_DEL_X1, R_TA_BTN_DEL_Y1, R_TA_BTN_DEL_X2, R_TA_BTN_DEL_Y2, x, y))
     {
-
-
-        if (HitScaled(R_TA_PAGE_PREV_X1, R_TA_PAGE_PREV_Y1, R_TA_PAGE_PREV_X2, R_TA_PAGE_PREV_Y2, x, y)) {
-            // 현재 페이지 상태 저장
-            Task_SaveCurrentPageState();
-
-            if (g_taskPage > 0) g_taskPage--;
-
-            // 페이지 이동 시: 일단 초기화(요구사항)
-            g_taskSelectedSlot = -1;
-            g_taskSelectedId = 0;          // ✅ 추가 
-            Task_RefreshLeftList();
-
-
-            // 왼쪽으로 돌아왔으면 이전에 있던 내용 복원
-            Task_RestorePageStateForPage(g_taskPage);
-
-            InvalidateRect(hWnd, NULL, FALSE);
+        if (g_taskSelectedId == 0) {
+            MessageBoxW(hWnd, L"삭제(비우기)할 과제를 선택해 주세요.", L"삭제", MB_OK | MB_ICONWARNING);
             SAFE_LEAVE();
         }
 
-        if (HitScaled(R_TA_PAGE_NEXT_X1, R_TA_PAGE_NEXT_Y1, R_TA_PAGE_NEXT_X2, R_TA_PAGE_NEXT_Y2, x, y)) {
-            // 현재 페이지 상태 저장
-            Task_SaveCurrentPageState();
+        // ✅ “행 삭제”가 아니라 “내용 비우기(soft delete)”
+        TaskItem t = { 0 };
+        t.id = g_taskSelectedId;
+        t.done = 0;                 // 비우면 완료도 해제(원하면 1 유지 가능)
+        t.title[0] = 0;
+        t.content[0] = 0;
+        t.detail[0] = 0;
+        t.file[0] = 0;
 
-            if (g_taskPage < TASK_PAGE_STATE_MAX - 1) g_taskPage++;
-
-            // 오른쪽 이동 시: 자동 초기화(요구사항)
-            g_taskSelectedSlot = -1;
-            g_taskSelectedId = 0;
-            Task_RefreshLeftList();
-
-            // 다음 페이지에 저장된 상태가 있으면(이미 갔다온 페이지면) 복원
-            Task_RestorePageStateForPage(g_taskPage);
-
-            InvalidateRect(hWnd, NULL, FALSE);
+        if (!Task_Update(g_currentTeamId, &t)) {
+            MessageBoxW(hWnd, L"삭제(비우기) 실패", L"삭제", MB_OK | MB_ICONERROR);
             SAFE_LEAVE();
         }
+
+        // 오른쪽 텍스트박스는 그대로 “빈 값” 상태로 유지
+        Task_ClearRightEdits();
+
+        // 선택 유지/표시 갱신
+        Task_SaveCurrentPageState();
+        Task_RefreshLeftList();
+
+        MessageBoxW(hWnd, L"삭제 되었습니다.", L"삭제", MB_OK | MB_ICONINFORMATION);
+        SAFE_LEAVE();
+    }
+
         // ✅ 왼쪽 과제 1~4칸 클릭 선택
         {
             int slot = -1;
@@ -1469,7 +1458,7 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
             SAFE_LEAVE();
         }
 
-        // 완료
+        /// 완료
         if (HitScaled(R_TA_BTN_DONE_X1, R_TA_BTN_DONE_Y1, R_TA_BTN_DONE_X2, R_TA_BTN_DONE_Y2, x, y))
         {
             if (g_taskSelectedId == 0) {
@@ -1482,13 +1471,15 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
                 SAFE_LEAVE();
             }
 
+            g_taskSelectedSlot = -1;
+            Task_ClearRightEdits();
+            Task_SaveCurrentPageState();
+
             Task_RefreshLeftList();
             MessageBoxW(hWnd, L"완료 처리!", L"완료", MB_OK | MB_ICONINFORMATION);
             SAFE_LEAVE();
         }
 
-        SAFE_LEAVE();
-    }
 
     // -----------------------------------------------------
     // BOARD

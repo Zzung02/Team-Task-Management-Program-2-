@@ -1,8 +1,9 @@
-﻿// team.c
+﻿// team.c  (taskName 제거 + 구형 5칸 호환 파싱)
 #define _CRT_SECURE_NO_WARNINGS
 #include "team.h"
 #include <stdio.h>
 #include <wchar.h>
+#include <stdlib.h>
 
 static FILE* OpenUtf8Read(const wchar_t* path)
 {
@@ -28,6 +29,7 @@ static void TrimNewline(wchar_t* s)
     }
 }
 
+// line: a|b|c
 static int Split3(const wchar_t* line,
     wchar_t* a, int an,
     wchar_t* b, int bn,
@@ -52,7 +54,7 @@ static int Split3(const wchar_t* line,
     return 1;
 }
 
-// ✅ 신규: 4칸 teamId|teamName|joinCode|owner
+// line: a|b|c|d
 static int Split4(const wchar_t* line,
     wchar_t* a, int an,
     wchar_t* b, int bn,
@@ -71,6 +73,7 @@ static int Split4(const wchar_t* line,
     wchar_t* t2 = wcstok(NULL, L"|", &ctx);
     wchar_t* t3 = wcstok(NULL, L"|", &ctx);
     wchar_t* t4 = wcstok(NULL, L"|", &ctx);
+
     if (!t1 || !t2 || !t3 || !t4) return 0;
 
     wcsncpy(a, t1, an - 1); a[an - 1] = 0;
@@ -80,32 +83,39 @@ static int Split4(const wchar_t* line,
     return 1;
 }
 
-// ✅ 호환 파서: (구형 5칸)도 읽히게
+// ✅ 호환 파서: (신형 4칸) + (구형 5칸) 모두 읽기
+// 신형: teamId|teamName|joinCode|owner
+// 구형: teamId|teamName|taskName|joinCode|owner   (taskName 무시)
 static int ParseTeamLine(const wchar_t* line, TeamInfo* out)
 {
     if (!line || !out) return 0;
 
-    // 1) 4칸 포맷 먼저 시도
     TeamInfo t = { 0 };
-    if (Split4(line, t.teamId, 32, t.teamName, 128, t.joinCode, 64, t.ownerUserId, 128)) {
+
+    // 1) 신형 4칸
+    if (Split4(line,
+        t.teamId, 32,
+        t.teamName, 128,
+        t.joinCode, 64,
+        t.ownerUserId, 128))
+    {
         *out = t;
         return 1;
     }
 
-    // 2) 구형 5칸 포맷(teamId|teamName|taskName|joinCode|owner)도 허용
-    //    taskName은 무시
+    // 2) 구형 5칸 (taskName 끼어있는 포맷)
     wchar_t buf[1024];
     wcsncpy(buf, line, 1023);
     buf[1023] = 0;
     TrimNewline(buf);
 
     wchar_t* ctx = NULL;
-    wchar_t* a = wcstok(buf, L"|", &ctx);
-    wchar_t* b = wcstok(NULL, L"|", &ctx);
-    wchar_t* _task = wcstok(NULL, L"|", &ctx);
-    wchar_t* c = wcstok(NULL, L"|", &ctx);
-    wchar_t* d = wcstok(NULL, L"|", &ctx);
-    if (!a || !b || !_task || !c || !d) return 0;
+    wchar_t* a = wcstok(buf, L"|", &ctx);     // teamId
+    wchar_t* b = wcstok(NULL, L"|", &ctx);    // teamName
+    wchar_t* task = wcstok(NULL, L"|", &ctx); // taskName (버림)
+    wchar_t* c = wcstok(NULL, L"|", &ctx);    // joinCode
+    wchar_t* d = wcstok(NULL, L"|", &ctx);    // owner
+    if (!a || !b || !task || !c || !d) return 0;
 
     wcsncpy(t.teamId, a, 31); t.teamId[31] = 0;
     wcsncpy(t.teamName, b, 127); t.teamName[127] = 0;
@@ -153,8 +163,7 @@ static void MakeNextTeamId(wchar_t* outId, int outLen)
         fclose(fp);
     }
 
-    int next = maxNum + 1;
-    _snwprintf(outId, outLen, L"T%06d", next);
+    _snwprintf(outId, outLen, L"T%06d", maxNum + 1);
     outId[outLen - 1] = 0;
 }
 
@@ -220,6 +229,7 @@ BOOL Team_FindByTeamId(const wchar_t* teamId, TeamInfo* outTeam)
     return FALSE;
 }
 
+// ✅ taskName 없이 생성
 BOOL Team_Create(const wchar_t* teamName,
     const wchar_t* joinCode,
     const wchar_t* ownerUserId,
@@ -237,11 +247,12 @@ BOOL Team_Create(const wchar_t* teamName,
     wcsncpy(t.joinCode, joinCode, 63);  t.joinCode[63] = 0;
     wcsncpy(t.ownerUserId, ownerUserId, 127); t.ownerUserId[127] = 0;
 
-    // ✅ 4칸으로 저장: teamId|teamName|joinCode|owner
     FILE* fp = OpenUtf8Append(TEAMS_FILE);
     if (!fp) return FALSE;
 
-    fwprintf(fp, L"%s|%s|%s|%s\n", t.teamId, t.teamName, t.joinCode, t.ownerUserId);
+    // ✅ 4칸 저장 (teamId|teamName|joinCode|owner)
+    fwprintf(fp, L"%s|%s|%s|%s\n",
+        t.teamId, t.teamName, t.joinCode, t.ownerUserId);
     fclose(fp);
 
     fp = OpenUtf8Append(TEAM_MEMBERS_FILE);
