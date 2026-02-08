@@ -1,7 +1,10 @@
 ﻿// main.c
+#define _CRT_SECURE_NO_WARNINGS
 #include <windows.h>
 #include <windowsx.h>
 #include "app.h"
+
+// WM_APP_CHILDCLICK는 app.h에 정의되어 있어야 함(아래 app.h 수정 참고)
 
 static HBRUSH g_brWhite = NULL;
 
@@ -17,31 +20,38 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
         App_OnSize(hWnd, LOWORD(lParam), HIWORD(lParam));
         return 0;
 
-    case WM_DRAWITEM:
-        return App_OnDrawItemWndProc(hWnd, wParam, lParam);
-
-    case WM_MOUSEMOVE:
-        return App_OnMouseMoveWndProc(hWnd, wParam, lParam);
 
     case WM_LBUTTONDOWN:
         App_OnLButtonDown(hWnd, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
         return 0;
 
+
+    case WM_APP_CHILDCLICK:
+    {
+        int x = GET_X_LPARAM(lParam);
+        int y = GET_Y_LPARAM(lParam);
+        App_OnLButtonDown(hWnd, x, y);
+        return 0;
+    }
+
     case WM_CTLCOLORSTATIC:
     {
         HDC hdc = (HDC)wParam;
+        HWND hCtrl = (HWND)lParam;
+
         SetTextColor(hdc, RGB(0, 0, 0));
-        SetBkColor(hdc, RGB(255, 255, 255));
-        return (LRESULT)(g_brWhite ? g_brWhite : (HBRUSH)GetStockObject(WHITE_BRUSH));
+        SetBkMode(hdc, TRANSPARENT);
+
+        int id = GetDlgCtrlID(hCtrl);
+
+        // ✅ TASK_ADD 과제 목록 STATIC: 902~905
+        if (id == 902 || id == 903 || id == 904 || id == 905) {
+            return (INT_PTR)g_brWhite;
+        }
+
+        return (INT_PTR)GetStockObject(WHITE_BRUSH);
     }
 
-    case WM_CTLCOLOREDIT:
-    {
-        HDC hdc = (HDC)wParam;
-        SetTextColor(hdc, RGB(0, 0, 0));
-        SetBkColor(hdc, RGB(255, 255, 255));
-        return (LRESULT)(g_brWhite ? g_brWhite : (HBRUSH)GetStockObject(WHITE_BRUSH));
-    }
 
     case WM_PAINT:
     {
@@ -54,11 +64,9 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
 
     case WM_DESTROY:
         App_OnDestroy();
-        g_brWhite = NULL;
         PostQuitMessage(0);
         return 0;
     }
-
     return DefWindowProcW(hWnd, msg, wParam, lParam);
 }
 
@@ -85,6 +93,7 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrev, PWSTR lpCmdLine, int nCmdS
     );
 
     ShowWindow(hWnd, nCmdShow);
+    UpdateWindow(hWnd);
 
     MSG msg;
     while (GetMessageW(&msg, NULL, 0, 0)) {
