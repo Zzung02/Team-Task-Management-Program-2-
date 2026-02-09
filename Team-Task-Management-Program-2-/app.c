@@ -539,8 +539,7 @@ static int ScreenHasHeader(Screen s)
 // ---------------------------------------------------------
 static void DestroyAllEdits(void)
 {
-    // ✅ DONE 리스트도 반드시 먼저 제거 (안 그러면 화면에 남음)
-    DestroyHookedWindow(&g_edDoneList, PROP_OLD_EDIT_PROC);
+   
 
     // EDIT는 PROP_OLD_EDIT_PROC로 훅 정리
     DestroyHookedWindow(&g_edStartId, PROP_OLD_EDIT_PROC);
@@ -920,7 +919,6 @@ static void SwitchScreen(HWND hWnd, Screen next)
 static void SwitchScreen_NoHistory(HWND hWnd, Screen next)
 {
     DestroyAllEdits();
-    g_edDoneList = NULL;
     g_screen = next;
 
     if (next == SCR_START)            ResizeToBitmap(hWnd, g_bmpStart);
@@ -1331,37 +1329,47 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
         {
             wchar_t key[128] = { 0 };
             if (g_edTaSearch) GetWindowTextW(g_edTaSearch, key, 128);
+
             if (!key[0]) {
                 MessageBoxW(hWnd, L"조회 키워드를 입력해 주세요.", L"조회", MB_OK | MB_ICONWARNING);
                 SAFE_LEAVE();
             }
 
+            if (!g_currentTeamId[0]) {
+                MessageBoxW(hWnd, L"팀을 먼저 선택해 주세요.", L"조회", MB_OK | MB_ICONWARNING);
+                SAFE_LEAVE();
+            }
+
             TaskItem found = { 0 };
-            if (Task_FindByTitle(g_currentTeamId, key, &found)) {
+            if (!Task_FindByTitle(g_currentTeamId, key, &found)) {
+                MessageBoxW(hWnd, L"해당 키워드의 과제가 없습니다.", L"조회", MB_OK | MB_ICONINFORMATION);
+                SAFE_LEAVE();
+            }
 
-                TaskItem* list = (TaskItem*)calloc(512, sizeof(TaskItem));
-                int n = list ? Task_LoadActiveOnly(g_currentTeamId, list, 512) : 0;
+            // ✅ 미완료 목록에서 found.id 위치 찾기
+            TaskItem* list = (TaskItem*)calloc(512, sizeof(TaskItem));
+            int n = list ? Task_LoadActiveOnly(g_currentTeamId, list, 512) : 0;
 
-                int idx = g_taskPage * 4 + slot;
-                if (idx < n) {
-                    g_taskSelectedSlot = slot;
-                    g_taskSelectedId = list[idx].id;
-                    Task_LoadToRightEdits(&list[idx]);
-                    Task_SaveCurrentPageState();
-                }
-                else {
-                    g_taskSelectedSlot = -1;
-                    g_taskSelectedId = 0;
-                    Task_ClearRightEdits();
-                    Task_SaveCurrentPageState();
-                }
+            int pos = -1;
+            for (int i = 0; i < n; i++) {
+                if (list[i].id == found.id) { pos = i; break; }
+            }
 
-                if (list) free(list);
+            if (pos >= 0) {
+                g_taskPage = pos / 4;
+                g_taskSelectedSlot = pos % 4;
+                g_taskSelectedId = list[pos].id;
+                Task_LoadToRightEdits(&list[pos]);
 
+                Task_RefreshLeftList();   // 왼쪽 표시도 페이지에 맞게 갱신
+                InvalidateRect(hWnd, NULL, FALSE);
             }
             else {
-                MessageBoxW(hWnd, L"해당 키워드의 과제가 없습니다.", L"조회", MB_OK | MB_ICONINFORMATION);
+                // (이론상 거의 없지만) 완료로 넘어갔거나 목록에 없으면
+                MessageBoxW(hWnd, L"미완료 목록에서 찾을 수 없습니다.", L"조회", MB_OK | MB_ICONINFORMATION);
             }
+
+            if (list) free(list);
             SAFE_LEAVE();
         }
 
