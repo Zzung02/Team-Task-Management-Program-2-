@@ -15,6 +15,13 @@
 #include <windowsx.h>
 #include <string.h>
 #include <stdlib.h>
+#include <commdlg.h>   
+#include <shellapi.h>  
+#pragma comment(lib, "Comdlg32.lib")
+#pragma comment(lib, "Shell32.lib")
+
+
+
 
 static HBRUSH g_brWhite = NULL;
 
@@ -34,6 +41,35 @@ static void Task_LoadToRightEdits(const TaskItem* t);
 static void Task_RefreshLeftList(void);
 static void Task_ClearRightEdits(void);
 static int Task_FindFirstEmptyId(const wchar_t* teamId);
+
+
+
+
+
+
+static int SelectFileDialog(HWND hWnd, wchar_t* outPath, int maxLen)
+
+{
+    OPENFILENAMEW ofn;
+    ZeroMemory(&ofn, sizeof(ofn));
+
+    wchar_t buf[MAX_PATH] = L"";
+
+    ofn.lStructSize = sizeof(ofn);
+    ofn.hwndOwner = hWnd;
+    ofn.lpstrFile = buf;
+    ofn.nMaxFile = MAX_PATH;
+    ofn.lpstrFilter = L"All Files\0*.*\0";
+    ofn.nFilterIndex = 1;
+    ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
+
+    if (!GetOpenFileNameW(&ofn))
+        return 0;
+
+    lstrcpynW(outPath, buf, maxLen);
+    return 1;
+}
+
 
 // ---------------------------------------------------------
 // [DO NOT TOUCH] 좌표/히트테스트 유틸
@@ -1509,6 +1545,42 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
             InvalidateRect(hWnd, NULL, FALSE);
             SAFE_LEAVE();
         }
+
+        // ✅ 파일칸 클릭 -> 파일 선택창 띄우기 (편의기능: 로컬경로 입력됨)
+        if (HitScaled(R_TA_FILE_X1, R_TA_FILE_Y1, R_TA_FILE_X2, R_TA_FILE_Y2, x, y))
+        {
+            wchar_t picked[TASK_FILE_MAX] = { 0 };
+            if (SelectFileDialog(hWnd, picked, TASK_FILE_MAX)) {
+                // 로컬 경로가 들어감 (공유는 안 됨)
+                if (g_edTaFile) SetWindowTextW(g_edTaFile, picked);
+            }
+            SAFE_LEAVE();
+        }
+
+
+        // 다운로드(열기) - 링크면 브라우저로, 로컬경로면 해당 PC에서 파일 열기
+        if (HitScaled(R_TA_BTN_DOWNLOAD_X1, R_TA_BTN_DOWNLOAD_Y1,
+            R_TA_BTN_DOWNLOAD_X2, R_TA_BTN_DOWNLOAD_Y2, x, y))
+        {
+            wchar_t path[TASK_FILE_MAX] = { 0 };
+            if (g_edTaFile) GetWindowTextW(g_edTaFile, path, TASK_FILE_MAX);
+
+            if (!path[0]) {
+                MessageBoxW(hWnd, L"파일/링크가 없습니다.", L"다운로드", MB_OK | MB_ICONWARNING);
+                SAFE_LEAVE();
+            }
+
+            // ✅ http/https 링크면: 다른 사용자도 열 수 있음
+            if (wcsncmp(path, L"http://", 7) == 0 || wcsncmp(path, L"https://", 8) == 0) {
+                ShellExecuteW(NULL, L"open", path, NULL, NULL, SW_SHOWNORMAL);
+                SAFE_LEAVE();
+            }
+
+            // ✅ 로컬 경로면: 그 PC에 파일이 있을 때만 열림
+            ShellExecuteW(NULL, L"open", path, NULL, NULL, SW_SHOWNORMAL);
+            SAFE_LEAVE();
+        }
+
 
         SAFE_LEAVE();
     }
