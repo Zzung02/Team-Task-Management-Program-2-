@@ -19,8 +19,7 @@
 #include <shellapi.h>  
 #pragma comment(lib, "Comdlg32.lib")
 #pragma comment(lib, "Shell32.lib")
-
-
+#define TASK_OWNERS_FILE L"task_owners.txt"
 
 
 static HBRUSH g_brWhite = NULL;
@@ -35,6 +34,7 @@ static void SwitchScreen_NoHistory(HWND hWnd, Screen next);
 static void DrawDebugOverlay(HDC hdc);
 static HFONT GetUIFont(void);
 static void LayoutMyTeamStatics(void);
+static void ApplyMyTeamTextsToUI(void);
 
 // TASK_ADD helper
 static void Task_LoadToRightEdits(const TaskItem* t);
@@ -442,7 +442,21 @@ typedef struct {
     wchar_t task[128];
     wchar_t teamId[64];
     wchar_t joinCode[64];
+    wchar_t role[32];          // ✅ 추가
 } MyTeamInfo;
+
+static wchar_t g_currentRole[32] = L""; // ✅ 현재 선택 팀에서 내 역할
+
+static int IsLeaderRole(void)
+{
+    return (wcscmp(g_currentRole, L"LEADER") == 0 || wcscmp(g_currentRole, L"OWNER") == 0);
+}
+
+static int CanDeleteOrDone(void)
+{
+    return IsLeaderRole(); // 팀장만 가능
+}
+
 
 static MyTeamInfo g_myTeams[MYTEAM_SLOT_MAX];
 static int g_myTeamSelected = -1;
@@ -480,10 +494,13 @@ static int LoadMyTeams_FromMembers(const wchar_t* userId)
 
         TeamInfo t = { 0 };
         if (Team_FindByTeamId(tid, &t)) {
+            // ... while loop 안에서 Team_FindByTeamId 성공했을 때
             lstrcpynW(g_myTeams[count].team, t.teamName, 128);
             lstrcpynW(g_myTeams[count].teamId, t.teamId, 64);
             lstrcpynW(g_myTeams[count].joinCode, t.joinCode, 64);
+            lstrcpynW(g_myTeams[count].role, role, 32);   // ✅ 추가
             count++;
+
         }
     }
 
@@ -515,6 +532,7 @@ static void EnsureMyTeamStatics(HWND hWnd, HFONT font)
     }
 }
 
+
 static void ApplyMyTeamTextsToUI(void)
 {
     for (int i = 0; i < MYTEAM_SLOT_MAX; i++)
@@ -526,11 +544,19 @@ static void ApplyMyTeamTextsToUI(void)
             buf[0] = 0;
         }
         else {
-            swprintf(buf, 260, L"%s   [코드:%s]", g_myTeams[i].team, g_myTeams[i].joinCode);
+            int isLeader =
+                (wcscmp(g_myTeams[i].role, L"OWNER") == 0 ||
+                    wcscmp(g_myTeams[i].role, L"LEADER") == 0);
+
+            swprintf(buf, 260, L"%s   [코드:%s]   [%s]",
+                g_myTeams[i].team,
+                g_myTeams[i].joinCode,
+                isLeader ? L"팀장" : L"팀원");
         }
         SetWindowTextW(g_stMyTeam[i], buf);
     }
 }
+
 
 static void ShowMyTeamStatics(int show)
 {
@@ -575,7 +601,7 @@ static int ScreenHasHeader(Screen s)
 // ---------------------------------------------------------
 static void DestroyAllEdits(void)
 {
-   
+    
 
     // EDIT는 PROP_OLD_EDIT_PROC로 훅 정리
     DestroyHookedWindow(&g_edStartId, PROP_OLD_EDIT_PROC);
@@ -1185,6 +1211,7 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
 
             lstrcpynW(g_currentTeamId, out.teamId, 64);
             lstrcpynW(g_mainTeamText, out.teamName, 128);
+            lstrcpynW(g_currentRole, L"LEADER", 32);
 
             LoadMyTeams_FromMembers(g_currentUserId);
             ApplyMyTeamTextsToUI();
@@ -1224,6 +1251,7 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
 
             lstrcpynW(g_currentTeamId, out.teamId, 64);
             lstrcpynW(g_mainTeamText, out.teamName, 128);
+            lstrcpynW(g_currentRole, L"MEMBER", 32);
 
             LoadMyTeams_FromMembers(g_currentUserId);
             ApplyMyTeamTextsToUI();
@@ -1252,6 +1280,7 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
 
             lstrcpynW(g_mainTeamText, g_myTeams[g_myTeamSelected].team, 128);
             lstrcpynW(g_currentTeamId, g_myTeams[g_myTeamSelected].teamId, 64);
+            lstrcpynW(g_currentRole, g_myTeams[g_myTeamSelected].role, 32); // ✅ 추가
 
             SwitchScreen(hWnd, SCR_MAIN);
             ApplyMainHeaderTextsReal();
@@ -1284,74 +1313,87 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
 
         SAFE_LEAVE();
     }
-
-    // -----------------------------------------------------
-    // TASK_ADD ✅ 화면 체크로 전부 묶음
-    // -----------------------------------------------------
-    if (g_screen == SCR_TASK_ADD)
+    // ✅ 왼쪽 과제목록(1~4) 클릭 -> 선택 처리
+    if (HitScaled(R_TA_ITEM1_X1, R_TA_ITEM1_Y1, R_TA_ITEM1_X2, R_TA_ITEM1_Y2, x, y) ||
+        HitScaled(R_TA_ITEM2_X1, R_TA_ITEM2_Y1, R_TA_ITEM2_X2, R_TA_ITEM2_Y2, x, y) ||
+        HitScaled(R_TA_ITEM3_X1, R_TA_ITEM3_Y1, R_TA_ITEM3_X2, R_TA_ITEM3_Y2, x, y) ||
+        HitScaled(R_TA_ITEM4_X1, R_TA_ITEM4_Y1, R_TA_ITEM4_X2, R_TA_ITEM4_Y2, x, y))
     {
-        // 삭제(비우기)
-        if (HitScaled(R_TA_BTN_DEL_X1, R_TA_BTN_DEL_Y1, R_TA_BTN_DEL_X2, R_TA_BTN_DEL_Y2, x, y))
-        {
-            if (g_taskSelectedId == 0) {
-                MessageBoxW(hWnd, L"삭제(비우기)할 과제를 선택해 주세요.", L"삭제", MB_OK | MB_ICONWARNING);
-                SAFE_LEAVE();
-            }
-
-            TaskItem t = { 0 };
-            t.id = g_taskSelectedId;
-            t.done = 0;
-            t.content[0] = 0;
-            t.detail[0] = 0;
-            t.file[0] = 0;
-
-            if (!Task_Update(g_currentTeamId, &t)) {
-                MessageBoxW(hWnd, L"삭제(비우기) 실패", L"삭제", MB_OK | MB_ICONERROR);
-                SAFE_LEAVE();
-            }
-
-            Task_ClearRightEdits();
-            Task_SaveCurrentPageState();
-            Task_RefreshLeftList();
-
-            MessageBoxW(hWnd, L"삭제 되었습니다.", L"삭제", MB_OK | MB_ICONINFORMATION);
-            SAFE_LEAVE();
-        }
-
-        // 왼쪽 1~4 클릭 선택
         int slot = -1;
         if (HitScaled(R_TA_ITEM1_X1, R_TA_ITEM1_Y1, R_TA_ITEM1_X2, R_TA_ITEM1_Y2, x, y)) slot = 0;
         else if (HitScaled(R_TA_ITEM2_X1, R_TA_ITEM2_Y1, R_TA_ITEM2_X2, R_TA_ITEM2_Y2, x, y)) slot = 1;
         else if (HitScaled(R_TA_ITEM3_X1, R_TA_ITEM3_Y1, R_TA_ITEM3_X2, R_TA_ITEM3_Y2, x, y)) slot = 2;
         else if (HitScaled(R_TA_ITEM4_X1, R_TA_ITEM4_Y1, R_TA_ITEM4_X2, R_TA_ITEM4_Y2, x, y)) slot = 3;
 
-        if (slot >= 0) {
-            if (!g_currentTeamId[0]) {
-                MessageBoxW(hWnd, L"팀을 먼저 선택해 주세요.", L"과제", MB_OK | MB_ICONWARNING);
-                SAFE_LEAVE();
-            }
+        if (slot >= 0 && g_currentTeamId[0])
+        {
             TaskItem* list = (TaskItem*)calloc(512, sizeof(TaskItem));
             int n = list ? Task_LoadActiveOnly(g_currentTeamId, list, 512) : 0;
 
             int idx = g_taskPage * 4 + slot;
-            if (idx < n) {
+            if (idx >= 0 && idx < n)
+            {
                 g_taskSelectedSlot = slot;
                 g_taskSelectedId = list[idx].id;
+
                 Task_LoadToRightEdits(&list[idx]);
                 Task_SaveCurrentPageState();
+                InvalidateRect(hWnd, NULL, FALSE);
             }
-            else {
+            else
+            {
+                // 빈칸 클릭이면 선택 해제
                 g_taskSelectedSlot = -1;
                 g_taskSelectedId = 0;
                 Task_ClearRightEdits();
-                Task_SaveCurrentPageState();
+                InvalidateRect(hWnd, NULL, FALSE);
             }
 
             if (list) free(list);
-            InvalidateRect(hWnd, NULL, FALSE);
-            SAFE_LEAVE();
-
         }
+
+        SAFE_LEAVE();
+    }
+
+
+    // -----------------------------------------------------
+    // TASK_ADD ✅ 화면 체크로 전부 묶음
+    // -----------------------------------------------------
+  // 삭제
+    if (g_screen == SCR_TASK_ADD)
+    {
+    if (HitScaled(R_TA_BTN_DEL_X1, R_TA_BTN_DEL_Y1,
+        R_TA_BTN_DEL_X2, R_TA_BTN_DEL_Y2, x, y))
+    {
+        if (g_taskSelectedId == 0) {
+            MessageBoxW(hWnd, L"삭제(비우기)할 과제를 선택해 주세요.", L"삭제", MB_OK | MB_ICONWARNING);
+            SAFE_LEAVE();
+        }
+        if (!CanDeleteOrDone()) {
+            MessageBoxW(hWnd, L"팀장만 삭제할 수 있습니다.", L"권한 없음", MB_OK | MB_ICONWARNING);
+            SAFE_LEAVE();
+        }
+
+        TaskItem t = { 0 };
+        t.id = g_taskSelectedId;
+        t.done = 0;
+        t.title[0] = 0;
+        t.content[0] = 0;
+        t.detail[0] = 0;
+        t.file[0] = 0;
+
+        if (!Task_Update(g_currentTeamId, &t)) {
+            MessageBoxW(hWnd, L"삭제 실패(Task_Update)", L"삭제", MB_OK | MB_ICONERROR);
+            SAFE_LEAVE();
+        }
+
+        Task_ClearRightEdits();
+        Task_SaveCurrentPageState();
+        Task_RefreshLeftList();
+
+        MessageBoxW(hWnd, L"삭제 되었습니다.", L"삭제", MB_OK | MB_ICONINFORMATION);
+        SAFE_LEAVE();
+    }
 
 
         // 파일 비우기
@@ -1461,7 +1503,8 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
 
 
         // 수정
-        if (HitScaled(R_TA_BTN_EDIT_X1, R_TA_BTN_EDIT_Y1, R_TA_BTN_EDIT_X2, R_TA_BTN_EDIT_Y2, x, y))
+        if (HitScaled(R_TA_BTN_EDIT_X1, R_TA_BTN_EDIT_Y1,
+            R_TA_BTN_EDIT_X2, R_TA_BTN_EDIT_Y2, x, y))
         {
             if (g_taskSelectedId == 0) {
                 MessageBoxW(hWnd, L"왼쪽 목록에서 과제를 먼저 선택해 주세요.", L"수정", MB_OK | MB_ICONWARNING);
@@ -1486,6 +1529,7 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
             SAFE_LEAVE();
         }
 
+
         // 완료
         if (HitScaled(R_TA_BTN_DONE_X1, R_TA_BTN_DONE_Y1, R_TA_BTN_DONE_X2, R_TA_BTN_DONE_Y2, x, y))
         {
@@ -1493,6 +1537,11 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
                 MessageBoxW(hWnd, L"완료할 과제를 선택해 주세요.", L"완료", MB_OK | MB_ICONWARNING);
                 SAFE_LEAVE();
             }
+            if (!CanDeleteOrDone()) {
+                MessageBoxW(hWnd, L"팀장만 완료 처리할 수 있습니다.", L"권한 없음", MB_OK | MB_ICONWARNING);
+                SAFE_LEAVE();
+            }
+
 
             if (!Task_SetDone(g_currentTeamId, g_taskSelectedId, 1)) {
                 MessageBoxW(hWnd, L"완료 처리 실패", L"완료", MB_OK | MB_ICONERROR);
@@ -1507,6 +1556,7 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
             MessageBoxW(hWnd, L"완료 처리!", L"완료", MB_OK | MB_ICONINFORMATION);
             SAFE_LEAVE();
         }
+
 
         // 페이지 이전
         if (HitScaled(R_TA_PAGE_PREV_X1, R_TA_PAGE_PREV_Y1, R_TA_PAGE_PREV_X2, R_TA_PAGE_PREV_Y2, x, y))
@@ -1584,6 +1634,7 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
 
         SAFE_LEAVE();
     }
+
 
     // -----------------------------------------------------
     // BOARD
@@ -1827,6 +1878,98 @@ static int Task_FindFirstEmptyId(const wchar_t* teamId)
     return best;  // 0이면 재사용할 빈 슬롯 없음
 }
 
+static int TaskOwner_Get(const wchar_t* teamId, int taskId, wchar_t* outOwner, int outLen)
+{
+    if (!teamId || !teamId[0] || taskId <= 0 || !outOwner || outLen <= 0) return 0;
+    outOwner[0] = 0;
+
+    FILE* fp = NULL;
+    _wfopen_s(&fp, TASK_OWNERS_FILE, L"r, ccs=UTF-8");
+    if (!fp) return 0;
+
+    wchar_t line[512];
+    while (fgetws(line, 512, fp)) {
+        wchar_t tid[64] = { 0 }, uid[128] = { 0 };
+        int id = 0;
+        // teamId|taskId|userId
+        if (swscanf(line, L"%63[^|]|%d|%127[^|\r\n]", tid, &id, uid) != 3) continue;
+        if (wcscmp(tid, teamId) == 0 && id == taskId) {
+            lstrcpynW(outOwner, uid, outLen);
+            fclose(fp);
+            return 1;
+        }
+    }
+    fclose(fp);
+    return 0;
+}
+
+static int TaskOwner_Set(const wchar_t* teamId, int taskId, const wchar_t* ownerId)
+{
+    if (!teamId || !teamId[0] || taskId <= 0 || !ownerId || !ownerId[0]) return 0;
+
+    // 간단하게: 전체 읽고 해당 레코드 있으면 교체, 없으면 추가 후 재작성
+    FILE* fp = NULL;
+    _wfopen_s(&fp, TASK_OWNERS_FILE, L"r, ccs=UTF-8");
+
+    wchar_t* lines = NULL;
+    int count = 0, cap = 0;
+
+    if (fp) {
+        wchar_t buf[512];
+        while (fgetws(buf, 512, fp)) {
+            if (count >= cap) {
+                cap = (cap == 0) ? 64 : cap * 2;
+                lines = (wchar_t*)realloc(lines, sizeof(wchar_t) * cap * 512);
+                if (!lines) { fclose(fp); return 0; }
+            }
+            // 한 줄 512 wchar_t로 저장
+            wcsncpy(&lines[count * 512], buf, 511);
+            lines[count * 512 + 511] = 0;
+            count++;
+        }
+        fclose(fp);
+    }
+
+    int found = 0;
+    for (int i = 0; i < count; i++) {
+        wchar_t* line = &lines[i * 512];
+        wchar_t tid[64] = { 0 }, uid[128] = { 0 };
+        int id = 0;
+        if (swscanf(line, L"%63[^|]|%d|%127[^|\r\n]", tid, &id, uid) != 3) continue;
+        if (wcscmp(tid, teamId) == 0 && id == taskId) {
+            swprintf(line, 512, L"%s|%d|%s\n", teamId, taskId, ownerId);
+            found = 1;
+            break;
+        }
+    }
+
+    _wfopen_s(&fp, TASK_OWNERS_FILE, L"w, ccs=UTF-8");
+    if (!fp) { if (lines) free(lines); return 0; }
+
+    for (int i = 0; i < count; i++) {
+        fputws(&lines[i * 512], fp);
+    }
+    if (!found) {
+        fwprintf(fp, L"%s|%d|%s\n", teamId, taskId, ownerId);
+    }
+    fclose(fp);
+
+    if (lines) free(lines);
+    return 1;
+}
+
+static int TaskOwner_IsMe(const wchar_t* teamId, int taskId)
+{
+    wchar_t owner[128] = { 0 };
+    if (!TaskOwner_Get(teamId, taskId, owner, 128)) return 0;
+    return (wcscmp(owner, g_currentUserId) == 0);
+}
+
+
+
+
+
+
 
 
 // ---------------------------------------------------------
@@ -1902,14 +2045,17 @@ static void DrawDebugOverlay(HDC hdc)
     );
     HFONT old = (HFONT)SelectObject(hdc, f);
 
-    wchar_t buf[128];
-    swprintf(buf, 128, L"Last Click: (%d, %d)  Client:(%d,%d)", g_lastX, g_lastY, g_clientW, g_clientH);
-    TextOutW(hdc, 20, 20, buf, (int)wcslen(buf));
+    wchar_t buf2[128];
+    swprintf(buf2, 128, L"User:%s Team:%s Role:%s", g_currentUserId, g_currentTeamId, g_currentRole);
+    TextOutW(hdc, 20, 10, buf2, (int)wcslen(buf2));   // ✅ 더 위로
+
+    wchar_t buf3[128];
+    swprintf(buf3, 128, L"Last Click: (%d, %d)", g_lastX, g_lastY);
+    TextOutW(hdc, 20, 30, buf3, (int)wcslen(buf3));   // ✅ 좌표 복구
 
     SelectObject(hdc, old);
     DeleteObject(f);
 }
-
 // ---------------------------------------------------------
 // 링크 에러 방지용
 // ---------------------------------------------------------

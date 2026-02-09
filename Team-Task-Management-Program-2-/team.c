@@ -251,8 +251,8 @@ BOOL Team_Create(const wchar_t* teamName,
     if (!fp) return FALSE;
 
     // ✅ 4칸 저장 (teamId|teamName|joinCode|owner)
-    fwprintf(fp, L"%s|%s|%s|%s\n",
-        t.teamId, t.teamName, t.joinCode, t.ownerUserId);
+    fwprintf(fp, L"%s|%s|%s\n", t.teamId, ownerUserId, L"LEADER");
+
     fclose(fp);
 
     fp = OpenUtf8Append(TEAM_MEMBERS_FILE);

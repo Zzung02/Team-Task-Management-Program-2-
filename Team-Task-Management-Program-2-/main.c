@@ -26,6 +26,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
         return 0;
 
 
+
     case WM_APP_CHILDCLICK:
     {
         int x = (int)wParam;
