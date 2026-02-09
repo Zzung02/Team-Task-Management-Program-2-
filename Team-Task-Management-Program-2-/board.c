@@ -2,11 +2,9 @@
 
 #define _CRT_SECURE_NO_WARNINGS
 #include "board.h"
-
 #include "app.h"        // App_CreateEdit 사용하려고 포함
 #include "ui_coords.h"
 #include "ui_layout.h"
-
 #include <wchar.h>
 #include <stdio.h>
 #include <string.h>

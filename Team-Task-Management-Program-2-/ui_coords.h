@@ -238,6 +238,13 @@ extern int g_clientH;
 #define R_TA_BTN_DEL_Y1  40
 #define R_TA_BTN_DEL_X2  612
 #define R_TA_BTN_DEL_Y2  80
+
+// DONE(완료목록)
+#define R_DONE_LIST_X1   159
+#define R_DONE_LIST_Y1   203
+#define R_DONE_LIST_X2   514
+#define R_DONE_LIST_Y2   655
+
 //파일 X표시
 #define R_TA_BTN_FILE_CLEAR_X1 964
 #define R_TA_BTN_FILE_CLEAR_Y1 596

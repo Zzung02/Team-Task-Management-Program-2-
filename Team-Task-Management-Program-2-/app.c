@@ -565,6 +565,7 @@ static void DestroyAllEdits(void)
     DestroyHookedWindow(&g_edTaTask2, PROP_OLD_STATIC_PROC);
     DestroyHookedWindow(&g_edTaTask3, PROP_OLD_STATIC_PROC);
     DestroyHookedWindow(&g_edTaTask4, PROP_OLD_STATIC_PROC);
+    DestroyHookedWindow(&g_edDoneList, PROP_OLD_EDIT_PROC);
 
     Board_DestroyControls();
     ShowMyTeamStatics(0);
@@ -874,22 +875,17 @@ static void RelayoutControls(HWND hWnd)
     if (g_screen == SCR_DONE) {
         if (g_edDoneList) ShowWindow(g_edDoneList, SW_SHOW);
 
-        RECT rc;
-        GetClientRect(hWnd, &rc);
-        int w = rc.right - rc.left;
-        int h = rc.bottom - rc.top;
-
-        // DONE 화면 왼쪽 큰 영역에 맞춰 배치(대충 비율)
-        int left = (int)(w * 0.10);
-        int top = (int)(h * 0.22);
-        int right = (int)(w * 0.46);
-        int bottom = (int)(h * 0.88);
-
-        MoveWindow(g_edDoneList, left, top, right - left, bottom - top, TRUE);
+   
+        MoveEdit(g_edDoneList,
+            SX(R_DONE_LIST_X1), SY(R_DONE_LIST_Y1),
+            SX(R_DONE_LIST_X2), SY(R_DONE_LIST_Y2),
+            0, 0, 0, 0
+        );
         return;
+       }
+
     }
 
-}
 
 // ---------------------------------------------------------
 // 화면 전환
@@ -915,6 +911,7 @@ static void SwitchScreen(HWND hWnd, Screen next)
 static void SwitchScreen_NoHistory(HWND hWnd, Screen next)
 {
     DestroyAllEdits();
+    g_edDoneList = NULL;
     g_screen = next;
 
     if (next == SCR_START)            ResizeToBitmap(hWnd, g_bmpStart);
