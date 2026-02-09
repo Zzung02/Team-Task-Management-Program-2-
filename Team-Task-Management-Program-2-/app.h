@@ -106,4 +106,6 @@ void SwitchToTeam(HWND hWnd, const wchar_t* teamId);
 HWND App_CreateEdit(HWND parent, int ctrlId, DWORD extraStyle);
 #ifndef WM_APP_CHILDCLICK
 #define WM_APP_CHILDCLICK (WM_APP + 100)
+#define WM_APP_CHILDCLICK (WM_APP + 101)
+
 #endif

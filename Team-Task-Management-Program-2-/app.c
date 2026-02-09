@@ -167,6 +167,7 @@ static HFONT GetUIFont(void)
 // ---------------------------------------------------------
 #define PROP_OLD_EDIT_PROC    L"TTM_OLD_EDIT_PROC"
 #define PROP_OLD_STATIC_PROC  L"TTM_OLD_STATIC_PROC"
+#define WM_APP_CHILDCLICK (WM_APP + 101)   // app.h에 이미 있으면 여기선 빼도 됨
 
 static LRESULT CALLBACK EditHookProc(HWND hEdit, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -181,15 +182,18 @@ static LRESULT CALLBACK EditHookProc(HWND hEdit, UINT msg, WPARAM wParam, LPARAM
         g_lastY = pt.y;
         InvalidateRect(parent, NULL, FALSE);
 
-        // 부모 클릭 로직으로 전달(버튼/히트테스트 유지)
-        App_OnLButtonDown(parent, pt.x, pt.y);
-        // 포커스/커서 처리는 원래 EDIT에게도 가야 하니 oldProc로 계속 전달
+        // ✅ 직접 호출 X -> 메시지로 우회
+        PostMessageW(parent, WM_APP_CHILDCLICK, (WPARAM)pt.x, (LPARAM)pt.y);
+
+        // ✅ 여기서 oldProc 계속 타게 두면 안전(화면전환은 부모에서 처리)
     }
 
     WNDPROC oldProc = (WNDPROC)GetPropW(hEdit, PROP_OLD_EDIT_PROC);
     if (!oldProc) return DefWindowProcW(hEdit, msg, wParam, lParam);
     return CallWindowProcW(oldProc, hEdit, msg, wParam, lParam);
 }
+
+
 
 static void HookEditClick(HWND hEdit)
 {
@@ -211,8 +215,10 @@ static LRESULT CALLBACK StaticHookProc(HWND hSt, UINT msg, WPARAM wParam, LPARAM
         g_lastY = pt.y;
         InvalidateRect(parent, NULL, FALSE);
 
-        App_OnLButtonDown(parent, pt.x, pt.y);
-        return 0; // STATIC은 클릭을 우리가 처리했으니 여기서 종료
+        // ✅ 직접 호출 X
+        PostMessageW(parent, WM_APP_CHILDCLICK, (WPARAM)pt.x, (LPARAM)pt.y);
+
+        return 0; // STATIC 클릭은 여기서 끝
     }
 
     WNDPROC oldProc = (WNDPROC)GetPropW(hSt, PROP_OLD_STATIC_PROC);
@@ -231,6 +237,7 @@ static void HookStaticClick(HWND hSt)
 static void DestroyHookedWindow(HWND* ph, const wchar_t* propName)
 {
     if (!ph || !(*ph)) return;
+    if (!IsWindow(*ph)) { *ph = NULL; return; }
 
     WNDPROC oldProc = (WNDPROC)GetPropW(*ph, propName);
     if (oldProc) {
@@ -532,6 +539,9 @@ static int ScreenHasHeader(Screen s)
 // ---------------------------------------------------------
 static void DestroyAllEdits(void)
 {
+    // ✅ DONE 리스트도 반드시 먼저 제거 (안 그러면 화면에 남음)
+    DestroyHookedWindow(&g_edDoneList, PROP_OLD_EDIT_PROC);
+
     // EDIT는 PROP_OLD_EDIT_PROC로 훅 정리
     DestroyHookedWindow(&g_edStartId, PROP_OLD_EDIT_PROC);
     DestroyHookedWindow(&g_edStartPw, PROP_OLD_EDIT_PROC);
@@ -565,11 +575,11 @@ static void DestroyAllEdits(void)
     DestroyHookedWindow(&g_edTaTask2, PROP_OLD_STATIC_PROC);
     DestroyHookedWindow(&g_edTaTask3, PROP_OLD_STATIC_PROC);
     DestroyHookedWindow(&g_edTaTask4, PROP_OLD_STATIC_PROC);
-    DestroyHookedWindow(&g_edDoneList, PROP_OLD_EDIT_PROC);
 
     Board_DestroyControls();
     ShowMyTeamStatics(0);
 }
+
 
 // ---------------------------------------------------------
 // 헤더 텍스트 적용
@@ -586,6 +596,9 @@ static void ApplyMainHeaderTextsReal(void)
 // ---------------------------------------------------------
 static void CreateControlsForScreen(HWND hWnd, Screen s)
 {
+
+    DestroyHookedWindow(&g_edDoneList, PROP_OLD_EDIT_PROC);
+
     DestroyAllEdits();
 
     if (ScreenHasHeader(s))
@@ -738,11 +751,7 @@ static void RelayoutControls(HWND hWnd)
 
         MoveEdit(g_edMainTeamName, SX(R_MAIN_TEAM_X1), SY(R_MAIN_TEAM_Y1),
             SX(R_MAIN_TEAM_X2), SY(R_MAIN_TEAM_Y2), 0, 0, 0, 0);
-
-        MoveEdit(g_edMainTaskName,
-            SX(R_MAIN_TEAM_X1), SY(R_MAIN_TEAM_Y1) + SY(30),
-            SX(R_MAIN_TEAM_X2), SY(R_MAIN_TEAM_Y2) + SY(30),
-            0, 0, 0, 0);
+       
     }
 
     // START
@@ -1258,7 +1267,6 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
             TaskItem t = { 0 };
             t.id = g_taskSelectedId;
             t.done = 0;
-            t.title[0] = 0;
             t.content[0] = 0;
             t.detail[0] = 0;
             t.file[0] = 0;
@@ -1288,9 +1296,8 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
                 MessageBoxW(hWnd, L"팀을 먼저 선택해 주세요.", L"과제", MB_OK | MB_ICONWARNING);
                 SAFE_LEAVE();
             }
-
             TaskItem* list = (TaskItem*)calloc(512, sizeof(TaskItem));
-            int n = list ? Task_LoadAll(g_currentTeamId, list, 512) : 0;
+            int n = list ? Task_LoadActiveOnly(g_currentTeamId, list, 512) : 0;
 
             int idx = g_taskPage * 4 + slot;
             if (idx < n) {
@@ -1309,7 +1316,9 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
             if (list) free(list);
             InvalidateRect(hWnd, NULL, FALSE);
             SAFE_LEAVE();
+
         }
+
 
         // 파일 비우기
         if (HitScaled(R_TA_BTN_FILE_CLEAR_X1, R_TA_BTN_FILE_CLEAR_Y1, R_TA_BTN_FILE_CLEAR_X2, R_TA_BTN_FILE_CLEAR_Y2, x, y)) {
@@ -1329,31 +1338,26 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
 
             TaskItem found = { 0 };
             if (Task_FindByTitle(g_currentTeamId, key, &found)) {
+
                 TaskItem* list = (TaskItem*)calloc(512, sizeof(TaskItem));
-                int n = list ? Task_LoadAll(g_currentTeamId, list, 512) : 0;
+                int n = list ? Task_LoadActiveOnly(g_currentTeamId, list, 512) : 0;
 
-                int idxFound = -1;
-                for (int i = 0; i < n; i++) {
-                    if (list[i].id == found.id) { idxFound = i; break; }
-                }
-
-                if (idxFound >= 0) {
-                    g_taskPage = idxFound / 4;
-                    g_taskSelectedSlot = idxFound % 4;
-
-                    Task_LoadToRightEdits(&found);
+                int idx = g_taskPage * 4 + slot;
+                if (idx < n) {
+                    g_taskSelectedSlot = slot;
+                    g_taskSelectedId = list[idx].id;
+                    Task_LoadToRightEdits(&list[idx]);
                     Task_SaveCurrentPageState();
-                    Task_RefreshLeftList();
-                    InvalidateRect(hWnd, NULL, FALSE);
                 }
                 else {
                     g_taskSelectedSlot = -1;
-                    Task_LoadToRightEdits(&found);
+                    g_taskSelectedId = 0;
+                    Task_ClearRightEdits();
                     Task_SaveCurrentPageState();
-                    InvalidateRect(hWnd, NULL, FALSE);
                 }
 
                 if (list) free(list);
+
             }
             else {
                 MessageBoxW(hWnd, L"해당 키워드의 과제가 없습니다.", L"조회", MB_OK | MB_ICONINFORMATION);
@@ -1480,12 +1484,13 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
         {
             Task_SaveCurrentPageState();
 
-            TaskItem* list = (TaskItem*)calloc(512, sizeof(TaskItem));
-            int n = list ? Task_LoadAll(g_currentTeamId, list, 512) : 0;
-            if (list) free(list);
+            TaskItem* tmp = (TaskItem*)calloc(512, sizeof(TaskItem));
+            int n = tmp ? Task_LoadActiveOnly(g_currentTeamId, tmp, 512) : 0;
+            if (tmp) free(tmp);
 
             int maxPage = (n <= 0) ? 0 : ((n - 1) / 4);
             if (g_taskPage < maxPage) g_taskPage++;
+
 
             g_taskSelectedSlot = -1;
             g_taskSelectedId = 0;
@@ -1779,10 +1784,10 @@ static void Task_RefreshLeftList(void)
         return;
     }
 
-    TaskItem* buf = (TaskItem*)calloc(512, sizeof(TaskItem));
+    TaskItem* buf = (TaskItem*)calloc(512, sizeof(TaskItem));   // ✅ 힙
     if (!buf) return;
 
-    int n = Task_LoadAll(g_currentTeamId, buf, 512);
+    int n = Task_LoadActiveOnly(g_currentTeamId, buf, 512);      // ✅ 압축 목록
     int base = g_taskPage * 4;
 
     for (int i = 0; i < 4; i++) {
@@ -1800,6 +1805,7 @@ static void Task_RefreshLeftList(void)
 
     free(buf);
 }
+
 
 // ---------------------------------------------------------
 // 디버그 오버레이

@@ -28,11 +28,13 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
 
     case WM_APP_CHILDCLICK:
     {
-        int x = GET_X_LPARAM(lParam);
-        int y = GET_Y_LPARAM(lParam);
+        int x = (int)wParam;
+        int y = (int)lParam;
+    
         App_OnLButtonDown(hWnd, x, y);
         return 0;
     }
+
 
     case WM_CTLCOLORSTATIC:
     {
