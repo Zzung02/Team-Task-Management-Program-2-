@@ -102,15 +102,28 @@ extern int g_clientH;
 // =========================================================
 // MAIN 왼쪽 필터 버튼
 // =========================================================
-#define R_MAIN_BTN_DEADLINE_X1  34
-#define R_MAIN_BTN_DEADLINE_Y1  128
-#define R_MAIN_BTN_DEADLINE_X2  96
-#define R_MAIN_BTN_DEADLINE_Y2  179
+
+
+#define R_MAIN_URGENT_X1		33
+#define R_MAIN_URGENT_Y1		134
+#define R_MAIN_URGENT_X2		90
+#define R_MAIN_URGENT_Y2		180
+
 
 #define R_MAIN_BTN_TODO_X1      28
 #define R_MAIN_BTN_TODO_Y1      206
 #define R_MAIN_BTN_TODO_X2      100
 #define R_MAIN_BTN_TODO_Y2      251
+
+#define R_MAIN_BTN_DEADLINE_X1  34
+#define R_MAIN_BTN_DEADLINE_Y1  128
+#define R_MAIN_BTN_DEADLINE_X2  96
+#define R_MAIN_BTN_DEADLINE_Y2  179
+
+#define R_MAIN_TODO_X1          29
+#define R_MAIN_TODO_Y1			203
+#define R_MAIN_TODO_X2			92
+#define R_MAIN_TODO_Y2			257
 
 #define R_MAIN_BTN_MYTEAM_X1    37
 #define R_MAIN_BTN_MYTEAM_Y1    278
@@ -121,6 +134,22 @@ extern int g_clientH;
 #define R_MAIN_BTN_DONE_Y1      350
 #define R_MAIN_BTN_DONE_X2      97
 #define R_MAIN_BTN_DONE_Y2      399 
+
+
+// =========================================================
+// MAIN - 내용 표시 박스(EDIT) 좌표 (미완료/마감임박)
+// =========================================================
+#define R_MAIN_TODO_BOX_X1    0
+#define R_MAIN_TODO_BOX_Y1    0
+#define R_MAIN_TODO_BOX_X2    0
+#define R_MAIN_TODO_BOX_Y2    0
+
+#define R_MAIN_URGENT_BOX_X1  0
+#define R_MAIN_URGENT_BOX_Y1  0
+#define R_MAIN_URGENT_BOX_X2  0
+#define R_MAIN_URGENT_BOX_Y2  0
+
+
 
 // =========================================================
 // MAIN 오른쪽 메뉴 버튼
@@ -166,14 +195,14 @@ extern int g_clientH;
 #define R_TC_SAVE_Y2  193
 
 // MAIN - 내 팀 목록(ListBox) 영역(원본 디자인 기준)
-#define R_MYTEAM_LIST_X1   160
-#define R_MYTEAM_LIST_Y1   205
-#define R_MYTEAM_LIST_X2   517
-#define R_MYTEAM_LIST_Y2   658
+#define R_MYTEAM_LIST_X1   161
+#define R_MYTEAM_LIST_Y1   201
+#define R_MYTEAM_LIST_X2   520
+#define R_MYTEAM_LIST_Y2  655
 
-#define R_MYTEAM_SAVE_X1  430
-#define R_MYTEAM_SAVE_Y1  140
-#define R_MYTEAM_SAVE_X2  519
+#define R_MYTEAM_SAVE_X1  427
+#define R_MYTEAM_SAVE_Y1  143
+#define R_MYTEAM_SAVE_X2  517
 #define R_MYTEAM_SAVE_Y2  184
 
 
@@ -314,14 +343,20 @@ extern int g_clientH;
 // 상세사항(작은 줄)
 #define R_TA_DETAIL_X1   785
 #define R_TA_DETAIL_Y1   544
-#define R_TA_DETAIL_X2   1172
-#define R_TA_DETAIL_Y2   568
+#define R_TA_DETAIL_X2   1014
+#define R_TA_DETAIL_Y2   563
 
 // 파일
 #define R_TA_FILE_X1     754
 #define R_TA_FILE_Y1     601
 #define R_TA_FILE_X2     951
 #define R_TA_FILE_Y2     628
+
+#define R_TA_DEADLINE_X1   1073
+#define R_TA_DEADLINE_Y1   542
+#define R_TA_DEADLINE_X2   1171
+#define R_TA_DEADLINE_Y2   559
+
 
 
 /// ================================
@@ -366,3 +401,30 @@ extern int g_clientH;
 #define R_BTN_BACK_GLOBAL_Y1   4
 #define R_BTN_BACK_GLOBAL_X2   1308    // 버튼 크기는 적당히
 #define R_BTN_BACK_GLOBAL_Y2   36
+
+
+
+
+// MAIN 왼쪽 패널(큰 칸) - 내용 출력 박스 영역
+#define R_MAIN_PANEL_X1   0
+#define R_MAIN_PANEL_Y1   0
+#define R_MAIN_PANEL_X2   0
+#define R_MAIN_PANEL_Y2   0
+
+
+#define R_OVR_LIST_X1  0
+#define R_OVR_LIST_Y1  0
+#define R_OVR_LIST_X2  0
+#define R_OVR_LIST_Y2  0
+
+
+
+#define R_DEADLINE_LIST_X1 157
+#define R_DEADLINE_LIST_Y1 202
+#define R_DEADLINE_LIST_X2 517
+#define R_DEADLINE_LIST_Y2 657
+
+#define R_TODO_LIST_X1 157
+#define R_TODO_LIST_Y1 202
+#define R_TODO_LIST_X2 517
+#define R_TODO_LIST_Y2 657

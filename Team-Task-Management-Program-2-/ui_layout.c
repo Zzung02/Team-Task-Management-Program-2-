@@ -9,17 +9,18 @@ int PtInRectXY(int x, int y, int x1, int y1, int x2, int y2)
 }
 
 // ✅ MoveEdit: 이미 스케일된 좌표(x1,y1,x2,y2)를 그대로 사용
+// ui_layout.c
 void MoveEdit(HWND hEd, int x1, int y1, int x2, int y2, int padL, int padT, int padR, int padB)
 {
     if (!hEd) return;
 
-    int X = x1 + padL;
-    int Y = y1 + padT;
+    int L = x1 + padL;
+    int T = y1 + padT;
     int W = (x2 - x1) - (padL + padR);
     int H = (y2 - y1) - (padT + padB);
 
-    if (W < 10) W = 10;
-    if (H < 10) H = 10;
+    if (W < 1) W = 1;
+    if (H < 1) H = 1;
 
-    MoveWindow(hEd, X, Y, W, H, TRUE);
+    MoveWindow(hEd, L, T, W, H, TRUE);
 }

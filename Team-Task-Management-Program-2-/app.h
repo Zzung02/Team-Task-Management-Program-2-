@@ -5,6 +5,7 @@
 #pragma once
 #include <windows.h>
 #include <wchar.h>
+#define WM_APP_CHILDCLICK (WM_APP + 10)
 
 // ✅ app.c에 실제로 존재하는 WndProc 헬퍼(네가 올린 app.c 기준)
 LRESULT App_OnDrawItemWndProc(HWND hWnd, WPARAM wParam, LPARAM lParam);
@@ -16,6 +17,7 @@ int App_OnDrawItem(HWND hWnd, const DRAWITEMSTRUCT* dis);
 // 기존 app.h에 int App_OnMouseMove(HWND,int,int)였는데, app.c 스텁은 LRESULT/ WPARAM/LPARAM로 맞춰둠.
 // 👉 기능 안 건드리고 링크만 맞추려면 아래처럼 WndProc 버전만 노출시키는 게 안전함.
 LRESULT App_OnMouseMove(HWND hWnd, WPARAM wParam, LPARAM lParam);
+LRESULT App_OnAppChildClickWndProc(HWND hWnd, WPARAM wParam, LPARAM lParam);
 
 void App_GoToStart(HWND hWnd);
 

@@ -19,10 +19,57 @@
 #include <shellapi.h>  
 #pragma comment(lib, "Comdlg32.lib")
 #pragma comment(lib, "Shell32.lib")
+
+
+// ===============================
+// ✅ Deadline util (YYYY/MM/DD)
+// ===============================
+static int ParseDateYYYYMMDD_Only(const wchar_t* s, SYSTEMTIME* out)
+{
+    if (!s || !s[0] || !out) return 0;
+
+    int y = 0, m = 0, d = 0;
+    if (swscanf(s, L"%d/%d/%d", &y, &m, &d) != 3) return 0;
+    if (y < 1900 || m < 1 || m > 12 || d < 1 || d > 31) return 0;
+
+    ZeroMemory(out, sizeof(*out));
+    out->wYear = (WORD)y;
+    out->wMonth = (WORD)m;
+    out->wDay = (WORD)d;
+    out->wHour = 0; out->wMinute = 0; out->wSecond = 0; out->wMilliseconds = 0;
+    return 1;
+}
+
+// 오늘 기준 D-day (마감일 - 오늘). 오늘=0, 내일=1, 지났으면 음수
+static int DaysUntil_YYYYMMDD(const wchar_t* deadline)
+{
+    SYSTEMTIME stDue, stNow;
+    FILETIME ftDue, ftNow;
+
+    if (!ParseDateYYYYMMDD_Only(deadline, &stDue)) return 999999;
+
+    GetLocalTime(&stNow);
+    stNow.wHour = 0; stNow.wMinute = 0; stNow.wSecond = 0; stNow.wMilliseconds = 0;
+
+    if (!SystemTimeToFileTime(&stDue, &ftDue)) return 999999;
+    if (!SystemTimeToFileTime(&stNow, &ftNow)) return 999999;
+
+    ULONGLONG due = ((ULONGLONG)ftDue.dwHighDateTime << 32) | ftDue.dwLowDateTime;
+    ULONGLONG now = ((ULONGLONG)ftNow.dwHighDateTime << 32) | ftNow.dwLowDateTime;
+
+    LONGLONG diff = (LONGLONG)due - (LONGLONG)now;
+    LONGLONG days = diff / (10LL * 1000 * 1000 * 60 * 60 * 24); // 100ns -> day
+    return (int)days;
+}
+
+
 #define TASK_OWNERS_FILE L"task_owners.txt"
 
 
 static HBRUSH g_brWhite = NULL;
+
+
+
 
 // ---------------------------------------------------------
 // Forward decl
@@ -36,13 +83,58 @@ static HFONT GetUIFont(void);
 static void LayoutMyTeamStatics(void);
 static void ApplyMyTeamTextsToUI(void);
 
+
+
 // TASK_ADD helper
 static void Task_LoadToRightEdits(const TaskItem* t);
 static void Task_RefreshLeftList(void);
 static void Task_ClearRightEdits(void);
 static int Task_FindFirstEmptyId(const wchar_t* teamId);
+static void Main_RefreshBoxes(void);
+static int  ParseDate_YYYYMMDD(const wchar_t* s, int* y, int* m, int* d);
+static int  ParseDateToSystemTime_YYYYMMDD(const wchar_t* s, SYSTEMTIME* out);
+static void Deadline_RefreshUI(void);
+static void Todo_RefreshUI(void);
 
 
+static int ParseDateYYYYMMDD(const wchar_t* s, SYSTEMTIME* out)
+{
+    if (!s || !s[0] || !out) return 0;
+
+    int y = 0, m = 0, d = 0;
+    if (swscanf(s, L"%d/%d/%d", &y, &m, &d) != 3) return 0;
+
+    ZeroMemory(out, sizeof(*out));
+    out->wYear = (WORD)y;
+    out->wMonth = (WORD)m;
+    out->wDay = (WORD)d;
+    return 1;
+}
+
+// 오늘 기준 D-day (마감일 - 오늘). 오늘=0, 내일=1, 지나면 음수
+static int DaysUntil(const wchar_t* deadline)
+{
+    SYSTEMTIME stDue, stNow;
+    FILETIME ftDue, ftNow;
+
+    if (!ParseDateYYYYMMDD(deadline, &stDue)) return 999999;
+
+    GetLocalTime(&stNow);
+
+    if (!SystemTimeToFileTime(&stDue, &ftDue)) return 999999;
+    if (!SystemTimeToFileTime(&stNow, &ftNow)) return 999999;
+
+    ULONGLONG a = (((ULONGLONG)ftDue.dwHighDateTime) << 32) | ftDue.dwLowDateTime;
+    ULONGLONG b = (((ULONGLONG)ftNow.dwHighDateTime) << 32) | ftNow.dwLowDateTime;
+
+    // 1일 = 86400초 = 86400*10,000,000(100ns)
+    const ULONGLONG DAY = 86400ULL * 10000000ULL;
+
+    // 자정 기준이 아니라 시간까지 포함이라 어긋날 수 있으니 "날짜만" 기준으로 맞추고 싶으면
+    // stDue / stNow의 wHour/wMinute/wSecond를 0으로 만들어도 됨.
+    long long diff = (long long)(a / DAY) - (long long)(b / DAY);
+    return (int)diff;
+}
 
 
 
@@ -98,7 +190,8 @@ static int HitScaled(int x1, int y1, int x2, int y2, int x, int y)
 // ---------------------------------------------------------
 Screen g_screen = SCR_START;
 
-typedef enum { OVR_NONE = 0, OVR_DEADLINE = 1 } Overlay;
+typedef enum { OVR_NONE = 0, OVR_DEADLINE = 1, OVR_UNDONE = 2 } Overlay;
+
 static Overlay g_overlay = OVR_NONE;
 
 static RECT g_rcDeadlinePanel = { 0,0,0,0 };
@@ -148,7 +241,11 @@ static wchar_t g_mainTaskText[128] = L"";
 static wchar_t g_mainCodeText[128] = L"";
 static HWND g_stMainCode = NULL;
 static HWND g_edDoneList = NULL;
+static HWND g_edOverlayList = NULL;
 
+static HWND g_edMainTodoList = NULL;       // 미완료 과제 표시
+static HWND g_edMainUrgentList = NULL;     // 마감 임박 과제 표시
+static int  g_taskSelectedSlot = -1;
 // ---------------------------------------------------------
 // 화면 히스토리(뒤로가기)  ✅ 하나만 사용
 // ---------------------------------------------------------
@@ -203,7 +300,7 @@ static HFONT GetUIFont(void)
 // ---------------------------------------------------------
 #define PROP_OLD_EDIT_PROC    L"TTM_OLD_EDIT_PROC"
 #define PROP_OLD_STATIC_PROC  L"TTM_OLD_STATIC_PROC"
-#define WM_APP_CHILDCLICK (WM_APP + 101)   // app.h에 이미 있으면 여기선 빼도 됨
+
 
 static LRESULT CALLBACK EditHookProc(HWND hEdit, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -340,8 +437,8 @@ static HWND g_edTaTitle = NULL;
 static HWND g_edTaContent = NULL;
 static HWND g_edTaDetail = NULL;
 static HWND g_edTaFile = NULL;
+static HWND g_edTaDeadline = NULL;   // ✅ 마감일
 
-static int  g_taskSelectedSlot = -1;
 static int  g_taskSelectedId = 0;
 static int  g_taskPage = 0;
 
@@ -410,7 +507,8 @@ static void Task_SaveCurrentPageState(void)
     if (g_edTaTitle)   GetWindowTextW(g_edTaTitle, t.title, TASK_TITLE_MAX);
     if (g_edTaContent) GetWindowTextW(g_edTaContent, t.content, TASK_TEXT_MAX);
     if (g_edTaDetail)  GetWindowTextW(g_edTaDetail, t.detail, TASK_TEXT_MAX);
-    if (g_edTaFile)    GetWindowTextW(g_edTaFile, t.file, TASK_FILE_MAX);
+    if (g_edTaDeadline) GetWindowTextW(g_edTaDeadline, t.deadline, TASK_DEADLINE_MAX);
+
 
     g_taskPageState[g_taskPage].used = 1;
     g_taskPageState[g_taskPage].selectedSlot = g_taskSelectedSlot;
@@ -468,12 +566,19 @@ static int LoadMyTeams_FromMembers(const wchar_t* userId)
         g_myTeams[i].task[0] = 0;
         g_myTeams[i].teamId[0] = 0;
         g_myTeams[i].joinCode[0] = 0;
+        g_myTeams[i].role[0] = 0;   // ✅ role도 초기화
     }
 
     if (!userId || !userId[0]) return 0;
 
     FILE* fp = NULL;
+
+    // 1) UTF-8 시도
     _wfopen_s(&fp, L"team_members.txt", L"r, ccs=UTF-8");
+
+    // 2) 실패하면 일반 r로 재시도 (ANSI/CP949/UTF-8 no BOM 대비)
+    if (!fp) _wfopen_s(&fp, L"team_members.txt", L"r");
+
     if (!fp) return 0;
 
     wchar_t line[512];
@@ -481,11 +586,13 @@ static int LoadMyTeams_FromMembers(const wchar_t* userId)
 
     while (fgetws(line, 512, fp) && count < MYTEAM_SLOT_MAX)
     {
-        wchar_t tid[32] = { 0 }, uid[128] = { 0 }, role[32] = { 0 };
-        int m = swscanf(line, L"%31[^|]|%127[^|]|%31[^|\r\n]", tid, uid, role);
+        wchar_t tid[64] = { 0 }, uid[128] = { 0 }, role[32] = { 0 };
+
+        int m = swscanf(line, L"%63[^|]|%127[^|]|%31[^|\r\n]", tid, uid, role);
         if (m != 3) continue;
         if (wcscmp(uid, userId) != 0) continue;
 
+        // 중복 방지
         int dup = 0;
         for (int k = 0; k < count; k++) {
             if (wcscmp(g_myTeams[k].teamId, tid) == 0) { dup = 1; break; }
@@ -494,13 +601,11 @@ static int LoadMyTeams_FromMembers(const wchar_t* userId)
 
         TeamInfo t = { 0 };
         if (Team_FindByTeamId(tid, &t)) {
-            // ... while loop 안에서 Team_FindByTeamId 성공했을 때
             lstrcpynW(g_myTeams[count].team, t.teamName, 128);
             lstrcpynW(g_myTeams[count].teamId, t.teamId, 64);
             lstrcpynW(g_myTeams[count].joinCode, t.joinCode, 64);
-            lstrcpynW(g_myTeams[count].role, role, 32);   // ✅ 추가
+            lstrcpynW(g_myTeams[count].role, role, 32);
             count++;
-
         }
     }
 
@@ -512,11 +617,12 @@ static void EnsureMyTeamStatics(HWND hWnd, HFONT font)
 {
     for (int i = 0; i < MYTEAM_SLOT_MAX; i++)
     {
-        if (g_stMyTeam[i]) continue;
+        if (g_stMyTeam[i] && IsWindow(g_stMyTeam[i])) continue;
+        g_stMyTeam[i] = NULL;
 
         g_stMyTeam[i] = CreateWindowExW(
             0, L"STATIC", L"",
-            WS_CHILD | SS_LEFT,
+            WS_CHILD | WS_VISIBLE | SS_LEFT | SS_NOTIFY,
             0, 0, 10, 10,
             hWnd,
             (HMENU)(INT_PTR)(6000 + i),
@@ -525,10 +631,9 @@ static void EnsureMyTeamStatics(HWND hWnd, HFONT font)
         );
 
         if (font) SendMessageW(g_stMyTeam[i], WM_SETFONT, (WPARAM)font, TRUE);
-        ShowWindow(g_stMyTeam[i], SW_HIDE);
 
-        // 필요 시 클릭 훅 달고 싶으면 여기서 HookStaticClick(g_stMyTeam[i])도 가능
-        // (현재는 MYTEAM 선택을 GetWindowRect 기반으로 처리 중이라 없어도 됨)
+        HookStaticClick(g_stMyTeam[i]); // ✅ 클릭/LastClick 전달도 확실하게
+        ShowWindow(g_stMyTeam[i], SW_HIDE); // 기본은 숨김, 화면에서 켜줌
     }
 }
 
@@ -596,12 +701,11 @@ static int ScreenHasHeader(Screen s)
     }
 }
 
-// ---------------------------------------------------------
-// 모든 컨트롤 제거
-// ---------------------------------------------------------
 static void DestroyAllEdits(void)
 {
-    
+    // ✅ MAIN 박스도 같이 정리 (중요!)
+    DestroyHookedWindow(&g_edMainTodoList, PROP_OLD_EDIT_PROC);
+    DestroyHookedWindow(&g_edMainUrgentList, PROP_OLD_EDIT_PROC);
 
     // EDIT는 PROP_OLD_EDIT_PROC로 훅 정리
     DestroyHookedWindow(&g_edStartId, PROP_OLD_EDIT_PROC);
@@ -637,9 +741,15 @@ static void DestroyAllEdits(void)
     DestroyHookedWindow(&g_edTaTask3, PROP_OLD_STATIC_PROC);
     DestroyHookedWindow(&g_edTaTask4, PROP_OLD_STATIC_PROC);
 
+    DestroyHookedWindow(&g_edTaDeadline, PROP_OLD_EDIT_PROC);
+
+    DestroyHookedWindow(&g_edOverlayList, PROP_OLD_EDIT_PROC);
+    DestroyHookedWindow(&g_edDoneList, PROP_OLD_EDIT_PROC);
+
     Board_DestroyControls();
     ShowMyTeamStatics(0);
 }
+
 
 
 // ---------------------------------------------------------
@@ -700,6 +810,25 @@ static void CreateControlsForScreen(HWND hWnd, Screen s)
         g_edFindResult = CreateEdit(hWnd, 303, ES_MULTILINE | ES_AUTOVSCROLL | WS_VSCROLL);
         break;
 
+    case SCR_DEADLINE:
+        g_edOverlayList = CreateEdit(hWnd, 1301, ES_MULTILINE | ES_AUTOVSCROLL | WS_VSCROLL | ES_READONLY);
+        Deadline_RefreshUI();
+        break;
+
+    case SCR_TODO:
+        g_edOverlayList = CreateEdit(hWnd, 1302, ES_MULTILINE | ES_AUTOVSCROLL | WS_VSCROLL | ES_READONLY);
+        Todo_RefreshUI();
+        break;
+        ;
+
+    case SCR_MAIN:
+    {
+       
+        break;
+    }
+
+
+
     case SCR_TEAM_CREATE:
         g_edTcTeam = CreateEdit(hWnd, 701, 0);
         g_edTcCode = CreateEdit(hWnd, 703, 0);
@@ -724,8 +853,12 @@ static void CreateControlsForScreen(HWND hWnd, Screen s)
         g_edTaSearch = CreateEdit(hWnd, 901, 0);
         g_edTaTitle = CreateEdit(hWnd, 906, 0);
         g_edTaContent = CreateEdit(hWnd, 907, ES_MULTILINE | ES_AUTOVSCROLL | WS_VSCROLL);
-        g_edTaDetail = CreateEdit(hWnd, 908, 0);
+        g_edTaDetail = CreateEdit(hWnd, 908, ES_MULTILINE | ES_AUTOVSCROLL | WS_VSCROLL);
         g_edTaFile = CreateEdit(hWnd, 909, 0);
+        g_edTaDeadline = CreateEdit(hWnd, 910, 0);
+        SetWindowTextW(g_edTaDeadline, L"");   // ✅ "0000/00/00" 대신 빈칸 시작
+        SendMessageW(g_edTaDeadline, EM_LIMITTEXT, 10, 0); // YYYY/MM/DD 10글자 제한(선택)
+
 
         HookStaticClick(g_edTaTask1);
         HookStaticClick(g_edTaTask2);
@@ -799,8 +932,8 @@ static void RelayoutControls(HWND hWnd)
     if (g_edTaContent) ShowWindow(g_edTaContent, SW_HIDE);
     if (g_edTaDetail) ShowWindow(g_edTaDetail, SW_HIDE);
     if (g_edTaFile) ShowWindow(g_edTaFile, SW_HIDE);
+    if (g_edOverlayList) ShowWindow(g_edOverlayList, SW_HIDE);
 
-    if (g_edDoneList) ShowWindow(g_edDoneList, SW_HIDE);
 
     ShowMyTeamStatics(0);
 
@@ -812,7 +945,7 @@ static void RelayoutControls(HWND hWnd)
 
         MoveEdit(g_edMainTeamName, SX(R_MAIN_TEAM_X1), SY(R_MAIN_TEAM_Y1),
             SX(R_MAIN_TEAM_X2), SY(R_MAIN_TEAM_Y2), 0, 0, 0, 0);
-       
+
     }
 
     // START
@@ -845,6 +978,12 @@ static void RelayoutControls(HWND hWnd)
         return;
     }
 
+    // ✅ MAIN
+    if (g_screen == SCR_MAIN) {
+
+    }
+
+
     // FINDPW
     if (g_screen == SCR_FINDPW) {
         ShowWindow(g_edFindName, SW_SHOW);
@@ -862,6 +1001,31 @@ static void RelayoutControls(HWND hWnd)
         return;
     }
 
+    // DEADLINE
+    if (g_screen == SCR_DEADLINE) {
+        if (g_edOverlayList) ShowWindow(g_edOverlayList, SW_SHOW);
+
+        MoveEdit(g_edOverlayList,
+            SX(R_DEADLINE_LIST_X1), SY(R_DEADLINE_LIST_Y1),
+            SX(R_DEADLINE_LIST_X2), SY(R_DEADLINE_LIST_Y2),
+            0, 0, 0, 0
+        );
+        return;
+    }
+
+    // TODO
+    if (g_screen == SCR_TODO) {
+        if (g_edOverlayList) ShowWindow(g_edOverlayList, SW_SHOW);
+
+        MoveEdit(g_edOverlayList,
+            SX(R_TODO_LIST_X1), SY(R_TODO_LIST_Y1),
+            SX(R_TODO_LIST_X2), SY(R_TODO_LIST_Y2),
+            0, 0, 0, 0
+        );
+        return;
+    }
+
+    
     // TEAM_CREATE
     if (g_screen == SCR_TEAM_CREATE) {
         ShowWindow(g_edTcTeam, SW_SHOW);
@@ -899,6 +1063,13 @@ static void RelayoutControls(HWND hWnd)
         ShowWindow(g_edTaContent, SW_SHOW);
         ShowWindow(g_edTaDetail, SW_SHOW);
         ShowWindow(g_edTaFile, SW_SHOW);
+        ShowWindow(g_edTaDeadline, SW_SHOW);
+
+        MoveEdit(g_edTaDeadline,
+            SX(R_TA_DEADLINE_X1), SY(R_TA_DEADLINE_Y1),
+            SX(R_TA_DEADLINE_X2), SY(R_TA_DEADLINE_Y2),
+            0, 0, 0, 0
+        );
 
         MoveEdit(g_edTaSearch, SX(R_TA_SEARCH_X1), SY(R_TA_SEARCH_Y1),
             SX(R_TA_SEARCH_X2), SY(R_TA_SEARCH_Y2), 0, 0, 0, 0);
@@ -937,9 +1108,12 @@ static void RelayoutControls(HWND hWnd)
 
     // MYTEAM
     if (g_screen == SCR_MYTEAM) {
-        MyTeam_RefreshUI(hWnd);
+        MyTeam_RefreshUI(hWnd);   // 여기서 텍스트/위치 갱신
+        ShowMyTeamStatics(1);     // ✅ 무조건 다시 SHOW
         return;
     }
+
+    
 
     // DONE
     if (g_screen == SCR_DONE) {
@@ -1168,12 +1342,25 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
     }
 
     // -----------------------------------------------------
-    // MAIN
-    // -----------------------------------------------------
+// MAIN
+// -----------------------------------------------------
     if (g_screen == SCR_MAIN)
     {
-        if (HitScaled(R_MAIN_BTN_DEADLINE_X1, R_MAIN_BTN_DEADLINE_Y1, R_MAIN_BTN_DEADLINE_X2, R_MAIN_BTN_DEADLINE_Y2, x, y)) { SwitchScreen(hWnd, SCR_DEADLINE); SAFE_LEAVE(); }
-        if (HitScaled(R_MAIN_BTN_TODO_X1, R_MAIN_BTN_TODO_Y1, R_MAIN_BTN_TODO_X2, R_MAIN_BTN_TODO_Y2, x, y)) { SwitchScreen(hWnd, SCR_TODO); SAFE_LEAVE(); }
+        // ✅ 여기서는 화면전환만 한다 (토글/오버레이 로직 제거)
+        if (HitScaled(R_MAIN_BTN_DEADLINE_X1, R_MAIN_BTN_DEADLINE_Y1,
+            R_MAIN_BTN_DEADLINE_X2, R_MAIN_BTN_DEADLINE_Y2, x, y))
+        {
+            SwitchScreen(hWnd, SCR_DEADLINE);
+            SAFE_LEAVE();
+        }
+
+        if (HitScaled(R_MAIN_BTN_TODO_X1, R_MAIN_BTN_TODO_Y1,
+            R_MAIN_BTN_TODO_X2, R_MAIN_BTN_TODO_Y2, x, y))
+        {
+            SwitchScreen(hWnd, SCR_TODO);
+            SAFE_LEAVE();
+        }
+
         if (HitScaled(R_MAIN_BTN_MYTEAM_X1, R_MAIN_BTN_MYTEAM_Y1, R_MAIN_BTN_MYTEAM_X2, R_MAIN_BTN_MYTEAM_Y2, x, y)) { SwitchScreen(hWnd, SCR_MYTEAM); SAFE_LEAVE(); }
         if (HitScaled(R_MAIN_BTN_DONE_X1, R_MAIN_BTN_DONE_Y1, R_MAIN_BTN_DONE_X2, R_MAIN_BTN_DONE_Y2, x, y)) { SwitchScreen(hWnd, SCR_DONE); SAFE_LEAVE(); }
 
@@ -1184,6 +1371,7 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
 
         SAFE_LEAVE();
     }
+
 
     // -----------------------------------------------------
     // TEAM_CREATE
@@ -1313,47 +1501,50 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
 
         SAFE_LEAVE();
     }
-    // ✅ 왼쪽 과제목록(1~4) 클릭 -> 선택 처리
-    if (HitScaled(R_TA_ITEM1_X1, R_TA_ITEM1_Y1, R_TA_ITEM1_X2, R_TA_ITEM1_Y2, x, y) ||
-        HitScaled(R_TA_ITEM2_X1, R_TA_ITEM2_Y1, R_TA_ITEM2_X2, R_TA_ITEM2_Y2, x, y) ||
-        HitScaled(R_TA_ITEM3_X1, R_TA_ITEM3_Y1, R_TA_ITEM3_X2, R_TA_ITEM3_Y2, x, y) ||
-        HitScaled(R_TA_ITEM4_X1, R_TA_ITEM4_Y1, R_TA_ITEM4_X2, R_TA_ITEM4_Y2, x, y))
+    if (g_screen == SCR_TASK_ADD)
     {
-        int slot = -1;
-        if (HitScaled(R_TA_ITEM1_X1, R_TA_ITEM1_Y1, R_TA_ITEM1_X2, R_TA_ITEM1_Y2, x, y)) slot = 0;
-        else if (HitScaled(R_TA_ITEM2_X1, R_TA_ITEM2_Y1, R_TA_ITEM2_X2, R_TA_ITEM2_Y2, x, y)) slot = 1;
-        else if (HitScaled(R_TA_ITEM3_X1, R_TA_ITEM3_Y1, R_TA_ITEM3_X2, R_TA_ITEM3_Y2, x, y)) slot = 2;
-        else if (HitScaled(R_TA_ITEM4_X1, R_TA_ITEM4_Y1, R_TA_ITEM4_X2, R_TA_ITEM4_Y2, x, y)) slot = 3;
-
-        if (slot >= 0 && g_currentTeamId[0])
+        // ✅ 왼쪽 과제목록(1~4) 클릭 -> 선택 처리 (여기 안으로 이동!)
+        if (HitScaled(R_TA_ITEM1_X1, R_TA_ITEM1_Y1, R_TA_ITEM1_X2, R_TA_ITEM1_Y2, x, y) ||
+            HitScaled(R_TA_ITEM2_X1, R_TA_ITEM2_Y1, R_TA_ITEM2_X2, R_TA_ITEM2_Y2, x, y) ||
+            HitScaled(R_TA_ITEM3_X1, R_TA_ITEM3_Y1, R_TA_ITEM3_X2, R_TA_ITEM3_Y2, x, y) ||
+            HitScaled(R_TA_ITEM4_X1, R_TA_ITEM4_Y1, R_TA_ITEM4_X2, R_TA_ITEM4_Y2, x, y))
         {
-            TaskItem* list = (TaskItem*)calloc(512, sizeof(TaskItem));
-            int n = list ? Task_LoadActiveOnly(g_currentTeamId, list, 512) : 0;
+            int slot = -1;
+            if (HitScaled(R_TA_ITEM1_X1, R_TA_ITEM1_Y1, R_TA_ITEM1_X2, R_TA_ITEM1_Y2, x, y)) slot = 0;
+            else if (HitScaled(R_TA_ITEM2_X1, R_TA_ITEM2_Y1, R_TA_ITEM2_X2, R_TA_ITEM2_Y2, x, y)) slot = 1;
+            else if (HitScaled(R_TA_ITEM3_X1, R_TA_ITEM3_Y1, R_TA_ITEM3_X2, R_TA_ITEM3_Y2, x, y)) slot = 2;
+            else if (HitScaled(R_TA_ITEM4_X1, R_TA_ITEM4_Y1, R_TA_ITEM4_X2, R_TA_ITEM4_Y2, x, y)) slot = 3;
 
-            int idx = g_taskPage * 4 + slot;
-            if (idx >= 0 && idx < n)
+            if (slot >= 0 && g_currentTeamId[0])
             {
-                g_taskSelectedSlot = slot;
-                g_taskSelectedId = list[idx].id;
+                TaskItem* list = (TaskItem*)calloc(512, sizeof(TaskItem));
+                int n = list ? Task_LoadActiveOnly(g_currentTeamId, list, 512) : 0;
 
-                Task_LoadToRightEdits(&list[idx]);
-                Task_SaveCurrentPageState();
-                InvalidateRect(hWnd, NULL, FALSE);
-            }
-            else
-            {
-                // 빈칸 클릭이면 선택 해제
-                g_taskSelectedSlot = -1;
-                g_taskSelectedId = 0;
-                Task_ClearRightEdits();
-                InvalidateRect(hWnd, NULL, FALSE);
-            }
+                int idx = g_taskPage * 4 + slot;
+                if (idx >= 0 && idx < n)
+                {
+                    g_taskSelectedSlot = slot;
+                    g_taskSelectedId = list[idx].id;
+                    Task_LoadToRightEdits(&list[idx]);
+                    Task_SaveCurrentPageState();
+                    InvalidateRect(hWnd, NULL, FALSE);
+                }
+                else
+                {
+                    g_taskSelectedSlot = -1;
+                    g_taskSelectedId = 0;
+                    Task_ClearRightEdits();
+                    InvalidateRect(hWnd, NULL, FALSE);
+                }
 
-            if (list) free(list);
+                if (list) free(list);
+            }
+            SAFE_LEAVE();
         }
 
-        SAFE_LEAVE();
+        // (그 다음에 삭제/조회/등록/수정/완료/페이지 이동/파일선택/다운로드 처리 계속...)
     }
+
 
 
     // -----------------------------------------------------
@@ -1390,6 +1581,8 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
         Task_ClearRightEdits();
         Task_SaveCurrentPageState();
         Task_RefreshLeftList();
+        if (g_edTaDeadline) SetWindowTextW(g_edTaDeadline, L"");
+
 
         MessageBoxW(hWnd, L"삭제 되었습니다.", L"삭제", MB_OK | MB_ICONINFORMATION);
         SAFE_LEAVE();
@@ -1466,7 +1659,9 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
             if (g_edTaContent) GetWindowTextW(g_edTaContent, t.content, TASK_TEXT_MAX);
             if (g_edTaDetail)  GetWindowTextW(g_edTaDetail, t.detail, TASK_TEXT_MAX);
             if (g_edTaFile)    GetWindowTextW(g_edTaFile, t.file, TASK_FILE_MAX);
+            if (g_edTaDeadline) GetWindowTextW(g_edTaDeadline, t.deadline, TASK_DEADLINE_MAX);
 
+         
             if (!t.title[0]) {
                 MessageBoxW(hWnd, L"제목을 입력해 주세요.", L"등록", MB_OK | MB_ICONWARNING);
                 SAFE_LEAVE();
@@ -1518,6 +1713,10 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
             if (g_edTaContent) GetWindowTextW(g_edTaContent, t.content, TASK_TEXT_MAX);
             if (g_edTaDetail)  GetWindowTextW(g_edTaDetail, t.detail, TASK_TEXT_MAX);
             if (g_edTaFile)    GetWindowTextW(g_edTaFile, t.file, TASK_FILE_MAX);
+            if (g_edTaDeadline)
+                GetWindowTextW(g_edTaDeadline, t.deadline, TASK_DEADLINE_MAX);
+            if (g_edTaDeadline) GetWindowTextW(g_edTaDeadline, t.deadline, TASK_DEADLINE_MAX);
+
 
             if (!Task_Update(g_currentTeamId, &t)) {
                 MessageBoxW(hWnd, L"수정 실패", L"수정", MB_OK | MB_ICONERROR);
@@ -1981,6 +2180,7 @@ static void Task_ClearRightEdits(void)
     if (g_edTaContent) SetWindowTextW(g_edTaContent, L"");
     if (g_edTaDetail)  SetWindowTextW(g_edTaDetail, L"");
     if (g_edTaFile)    SetWindowTextW(g_edTaFile, L"");
+    if (g_edTaDeadline) SetWindowTextW(g_edTaDeadline, L""); 
 
     g_taskSelectedId = 0;
 }
@@ -1993,6 +2193,7 @@ static void Task_LoadToRightEdits(const TaskItem* t)
     if (g_edTaContent) SetWindowTextW(g_edTaContent, t->content);
     if (g_edTaDetail)  SetWindowTextW(g_edTaDetail, t->detail);
     if (g_edTaFile)    SetWindowTextW(g_edTaFile, t->file);
+    if (g_edTaDeadline) SetWindowTextW(g_edTaDeadline, t->deadline);
 
     g_taskSelectedId = t->id;
 }
@@ -2111,3 +2312,199 @@ void SwitchToTeam(HWND hWnd, const wchar_t* teamId)
     SwitchScreen(hWnd, SCR_MAIN);
     ApplyMainHeaderTextsReal();
 } 
+
+
+static int ParseDateToSystemTime_YYYYMMDD(const wchar_t* s, SYSTEMTIME* out)
+{
+    if (!s || !s[0] || !out) return 0;
+
+    int y = 0, m = 0, d = 0;
+    if (swscanf(s, L"%d/%d/%d", &y, &m, &d) != 3) return 0;
+    if (y < 1900 || m < 1 || m > 12 || d < 1 || d > 31) return 0;
+
+    ZeroMemory(out, sizeof(*out));
+    out->wYear = (WORD)y;
+    out->wMonth = (WORD)m;
+    out->wDay = (WORD)d;
+    return 1;
+}
+
+
+static int IsDueSoon(const wchar_t* deadline, int days) // days: 예) 3일 이내
+{
+    SYSTEMTIME stDue, stNow;
+    FILETIME ftDue, ftNow;
+
+    if (!ParseDateToSystemTime_YYYYMMDD(deadline, &stDue)) return 0;  // ✅
+
+
+    GetLocalTime(&stNow);
+
+    // 날짜 비교를 위해 FILETIME 변환
+    if (!SystemTimeToFileTime(&stDue, &ftDue)) return 0;
+    if (!SystemTimeToFileTime(&stNow, &ftNow)) return 0;
+
+    ULONGLONG due = (((ULONGLONG)ftDue.dwHighDateTime) << 32) | ftDue.dwLowDateTime;
+    ULONGLONG now = (((ULONGLONG)ftNow.dwHighDateTime) << 32) | ftNow.dwLowDateTime;
+
+    // 이미 지난 마감은 “임박”에서 제외(원하면 포함으로 바꿔도 됨)
+    if (due < now) return 0;
+
+    // FILETIME 단위: 100ns
+    ULONGLONG diff100ns = due - now;
+    ULONGLONG diffDays = diff100ns / (10000000ULL * 60 * 60 * 24);
+
+    return (diffDays <= (ULONGLONG)days);
+}
+
+
+static int ParseDate_YYYYMMDD(const wchar_t* s, int* y, int* m, int* d)
+{
+    if (!s || !s[0]) return 0;
+    int yy = 0, mm = 0, dd = 0;
+    if (swscanf(s, L"%d/%d/%d", &yy, &mm, &dd) != 3) return 0;
+    if (yy < 1900 || mm < 1 || mm > 12 || dd < 1 || dd > 31) return 0;
+    *y = yy; *m = mm; *d = dd;
+    return 1;
+}
+
+static int DaysUntil_YMD(int y, int m, int d)
+{
+    SYSTEMTIME stNow;
+    GetLocalTime(&stNow);
+
+    FILETIME ftNow, ftTarget;
+    SYSTEMTIME stTarget = { 0 };
+    stTarget.wYear = (WORD)y;
+    stTarget.wMonth = (WORD)m;
+    stTarget.wDay = (WORD)d;
+
+    if (!SystemTimeToFileTime(&stNow, &ftNow)) return 999999;
+    if (!SystemTimeToFileTime(&stTarget, &ftTarget)) return 999999;
+
+    ULARGE_INTEGER a, b;
+    a.LowPart = ftNow.dwLowDateTime;   a.HighPart = ftNow.dwHighDateTime;
+    b.LowPart = ftTarget.dwLowDateTime; b.HighPart = ftTarget.dwHighDateTime;
+
+    // 1 day = 86400 sec = 86400*10^7 (FILETIME tick = 100ns)
+    const ULONGLONG DAY = 86400ULL * 10000000ULL;
+
+    if (b.QuadPart < a.QuadPart) return -1; // 이미 지남
+    ULONGLONG diff = b.QuadPart - a.QuadPart;
+    return (int)(diff / DAY);
+}
+
+static void Main_RefreshBoxes(void)
+{
+    if (!g_edMainTodoList || !g_edMainUrgentList) return;
+
+    if (!g_currentTeamId[0]) {
+        SetWindowTextW(g_edMainTodoList, L"팀을 먼저 선택해 주세요.");
+        SetWindowTextW(g_edMainUrgentList, L"팀을 먼저 선택해 주세요.");
+        return;
+    }
+
+    TaskItem* list = (TaskItem*)calloc(512, sizeof(TaskItem));
+    int n = list ? Task_LoadActiveOnly(g_currentTeamId, list, 512) : 0;
+
+    wchar_t todo[8192] = L"";
+    wchar_t urg[8192] = L"";
+
+    int tcnt = 0, ucnt = 0;
+
+    for (int i = 0; i < n; i++) {
+        // ✅ 미완료 박스: 제목만 쭉
+        {
+            wchar_t line[256];
+            swprintf(line, 256, L"%d. %ls\r\n", ++tcnt, list[i].title);
+            if (wcslen(todo) + wcslen(line) < 8190) wcscat(todo, line);
+        }
+
+        // ✅ 마감 임박 박스: 마감일 있고, D-10 이내만
+        if (list[i].deadline[0]) {
+            int d = DaysUntil_YYYYMMDD(list[i].deadline);
+            if (d >= 0 && d <= 10) {
+                wchar_t line2[256];
+                swprintf(line2, 256, L"%d. %ls  (%ls, D-%d)\r\n",
+                    ++ucnt, list[i].title, list[i].deadline, d);
+                if (wcslen(urg) + wcslen(line2) < 8190) wcscat(urg, line2);
+            }
+        }
+    }
+
+    if (tcnt == 0) wcscpy(todo, L"(미완료 과제가 없습니다)");
+    if (ucnt == 0) wcscpy(urg, L"(마감 임박(D-10) 과제가 없습니다)");
+
+    SetWindowTextW(g_edMainTodoList, todo);
+    SetWindowTextW(g_edMainUrgentList, urg);
+
+    if (list) free(list);
+}
+static void Deadline_RefreshUI(void)
+{
+    if (!g_edOverlayList) return;
+
+    if (!g_currentTeamId[0]) {
+        SetWindowTextW(g_edOverlayList, L"팀을 먼저 선택해 주세요.");
+        return;
+    }
+
+    TaskItem* list = (TaskItem*)calloc(512, sizeof(TaskItem));
+    int n = list ? Task_LoadActiveOnly(g_currentTeamId, list, 512) : 0;
+
+    wchar_t out[8192];
+    out[0] = 0;
+
+    int k = 0;
+    for (int i = 0; i < n; i++) {
+        if (!list[i].title[0]) continue;
+        if (!list[i].deadline[0]) continue;
+
+        int d = DaysUntil_YYYYMMDD(list[i].deadline);
+
+        // ✅ D-10 이내만 보여주고 싶으면 아래 조건 유지
+        if (d < 0 || d > 10) continue;
+
+        wchar_t line[256];
+        swprintf(line, 256, L"%d. %ls  (%ls, D-%d)\r\n",
+            ++k, list[i].title, list[i].deadline, d);
+
+        if (wcslen(out) + wcslen(line) < 8190) wcscat(out, line);
+    }
+
+    if (k == 0) wcscpy(out, L"(마감 임박(D-10) 과제가 없습니다)");
+    SetWindowTextW(g_edOverlayList, out);
+
+    if (list) free(list);
+}
+
+static void Todo_RefreshUI(void)
+{
+    if (!g_edOverlayList) return;
+
+    if (!g_currentTeamId[0]) {
+        SetWindowTextW(g_edOverlayList, L"팀을 먼저 선택해 주세요.");
+        return;
+    }
+
+    TaskItem* list = (TaskItem*)calloc(512, sizeof(TaskItem));
+    int n = list ? Task_LoadActiveOnly(g_currentTeamId, list, 512) : 0;
+
+    wchar_t out[8192];
+    out[0] = 0;
+
+    int k = 0;
+    for (int i = 0; i < n; i++) {
+        if (!list[i].title[0]) continue;
+
+        wchar_t line[256];
+        swprintf(line, 256, L"%d. %ls\r\n", ++k, list[i].title);
+
+        if (wcslen(out) + wcslen(line) < 8190) wcscat(out, line);
+    }
+
+    if (k == 0) wcscpy(out, L"(미완료 과제가 없습니다)");
+    SetWindowTextW(g_edOverlayList, out);
+
+    if (list) free(list);
+}

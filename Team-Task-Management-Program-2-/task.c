@@ -40,12 +40,12 @@ static void BuildTaskPath(const wchar_t* teamId, wchar_t* outPath, int cap)
 }
 
 // 저장 포맷(1 task = 6 lines)
-// id|done
-// title
-// content(escape된 한줄)
-// detail(escape된 한줄)
-// file
-// --END--
+// 1) id|done|deadline
+// 2) title
+// 3) content(escape된 한줄)
+// 4) detail(escape된 한줄)
+// 5) file
+// 6) --END--
 static void EscapeToOneLine(const wchar_t* in, wchar_t* out, int cap)
 {
     if (!out || cap <= 0) return;
@@ -104,12 +104,14 @@ int Task_LoadAll(const wchar_t* teamId, TaskItem* outArr, int maxCount)
         TaskItem t;
         ZeroMemory(&t, sizeof(t));
 
-        // 1) id|done
+        // 1) id|done|deadline   (구버전 파일이면 id|done 만 있을 수도 있음)
         if (!fgetws(line, 4096, fp)) break;
         TrimNL(line);
         if (line[0] == 0) continue;
 
-        swscanf(line, L"%d|%d", &t.id, &t.done);
+        int m = swscanf(line, L"%d|%d|%31[^\r\n]", &t.id, &t.done, t.deadline);
+        if (m < 2) continue;
+        if (m == 2) t.deadline[0] = 0;
 
         // 2) title
         if (!fgetws(line, 4096, fp)) break;
@@ -117,12 +119,12 @@ int Task_LoadAll(const wchar_t* teamId, TaskItem* outArr, int maxCount)
         wcsncpy(t.title, line, TASK_TITLE_MAX - 1);
         t.title[TASK_TITLE_MAX - 1] = 0;
 
-        // 3) content
+        // 3) content (escaped)
         if (!fgetws(line, 4096, fp)) break;
         TrimNL(line);
         UnescapeFromOneLine(line, t.content, TASK_TEXT_MAX);
 
-        // 4) detail
+        // 4) detail (escaped)
         if (!fgetws(line, 4096, fp)) break;
         TrimNL(line);
         UnescapeFromOneLine(line, t.detail, TASK_TEXT_MAX);
@@ -154,8 +156,8 @@ int Task_SaveAll(const wchar_t* teamId, const TaskItem* arr, int count)
     _wfopen_s(&fp, path, L"w, ccs=UTF-8");
     if (!fp) return 0;
 
-    // ✅ 스택오버플로 방지: 큰 버퍼는 힙으로
-    const int cap = TASK_TEXT_MAX * 2; // 4096 wchar_t
+    // ✅ 큰 버퍼는 힙
+    const int cap = TASK_TEXT_MAX * 2;
     wchar_t* c1 = (wchar_t*)calloc(cap, sizeof(wchar_t));
     wchar_t* d1 = (wchar_t*)calloc(cap, sizeof(wchar_t));
     if (!c1 || !d1) {
@@ -174,11 +176,22 @@ int Task_SaveAll(const wchar_t* teamId, const TaskItem* arr, int count)
         EscapeToOneLine(t->content, c1, cap);
         EscapeToOneLine(t->detail, d1, cap);
 
-        fwprintf(fp, L"%d|%d\n", t->id, t->done);
-        fwprintf(fp, L"%ls\n", t->title);
-        fwprintf(fp, L"%ls\n", c1);
-        fwprintf(fp, L"%ls\n", d1);
-        fwprintf(fp, L"%ls\n", t->file);
+        // ✅ 1) header: id|done|deadline  (Load와 완전 일치)
+        fwprintf(fp, L"%d|%d|%s\n", t->id, t->done, t->deadline);
+
+        // 2) title
+        fwprintf(fp, L"%s\n", t->title);
+
+        // 3) content (escaped)
+        fwprintf(fp, L"%s\n", c1);
+
+        // 4) detail (escaped)
+        fwprintf(fp, L"%s\n", d1);
+
+        // 5) file
+        fwprintf(fp, L"%s\n", t->file);
+
+        // 6) --END--
         fwprintf(fp, L"--END--\n");
     }
 

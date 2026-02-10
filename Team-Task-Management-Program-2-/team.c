@@ -229,7 +229,6 @@ BOOL Team_FindByTeamId(const wchar_t* teamId, TeamInfo* outTeam)
     return FALSE;
 }
 
-// ✅ taskName 없이 생성
 BOOL Team_Create(const wchar_t* teamName,
     const wchar_t* joinCode,
     const wchar_t* ownerUserId,
@@ -247,14 +246,14 @@ BOOL Team_Create(const wchar_t* teamName,
     wcsncpy(t.joinCode, joinCode, 63);  t.joinCode[63] = 0;
     wcsncpy(t.ownerUserId, ownerUserId, 127); t.ownerUserId[127] = 0;
 
+    // 1) teams.txt 저장 (4칸)
     FILE* fp = OpenUtf8Append(TEAMS_FILE);
     if (!fp) return FALSE;
 
-    // ✅ 4칸 저장 (teamId|teamName|joinCode|owner)
-    fwprintf(fp, L"%s|%s|%s\n", t.teamId, ownerUserId, L"LEADER");
-
+    fwprintf(fp, L"%s|%s|%s|%s\n", t.teamId, t.teamName, t.joinCode, t.ownerUserId);
     fclose(fp);
 
+    // 2) team_members.txt에 OWNER 추가
     fp = OpenUtf8Append(TEAM_MEMBERS_FILE);
     if (!fp) return FALSE;
 
@@ -264,6 +263,7 @@ BOOL Team_Create(const wchar_t* teamName,
     if (outTeam) *outTeam = t;
     return TRUE;
 }
+
 
 BOOL Team_JoinByCode(const wchar_t* joinCode,
     const wchar_t* userId,
