@@ -210,7 +210,7 @@ const wchar_t* BMP_TEAM_CREATE = L"team_create.bmp";
 const wchar_t* BMP_TEAM_JOIN = L"team_join.bmp";
 const wchar_t* BMP_TASK_ADD = L"task_add.bmp";
 const wchar_t* BMP_BOARD = L"board.bmp";
-
+const wchar_t* BMP_BOARD_WRITE = L"board_write.bmp";
 // BMP 핸들
 HBITMAP g_bmpStart = NULL;
 HBITMAP g_bmpSignup = NULL;
@@ -224,7 +224,7 @@ HBITMAP g_bmpTeamCreate = NULL;
 HBITMAP g_bmpTeamJoin = NULL;
 HBITMAP g_bmpTaskAdd = NULL;
 HBITMAP g_bmpBoard = NULL;
-
+HBITMAP g_bmpBoardWrite = NULL;
 // 디버그/클라이언트 크기
 int g_lastX = -1, g_lastY = -1;
 int g_clientW = 0, g_clientH = 0;
@@ -245,6 +245,8 @@ static HWND g_edOverlayList = NULL;
 
 static HWND g_edMainTodoList = NULL;       // 미완료 과제 표시
 static HWND g_edMainUrgentList = NULL;     // 마감 임박 과제 표시
+static HWND g_edBoardList = NULL;
+
 static int  g_taskSelectedSlot = -1;
 // ---------------------------------------------------------
 // 화면 히스토리(뒤로가기)  ✅ 하나만 사용
@@ -746,6 +748,7 @@ static void DestroyAllEdits(void)
     DestroyHookedWindow(&g_edOverlayList, PROP_OLD_EDIT_PROC);
     DestroyHookedWindow(&g_edDoneList, PROP_OLD_EDIT_PROC);
 
+    
     Board_DestroyControls();
     ShowMyTeamStatics(0);
 }
@@ -807,7 +810,7 @@ static void CreateControlsForScreen(HWND hWnd, Screen s)
     case SCR_FINDPW:
         g_edFindName = CreateEdit(hWnd, 301, 0);
         g_edFindId = CreateEdit(hWnd, 302, 0);
-        g_edFindResult = CreateEdit(hWnd, 303, ES_MULTILINE | ES_AUTOVSCROLL | WS_VSCROLL);
+        g_edFindResult = CreateEdit(hWnd, 303, ES_READONLY);
         break;
 
     case SCR_DEADLINE:
@@ -874,8 +877,19 @@ static void CreateControlsForScreen(HWND hWnd, Screen s)
         break;
 
     case SCR_BOARD:
-        Board_CreateControls(hWnd);
+    {
+        // ✅ 게시판 목록: 텍스트박스 1개만
+        g_edBoardList = CreateEdit(hWnd, 7210,
+            ES_MULTILINE | ES_AUTOVSCROLL | WS_VSCROLL | ES_READONLY);
+
+        // ✅ 탭 정렬(번호/제목/글쓴이 컬럼 느낌)
+        int tabs[2] = { 80, 520 }; // 너 화면 기준으로 적당히(픽셀 느낌으로 맞출 것)
+        SendMessageW(g_edBoardList, EM_SETTABSTOPS, 2, (LPARAM)tabs);
+
+        Board_CreateControls(hWnd);   // 기존 로직 유지(검색/클릭 등)
         break;
+    }
+
 
     case SCR_MYTEAM:
         EnsureMyTeamStatics(hWnd, GetUIFont());
@@ -1102,9 +1116,18 @@ static void RelayoutControls(HWND hWnd)
 
     // BOARD
     if (g_screen == SCR_BOARD) {
+        if (g_edBoardList) ShowWindow(g_edBoardList, SW_SHOW);
+
+        MoveEdit(g_edBoardList,
+            SX(R_BOARD_LIST_X1), SY(R_BOARD_LIST_Y1),
+            SX(R_BOARD_LIST_X2), SY(R_BOARD_LIST_Y2),
+            6, 6, 6, 6
+        );
+
         Board_RelayoutControls(hWnd);
         return;
     }
+
 
     // MYTEAM
     if (g_screen == SCR_MYTEAM) {
@@ -1156,7 +1179,6 @@ static void SwitchScreen_NoHistory(HWND hWnd, Screen next)
 {
     DestroyAllEdits();
     g_screen = next;
-
     if (next == SCR_START)            ResizeToBitmap(hWnd, g_bmpStart);
     else if (next == SCR_SIGNUP)      ResizeToBitmap(hWnd, g_bmpSignup);
     else if (next == SCR_FINDPW)      ResizeToBitmap(hWnd, g_bmpFindPw);
@@ -1168,7 +1190,10 @@ static void SwitchScreen_NoHistory(HWND hWnd, Screen next)
     else if (next == SCR_TEAM_JOIN)   ResizeToBitmap(hWnd, g_bmpTeamJoin);
     else if (next == SCR_TASK_ADD)    ResizeToBitmap(hWnd, g_bmpTaskAdd);
     else if (next == SCR_BOARD)       ResizeToBitmap(hWnd, g_bmpBoard);
-    else                               ResizeToBitmap(hWnd, g_bmpMain);
+    else if (next == SCR_BOARD_WRITE) ResizeToBitmap(hWnd, g_bmpBoardWrite);
+    else                              ResizeToBitmap(hWnd, g_bmpMain);
+
+
 
     CreateControlsForScreen(hWnd, next);
     RelayoutControls(hWnd);
@@ -1197,6 +1222,8 @@ int App_OnCreate(HWND hWnd)
     g_bmpTeamJoin = LoadBmpFromExeDir(hWnd, BMP_TEAM_JOIN, NULL, NULL);
     g_bmpTaskAdd = LoadBmpFromExeDir(hWnd, BMP_TASK_ADD, NULL, NULL);
     g_bmpBoard = LoadBmpFromExeDir(hWnd, BMP_BOARD, NULL, NULL);
+    g_bmpBoardWrite = LoadBmpFromExeDir(hWnd, BMP_BOARD_WRITE, NULL, NULL);
+    if (!g_bmpBoardWrite) return -1;
 
     if (!g_bmpSignup || !g_bmpMain || !g_bmpFindPw ||
         !g_bmpDeadline || !g_bmpTodo || !g_bmpMyTeam || !g_bmpDone ||
@@ -1553,40 +1580,40 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
   // 삭제
     if (g_screen == SCR_TASK_ADD)
     {
-    if (HitScaled(R_TA_BTN_DEL_X1, R_TA_BTN_DEL_Y1,
-        R_TA_BTN_DEL_X2, R_TA_BTN_DEL_Y2, x, y))
-    {
-        if (g_taskSelectedId == 0) {
-            MessageBoxW(hWnd, L"삭제(비우기)할 과제를 선택해 주세요.", L"삭제", MB_OK | MB_ICONWARNING);
+        if (HitScaled(R_TA_BTN_DEL_X1, R_TA_BTN_DEL_Y1,
+            R_TA_BTN_DEL_X2, R_TA_BTN_DEL_Y2, x, y))
+        {
+            if (g_taskSelectedId == 0) {
+                MessageBoxW(hWnd, L"삭제(비우기)할 과제를 선택해 주세요.", L"삭제", MB_OK | MB_ICONWARNING);
+                SAFE_LEAVE();
+            }
+            if (!CanDeleteOrDone()) {
+                MessageBoxW(hWnd, L"팀장만 삭제할 수 있습니다.", L"권한 없음", MB_OK | MB_ICONWARNING);
+                SAFE_LEAVE();
+            }
+
+            TaskItem t = { 0 };
+            t.id = g_taskSelectedId;
+            t.done = 0;
+            t.title[0] = 0;
+            t.content[0] = 0;
+            t.detail[0] = 0;
+            t.file[0] = 0;
+
+            if (!Task_Update(g_currentTeamId, &t)) {
+                MessageBoxW(hWnd, L"삭제 실패(Task_Update)", L"삭제", MB_OK | MB_ICONERROR);
+                SAFE_LEAVE();
+            }
+
+            Task_ClearRightEdits();
+            Task_SaveCurrentPageState();
+            Task_RefreshLeftList();
+            if (g_edTaDeadline) SetWindowTextW(g_edTaDeadline, L"");
+
+
+            MessageBoxW(hWnd, L"삭제 되었습니다.", L"삭제", MB_OK | MB_ICONINFORMATION);
             SAFE_LEAVE();
         }
-        if (!CanDeleteOrDone()) {
-            MessageBoxW(hWnd, L"팀장만 삭제할 수 있습니다.", L"권한 없음", MB_OK | MB_ICONWARNING);
-            SAFE_LEAVE();
-        }
-
-        TaskItem t = { 0 };
-        t.id = g_taskSelectedId;
-        t.done = 0;
-        t.title[0] = 0;
-        t.content[0] = 0;
-        t.detail[0] = 0;
-        t.file[0] = 0;
-
-        if (!Task_Update(g_currentTeamId, &t)) {
-            MessageBoxW(hWnd, L"삭제 실패(Task_Update)", L"삭제", MB_OK | MB_ICONERROR);
-            SAFE_LEAVE();
-        }
-
-        Task_ClearRightEdits();
-        Task_SaveCurrentPageState();
-        Task_RefreshLeftList();
-        if (g_edTaDeadline) SetWindowTextW(g_edTaDeadline, L"");
-
-
-        MessageBoxW(hWnd, L"삭제 되었습니다.", L"삭제", MB_OK | MB_ICONINFORMATION);
-        SAFE_LEAVE();
-    }
 
 
         // 파일 비우기
@@ -1661,7 +1688,7 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
             if (g_edTaFile)    GetWindowTextW(g_edTaFile, t.file, TASK_FILE_MAX);
             if (g_edTaDeadline) GetWindowTextW(g_edTaDeadline, t.deadline, TASK_DEADLINE_MAX);
 
-         
+
             if (!t.title[0]) {
                 MessageBoxW(hWnd, L"제목을 입력해 주세요.", L"등록", MB_OK | MB_ICONWARNING);
                 SAFE_LEAVE();
@@ -1838,13 +1865,21 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
     // -----------------------------------------------------
     // BOARD
     // -----------------------------------------------------
-    if (g_screen == SCR_BOARD) {
+    if (g_screen == SCR_BOARD)
+    {
+        // ✅ 등록 버튼 -> 글쓰기 화면 전환
+        if (HitScaled(R_BOARD_BTN_REG_X1, R_BOARD_BTN_REG_Y1,
+            R_BOARD_BTN_REG_X2, R_BOARD_BTN_REG_Y2, x, y))
+        {
+            SwitchScreen(hWnd, SCR_BOARD_WRITE);
+            SAFE_LEAVE();
+        }
+
         if (Board_OnClick(hWnd, x, y)) SAFE_LEAVE();
         SAFE_LEAVE();
     }
-
-    SAFE_LEAVE();
 }
+
 
 // ---------------------------------------------------------
 // Paint
@@ -1876,7 +1911,9 @@ void App_OnPaint(HWND hWnd, HDC hdc)
     else if (g_screen == SCR_TEAM_JOIN)   DrawBitmapFit(mem, g_bmpTeamJoin, w, h);
     else if (g_screen == SCR_TASK_ADD)    DrawBitmapFit(mem, g_bmpTaskAdd, w, h);
     else if (g_screen == SCR_BOARD)       DrawBitmapFit(mem, g_bmpBoard, w, h);
+    else if (g_screen == SCR_BOARD_WRITE) DrawBitmapFit(mem, g_bmpBoardWrite, w, h);
     else                                  DrawBitmapFit(mem, g_bmpMain, w, h);
+
 
     // MYTEAM 테두리 표시
     if (g_screen == SCR_MYTEAM)
@@ -1987,6 +2024,7 @@ void App_OnDestroy(void)
 
     if (g_uiFont) { DeleteObject(g_uiFont); g_uiFont = NULL; }
     if (g_brWhite) { DeleteObject(g_brWhite); g_brWhite = NULL; }
+    if (g_bmpBoardWrite) { DeleteObject(g_bmpBoardWrite); g_bmpBoardWrite = NULL; }
 
 }
 
@@ -2472,7 +2510,7 @@ static void Deadline_RefreshUI(void)
         if (wcslen(out) + wcslen(line) < 8190) wcscat(out, line);
     }
 
-    if (k == 0) wcscpy(out, L"(마감 임박(D-10) 과제가 없습니다)");
+    if (k == 0) wcscpy(out, L"(마감 임박 과제가 없습니다)");
     SetWindowTextW(g_edOverlayList, out);
 
     if (list) free(list);
@@ -2507,4 +2545,18 @@ static void Todo_RefreshUI(void)
     SetWindowTextW(g_edOverlayList, out);
 
     if (list) free(list);
+}
+
+#ifndef WM_APP_CHILDCLICK
+#define WM_APP_CHILDCLICK (WM_APP + 1)
+#endif
+
+LRESULT App_OnAppChildClickWndProc(HWND hWnd, WPARAM wParam, LPARAM lParam)
+{
+    int x = (int)wParam;
+    int y = (int)lParam;
+
+    // 자식 EDIT/STATIC 클릭도 부모 클릭 처리로 흘려보내기
+    App_OnLButtonDown(hWnd, x, y);
+    return 0;
 }

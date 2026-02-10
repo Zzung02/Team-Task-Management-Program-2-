@@ -18,6 +18,7 @@ int App_OnDrawItem(HWND hWnd, const DRAWITEMSTRUCT* dis);
 // 👉 기능 안 건드리고 링크만 맞추려면 아래처럼 WndProc 버전만 노출시키는 게 안전함.
 LRESULT App_OnMouseMove(HWND hWnd, WPARAM wParam, LPARAM lParam);
 LRESULT App_OnAppChildClickWndProc(HWND hWnd, WPARAM wParam, LPARAM lParam);
+LRESULT App_OnAppChildClickWndProc(HWND hWnd, WPARAM wParam, LPARAM lParam);
 
 void App_GoToStart(HWND hWnd);
 
@@ -33,7 +34,8 @@ typedef enum {
     SCR_TEAM_CREATE = 8,  // 팀 등록
     SCR_TEAM_JOIN = 9,    // 팀 참여
     SCR_TASK_ADD = 10,
-    SCR_BOARD = 11        // 게시판
+    SCR_BOARD = 11,        // 게시판
+    SCR_BOARD_WRITE = 12
 } Screen;
 
 extern Screen g_screen;

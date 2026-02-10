@@ -136,19 +136,6 @@ extern int g_clientH;
 #define R_MAIN_BTN_DONE_Y2      399 
 
 
-// =========================================================
-// MAIN - 내용 표시 박스(EDIT) 좌표 (미완료/마감임박)
-// =========================================================
-#define R_MAIN_TODO_BOX_X1    0
-#define R_MAIN_TODO_BOX_Y1    0
-#define R_MAIN_TODO_BOX_X2    0
-#define R_MAIN_TODO_BOX_Y2    0
-
-#define R_MAIN_URGENT_BOX_X1  0
-#define R_MAIN_URGENT_BOX_Y1  0
-#define R_MAIN_URGENT_BOX_X2  0
-#define R_MAIN_URGENT_BOX_Y2  0
-
 
 
 // =========================================================
@@ -261,6 +248,15 @@ extern int g_clientH;
 #define R_TA_SEARCH_ICON_X2  1285
 #define R_TA_SEARCH_ICON_Y2  75
 
+#define R_DEADLINE_LIST_X1 157
+#define R_DEADLINE_LIST_Y1 202
+#define R_DEADLINE_LIST_X2 517
+#define R_DEADLINE_LIST_Y2 657
+
+#define R_TODO_LIST_X1 157
+#define R_TODO_LIST_Y1 202
+#define R_TODO_LIST_X2 517
+#define R_TODO_LIST_Y2 657
 
 // 삭제 버튼(너 BMP에 있으면)
 #define R_TA_BTN_DEL_X1  493
@@ -362,20 +358,10 @@ extern int g_clientH;
 /// ================================
 // BOARD 
 // ================================
-#define R_BD_SEARCH_X1  696
-#define R_BD_SEARCH_Y1  54
-#define R_BD_SEARCH_X2  1171
-#define R_BD_SEARCH_Y2  77
-
-#define R_BD_TITLE_X1   178
-#define R_BD_TITLE_Y1   182
-#define R_BD_TITLE_X2   1002
-#define R_BD_TITLE_Y2   204
-
-#define R_BD_CONTENT_X1 176
-#define R_BD_CONTENT_Y1 276
-#define R_BD_CONTENT_X2 1182
-#define R_BD_CONTENT_Y2 481
+#define R_BD_SEARCH_X1  897
+#define R_BD_SEARCH_Y1  49
+#define R_BD_SEARCH_X2  1214
+#define R_BD_SEARCH_Y2  79
 
 #define R_BD_BTN_ADD_X1   187
 #define R_BD_BTN_ADD_Y1   39
@@ -387,13 +373,21 @@ extern int g_clientH;
 #define R_BD_BTN_EDIT_X2  593
 #define R_BD_BTN_EDIT_Y2  84
 
-#define R_BD_BTN_DONE_X1  790
-#define R_BD_BTN_DONE_Y1  60
-#define R_BD_BTN_DONE_X2  1040
-#define R_BD_BTN_DONE_Y2  120
+#define R_BD_BTN_DONE_X1  556
+#define R_BD_BTN_DONE_Y1  43
+#define R_BD_BTN_DONE_X2  581
+#define R_BD_BTN_DONE_Y2  76
 
 
+#define R_BOARD_BTN_REG_X1 188
+#define R_BOARD_BTN_REG_Y1 41
+#define R_BOARD_BTN_REG_X2 376
+#define R_BOARD_BTN_REG_Y2 81
 
+#define R_BOARD_LIST_X1 153
+#define R_BOARD_LIST_Y1 164
+#define R_BOARD_LIST_X2 1221
+#define R_BOARD_LIST_Y2 587
 // =========================================================
 // 공통 뒤로가기 버튼 (모든 화면)
 // =========================================================
@@ -404,27 +398,3 @@ extern int g_clientH;
 
 
 
-
-// MAIN 왼쪽 패널(큰 칸) - 내용 출력 박스 영역
-#define R_MAIN_PANEL_X1   0
-#define R_MAIN_PANEL_Y1   0
-#define R_MAIN_PANEL_X2   0
-#define R_MAIN_PANEL_Y2   0
-
-
-#define R_OVR_LIST_X1  0
-#define R_OVR_LIST_Y1  0
-#define R_OVR_LIST_X2  0
-#define R_OVR_LIST_Y2  0
-
-
-
-#define R_DEADLINE_LIST_X1 157
-#define R_DEADLINE_LIST_Y1 202
-#define R_DEADLINE_LIST_X2 517
-#define R_DEADLINE_LIST_Y2 657
-
-#define R_TODO_LIST_X1 157
-#define R_TODO_LIST_Y1 202
-#define R_TODO_LIST_X2 517
-#define R_TODO_LIST_Y2 657

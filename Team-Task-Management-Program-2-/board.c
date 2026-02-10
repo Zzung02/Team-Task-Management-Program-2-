@@ -130,12 +130,8 @@ void Board_RelayoutControls(HWND hWnd)
     MoveEdit(g_edBdSearch, SX(R_BD_SEARCH_X1), SY(R_BD_SEARCH_Y1),
         SX(R_BD_SEARCH_X2), SY(R_BD_SEARCH_Y2), 0, 0, 0, 0);
 
-    MoveEdit(g_edBdTitle, SX(R_BD_TITLE_X1), SY(R_BD_TITLE_Y1),
-        SX(R_BD_TITLE_X2), SY(R_BD_TITLE_Y2), 0, 0, 0, 0);
-
-    MoveEdit(g_edBdContent, SX(R_BD_CONTENT_X1), SY(R_BD_CONTENT_Y1),
-        SX(R_BD_CONTENT_X2), SY(R_BD_CONTENT_Y2), 0, 0, 0, 0);
 }
+
 
 // ---------------------------------------------------------
 // Click handling

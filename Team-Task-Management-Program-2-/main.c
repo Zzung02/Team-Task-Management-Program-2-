@@ -41,6 +41,8 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
         return (INT_PTR)g_brWhite;
     }
 
+
+
     case WM_ERASEBKGND:
         return 1;
 
