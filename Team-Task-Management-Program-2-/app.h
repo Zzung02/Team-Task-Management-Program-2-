@@ -57,6 +57,8 @@ extern const wchar_t* BMP_BOARD;
 // ✅ app.c에 실제로 있는 전역(네 app.c 기준)
 extern wchar_t g_currentUserId[128];
 extern wchar_t g_currentTeamId[64];
+extern wchar_t g_currentTeamId[64];
+
 
 // ❌ 아래 3개는 app.c에 "정의가 없음" (있으면 ok, 없으면 링크 에러 원인)
 //    기능 안 건드리고 문법/링크만 맞추려면 일단 제거하거나,

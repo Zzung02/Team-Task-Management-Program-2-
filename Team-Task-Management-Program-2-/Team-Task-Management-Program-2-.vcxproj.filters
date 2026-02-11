@@ -39,6 +39,9 @@
     <ClCompile Include="task.c">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="calendar.c">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="app.h">
@@ -63,6 +66,9 @@
       <Filter>헤더 파일</Filter>
     </ClInclude>
     <ClInclude Include="task.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="calendar.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>

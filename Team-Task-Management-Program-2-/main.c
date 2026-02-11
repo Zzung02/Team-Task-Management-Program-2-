@@ -27,6 +27,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
         App_OnLButtonDown(hWnd, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
         return 0;
 
+
         // ✅⭐ 핵심: 자식(EDIT/STATIC)에서 PostMessage로 보낸 클릭 좌표를 여기서 받아서
         //          똑같이 App_OnLButtonDown으로 전달해야 함
     case WM_APP_CHILDCLICK:

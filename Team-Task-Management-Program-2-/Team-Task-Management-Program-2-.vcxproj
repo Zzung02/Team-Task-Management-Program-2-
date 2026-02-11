@@ -132,6 +132,7 @@
     <ClCompile Include="auth.c" />
     <ClCompile Include="bmp_loader.c" />
     <ClCompile Include="board.c" />
+    <ClCompile Include="calendar.c" />
     <ClCompile Include="main.c" />
     <ClCompile Include="task.c" />
     <ClCompile Include="team.c" />
@@ -142,6 +143,7 @@
     <ClInclude Include="auth.h" />
     <ClInclude Include="bmp_loader.h" />
     <ClInclude Include="board.h" />
+    <ClInclude Include="calendar.h" />
     <ClInclude Include="task.h" />
     <ClInclude Include="team.h" />
     <ClInclude Include="ui_coords.h" />

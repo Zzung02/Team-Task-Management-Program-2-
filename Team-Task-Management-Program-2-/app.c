@@ -8,6 +8,7 @@
 #include "auth.h"
 #include "board.h"
 #include "team.h"
+#include "calendar.h"
 
 #include <windows.h>
 #include <wchar.h>
@@ -747,7 +748,7 @@ static void DestroyAllEdits(void)
 
     DestroyHookedWindow(&g_edOverlayList, PROP_OLD_EDIT_PROC);
     DestroyHookedWindow(&g_edDoneList, PROP_OLD_EDIT_PROC);
-
+    DestroyHookedWindow(&g_edBoardList, PROP_OLD_EDIT_PROC);
     
     Board_DestroyControls();
     ShowMyTeamStatics(0);
@@ -947,6 +948,7 @@ static void RelayoutControls(HWND hWnd)
     if (g_edTaDetail) ShowWindow(g_edTaDetail, SW_HIDE);
     if (g_edTaFile) ShowWindow(g_edTaFile, SW_HIDE);
     if (g_edOverlayList) ShowWindow(g_edOverlayList, SW_HIDE);
+    if (g_edBoardList) ShowWindow(g_edBoardList, SW_HIDE);
 
 
     ShowMyTeamStatics(0);
@@ -992,10 +994,7 @@ static void RelayoutControls(HWND hWnd)
         return;
     }
 
-    // ✅ MAIN
-    if (g_screen == SCR_MAIN) {
-
-    }
+    
 
 
     // FINDPW
@@ -1231,6 +1230,7 @@ int App_OnCreate(HWND hWnd)
         return -1;
     }
 
+    Calendar_Init();
     SwitchScreen(hWnd, SCR_START);
     return 0;
 }
@@ -1241,6 +1241,8 @@ void App_OnSize(HWND hWnd, int w, int h)
     g_clientH = h;
     RelayoutControls(hWnd);
     InvalidateRect(hWnd, NULL, FALSE);
+
+
 }
 
 // ---------------------------------------------------------
@@ -1283,7 +1285,13 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
                 SAFE_LEAVE();
             }
 
-            if (Auth_Login(id, pw)) {
+            if (Auth_Login(id, pw)){
+
+                
+                Calendar_Init();                         
+                Calendar_SetTeamId(g_currentTeamId);     
+                Calendar_NotifyTasksChanged(hWnd, g_currentTeamId); 
+
                 lstrcpynW(g_currentUserId, id, 128);
                 g_currentTeamId[0] = 0;
                 g_mainTeamText[0] = 0;
@@ -1373,6 +1381,8 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
 // -----------------------------------------------------
     if (g_screen == SCR_MAIN)
     {
+
+        if (Calendar_OnClick(hWnd, x, y)) SAFE_LEAVE();
         // ✅ 여기서는 화면전환만 한다 (토글/오버레이 로직 제거)
         if (HitScaled(R_MAIN_BTN_DEADLINE_X1, R_MAIN_BTN_DEADLINE_Y1,
             R_MAIN_BTN_DEADLINE_X2, R_MAIN_BTN_DEADLINE_Y2, x, y))
@@ -1719,6 +1729,9 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
             Task_RefreshLeftList();
 
             MessageBoxW(hWnd, L"등록 완료!", L"등록", MB_OK | MB_ICONINFORMATION);
+            Calendar_SetTeamId(g_currentTeamId);
+            Calendar_NotifyTasksChanged(hWnd, g_currentTeamId);
+
             SAFE_LEAVE();
         }
 
@@ -1881,6 +1894,8 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
 }
 
 
+
+
 // ---------------------------------------------------------
 // Paint
 // ---------------------------------------------------------
@@ -1913,6 +1928,10 @@ void App_OnPaint(HWND hWnd, HDC hdc)
     else if (g_screen == SCR_BOARD)       DrawBitmapFit(mem, g_bmpBoard, w, h);
     else if (g_screen == SCR_BOARD_WRITE) DrawBitmapFit(mem, g_bmpBoardWrite, w, h);
     else                                  DrawBitmapFit(mem, g_bmpMain, w, h);
+    if (g_screen == SCR_MAIN)
+    {
+        Calendar_Draw(mem);   // 🔥 이거 추가
+    }
 
 
     // MYTEAM 테두리 표시
@@ -2026,7 +2045,8 @@ void App_OnDestroy(void)
     if (g_brWhite) { DeleteObject(g_brWhite); g_brWhite = NULL; }
     if (g_bmpBoardWrite) { DeleteObject(g_bmpBoardWrite); g_bmpBoardWrite = NULL; }
 
-}
+    }
+
 
 
 
@@ -2298,8 +2318,8 @@ static void DrawDebugOverlay(HDC hdc)
 // ---------------------------------------------------------
 // 링크 에러 방지용
 // ---------------------------------------------------------
-void App_GoToStart(HWND hWnd) { SwitchScreen(hWnd, SCR_START); }
 
+void App_GoToStart(HWND hWnd) { SwitchScreen(hWnd, SCR_START); }
 int App_OnDrawItem(HWND hWnd, const DRAWITEMSTRUCT* dis)
 {
     (void)hWnd; (void)dis;
@@ -2348,6 +2368,7 @@ void SwitchToTeam(HWND hWnd, const wchar_t* teamId)
     g_mainCodeText[0] = 0;
 
     SwitchScreen(hWnd, SCR_MAIN);
+
     ApplyMainHeaderTextsReal();
 } 
 
@@ -2546,10 +2567,6 @@ static void Todo_RefreshUI(void)
 
     if (list) free(list);
 }
-
-#ifndef WM_APP_CHILDCLICK
-#define WM_APP_CHILDCLICK (WM_APP + 1)
-#endif
 
 LRESULT App_OnAppChildClickWndProc(HWND hWnd, WPARAM wParam, LPARAM lParam)
 {

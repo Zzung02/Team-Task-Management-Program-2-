@@ -53,49 +53,49 @@ extern int g_clientH;
 #define R_BTN_BACK_X2        90
 #define R_BTN_BACK_Y2        50
 
-#define R_SIGN_NAME_X1       485
-#define R_SIGN_NAME_Y1       205
-#define R_SIGN_NAME_X2       800
-#define R_SIGN_NAME_Y2       230
+#define R_SIGN_NAME_X1       270
+#define R_SIGN_NAME_Y1       263
+#define R_SIGN_NAME_X2       640
+#define R_SIGN_NAME_Y2       284
 
-#define R_SIGN_ID_X1         436
-#define R_SIGN_ID_Y1         288
-#define R_SIGN_ID_X2         861
-#define R_SIGN_ID_Y2         310
+#define R_SIGN_ID_X1         216
+#define R_SIGN_ID_Y1         341
+#define R_SIGN_ID_X2         645
+#define R_SIGN_ID_Y2         366
 
-#define R_SIGN_PW_X1         450
-#define R_SIGN_PW_Y1         365
-#define R_SIGN_PW_X2         720
-#define R_SIGN_PW_Y2         395
+#define R_SIGN_PW_X1         233
+#define R_SIGN_PW_Y1         422
+#define R_SIGN_PW_X2         645
+#define R_SIGN_PW_Y2         444
 
-#define R_BTN_CREATE_X1      527
-#define R_BTN_CREATE_Y1      484
-#define R_BTN_CREATE_X2      717
+#define R_BTN_CREATE_X1      453
+#define R_BTN_CREATE_Y1      482
+#define R_BTN_CREATE_X2      642
 #define R_BTN_CREATE_Y2      525
 
 // =========================================================
 // FINDPW(비밀번호 찾기) 텍스트필드들
 // =========================================================
-#define R_FIND_NAME_X1   160
-#define R_FIND_NAME_Y1   215
-#define R_FIND_NAME_X2   500
-#define R_FIND_NAME_Y2   240
+#define R_FIND_NAME_X1   270
+#define R_FIND_NAME_Y1   263
+#define R_FIND_NAME_X2   638
+#define R_FIND_NAME_Y2   283
 
-#define R_FIND_ID_X1     120
-#define R_FIND_ID_Y1     300
-#define R_FIND_ID_X2     546
-#define R_FIND_ID_Y2     320
+#define R_FIND_ID_X1     215
+#define R_FIND_ID_Y1     341
+#define R_FIND_ID_X2     645
+#define R_FIND_ID_Y2     365
 
-#define R_FIND_RESULT_X1  840
-#define R_FIND_RESULT_Y1  150
-#define R_FIND_RESULT_X2  1105
-#define R_FIND_RESULT_Y2  300
+#define R_FIND_RESULT_X1  895
+#define R_FIND_RESULT_Y1  440
+#define R_FIND_RESULT_X2  1095
+#define R_FIND_RESULT_Y2  541
 
 // FINDPW "찾기" 버튼 
-#define R_FIND_BTN_X1   364
-#define R_FIND_BTN_Y1   376
-#define R_FIND_BTN_X2   551
-#define R_FIND_BTN_Y2   415
+#define R_FIND_BTN_X1   459
+#define R_FIND_BTN_Y1   407
+#define R_FIND_BTN_X2   646
+#define R_FIND_BTN_Y2   446
 
 
 
@@ -378,7 +378,6 @@ extern int g_clientH;
 #define R_BD_BTN_DONE_X2  581
 #define R_BD_BTN_DONE_Y2  76
 
-
 #define R_BOARD_BTN_REG_X1 188
 #define R_BOARD_BTN_REG_Y1 41
 #define R_BOARD_BTN_REG_X2 376
@@ -388,6 +387,51 @@ extern int g_clientH;
 #define R_BOARD_LIST_Y1 164
 #define R_BOARD_LIST_X2 1221
 #define R_BOARD_LIST_Y2 587
+
+#define R_BD_TITLE_X1 0
+#define R_BD_TITLE_Y1 0
+#define R_BD_TITLE_X2 0 
+#define R_BD_TITLE_Y2 0
+
+#define R_BD_CONTENT_X1 0
+#define R_BD_CONTENT_Y1 0 
+#define R_BD_CONTENT_X2 0
+#define R_BD_CONTENT_Y2 0
+
+
+// ================================
+// CALENDAR (MAIN 화면에 그릴 달력 영역)
+// ================================
+#define R_CAL_GRID_X1   170
+#define R_CAL_GRID_Y1   160
+#define R_CAL_GRID_X2   1120
+#define R_CAL_GRID_Y2   660
+
+// 월 이동(세모 박스) - 너 스샷 왼쪽 위 세모 영역 기준
+#define R_CAL_PREV_X1   84
+#define R_CAL_PREV_Y1   58
+#define R_CAL_PREV_X2   117
+#define R_CAL_PREV_Y2   82
+
+#define R_CAL_NEXT_X1   85
+#define R_CAL_NEXT_Y1   92
+#define R_CAL_NEXT_X2   116
+#define R_CAL_NEXT_Y2   114
+
+// "2026년 2월" 텍스트 표시 위치(세모 옆)
+#define R_CAL_LABEL_X1  12
+#define R_CAL_LABEL_Y1  54
+#define R_CAL_LABEL_X2  75
+#define R_CAL_LABEL_Y2  110
+
+// 예시 (네가 last click으로 잡은 좌표로 채워)
+#define R_CAL_X1  129
+#define R_CAL_Y1  179
+#define R_CAL_X2  1114
+#define R_CAL_Y2  684
+
+#define R_CAL_HEADER_H 60 
+
 // =========================================================
 // 공통 뒤로가기 버튼 (모든 화면)
 // =========================================================
