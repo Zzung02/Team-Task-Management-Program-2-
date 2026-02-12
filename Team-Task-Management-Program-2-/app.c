@@ -1292,11 +1292,7 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
                 Calendar_SetTeamId(g_currentTeamId);     
                 Calendar_NotifyTasksChanged(hWnd, g_currentTeamId); 
 
-                lstrcpynW(g_currentUserId, id, 128);
-                g_currentTeamId[0] = 0;
-                g_mainTeamText[0] = 0;
-                g_mainTaskText[0] = 0;
-                g_mainCodeText[0] = 0;
+         
 
                 SwitchScreen(hWnd, SCR_MAIN);
                 SAFE_LEAVE();
@@ -1383,6 +1379,7 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
     {
 
         if (Calendar_OnClick(hWnd, x, y)) SAFE_LEAVE();
+
         // ✅ 여기서는 화면전환만 한다 (토글/오버레이 로직 제거)
         if (HitScaled(R_MAIN_BTN_DEADLINE_X1, R_MAIN_BTN_DEADLINE_Y1,
             R_MAIN_BTN_DEADLINE_X2, R_MAIN_BTN_DEADLINE_Y2, x, y))
@@ -1397,6 +1394,7 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
             SwitchScreen(hWnd, SCR_TODO);
             SAFE_LEAVE();
         }
+
 
         if (HitScaled(R_MAIN_BTN_MYTEAM_X1, R_MAIN_BTN_MYTEAM_Y1, R_MAIN_BTN_MYTEAM_X2, R_MAIN_BTN_MYTEAM_Y2, x, y)) { SwitchScreen(hWnd, SCR_MYTEAM); SAFE_LEAVE(); }
         if (HitScaled(R_MAIN_BTN_DONE_X1, R_MAIN_BTN_DONE_Y1, R_MAIN_BTN_DONE_X2, R_MAIN_BTN_DONE_Y2, x, y)) { SwitchScreen(hWnd, SCR_DONE); SAFE_LEAVE(); }
@@ -1893,11 +1891,19 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
     }
 }
 
-
+static int ScreenShowsCalendar(Screen s)
+{
+    return (s == SCR_DEADLINE ||
+        s == SCR_TODO ||
+        s == SCR_MYTEAM ||
+        s == SCR_DONE ||
+        s == SCR_TEAM_CREATE ||
+        s == SCR_TEAM_JOIN);
+}
 
 
 // ---------------------------------------------------------
-// Paint
+// Paint  ✅ 캘린더: 메인(SCR_MAIN)에서만 표시 + 다른 화면에서는 절대 안 그림
 // ---------------------------------------------------------
 void App_OnPaint(HWND hWnd, HDC hdc)
 {
@@ -1928,13 +1934,37 @@ void App_OnPaint(HWND hWnd, HDC hdc)
     else if (g_screen == SCR_BOARD)       DrawBitmapFit(mem, g_bmpBoard, w, h);
     else if (g_screen == SCR_BOARD_WRITE) DrawBitmapFit(mem, g_bmpBoardWrite, w, h);
     else                                  DrawBitmapFit(mem, g_bmpMain, w, h);
-    if (g_screen == SCR_MAIN)
+
+    // ✅ 캘린더는 요청한 6개 화면에서만
+    if (ScreenShowsCalendar(g_screen))
     {
-        Calendar_Draw(mem);   // 🔥 이거 추가
+        int clipMode = 0;
+
+        // 왼쪽 패널이 올라오는 화면들(마감/미완료/내팀/완료)은 왼쪽 가림
+        if (g_screen == SCR_DEADLINE || g_screen == SCR_TODO ||
+            g_screen == SCR_DONE || g_screen == SCR_MYTEAM)
+        {
+            clipMode = 1;
+        }
+        // 팀등록/팀참여는 오른쪽 패널 가림(원하면 0으로 바꿔도 됨)
+        else if (g_screen == SCR_TEAM_CREATE || g_screen == SCR_TEAM_JOIN)
+        {
+            clipMode = 2;
+        }
+
+        Calendar_SetClipMode(clipMode);
+        Calendar_Draw(mem);   // ✅ 반드시 mem(더블버퍼)
     }
 
 
-    // MYTEAM 테두리 표시
+    // ✅ 캘린더는 메인 화면에서만 (년도/월/날짜 전부 메인에서만)
+    if (g_screen == SCR_MAIN)
+    {
+        Calendar_SetClipMode(0);
+        Calendar_Draw(mem);   // ✅ 반드시 mem에만
+    }
+
+    // ✅ MYTEAM 선택 테두리 표시
     if (g_screen == SCR_MYTEAM)
     {
         for (int i = 0; i < MYTEAM_SLOT_MAX; i++)
@@ -1982,7 +2012,7 @@ void App_OnPaint(HWND hWnd, HDC hdc)
         }
     }
 
-    // TASK_ADD 선택 테두리
+    // ✅ TASK_ADD 선택 테두리
     if (g_screen == SCR_TASK_ADD)
     {
         RECT slots[4] = {
@@ -2023,6 +2053,7 @@ void App_OnPaint(HWND hWnd, HDC hdc)
     DeleteDC(mem);
     (void)hWnd;
 }
+
 
 void App_OnDestroy(void)
 {

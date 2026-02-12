@@ -29,6 +29,7 @@ extern "C" {
 	// 과제 변경(등록/수정/삭제/완료) 직후 호출용 유틸
 	void Calendar_NotifyTasksChanged(HWND hWnd, const wchar_t* teamId);
 
+	void Calendar_SetClipMode(int mode);
 #ifdef __cplusplus
 }
 #endif

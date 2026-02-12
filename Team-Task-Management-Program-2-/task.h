@@ -25,6 +25,7 @@ int  Task_LoadAll(const wchar_t* teamId, TaskItem* outArr, int maxCount);
 int  Task_SaveAll(const wchar_t* teamId, const TaskItem* arr, int count);
 
 int  Task_NextId(const TaskItem* arr, int count);
+int Task_LoadActiveOnly(const wchar_t* teamId, TaskItem* out, int cap);
 
 int  Task_Add(const wchar_t* teamId, const TaskItem* item);                 // 추가
 int  Task_Update(const wchar_t* teamId, const TaskItem* item);              // id 기준 수정

@@ -14,7 +14,7 @@
 C언어 과제 분담
 7~9장까지 문제 나누기
 없음
-C:\Users\User\Pictures\Screenshots\스크린샷 2026-02-09 173839.png
+
 --END--
 6|0|
 

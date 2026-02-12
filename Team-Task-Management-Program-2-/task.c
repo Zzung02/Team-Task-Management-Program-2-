@@ -323,3 +323,24 @@ int Task_FindByTitle(const wchar_t* teamId, const wchar_t* keyword, TaskItem* ou
     free(buf);
     return found;
 }
+
+int Task_LoadActiveOnly(const wchar_t* teamId, TaskItem* out, int cap)
+{
+    if (!out || cap <= 0) return 0;
+
+    TaskItem* tmp = (TaskItem*)calloc(cap, sizeof(TaskItem));
+    if (!tmp) return 0;
+
+    int n = Task_LoadAll(teamId, tmp, cap);
+
+    int w = 0;
+    for (int i = 0; i < n; i++) {
+        if (tmp[i].title[0] == 0) continue;
+        if (tmp[i].done == 1) continue;     // ✅ 완료 제외 = active만
+        out[w++] = tmp[i];
+        if (w >= cap) break;
+    }
+
+    free(tmp);
+    return w;
+}

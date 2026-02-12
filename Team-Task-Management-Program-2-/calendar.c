@@ -1,16 +1,9 @@
-﻿// calendar.c  (원샷 덮어쓰기)
-// ✅ 네이버 캘린더 느낌: "월 라벨(2026년 \n 2월)" + ◀▶ 월 이동 + 날짜칸 + (마감일=과제제목 표시)
-// ✅ 요일 텍스트 없음
-// ✅ App_OnPaint(SCR_MAIN)에서 Calendar_Draw 호출
-// ✅ App_OnLButtonDown(SCR_MAIN)에서 Calendar_OnClick 먼저 호출
-// ✅ 과제 등록/수정/삭제/완료 성공 시 Calendar_NotifyTasksChanged(hWnd, g_currentTeamId) 호출 권장
-// ✅ 화면 전환해도 안 지워지게: teamId 비어있으면 Notify/Rebuild가 Clear만 하지 않도록 방어
-
+﻿// calendar.c  (원샷 덮어쓰기)  ✅ 화면별 클리핑(숫자 튀어나옴 방지) + 주말 빨간색 + 오늘 날짜 굵게
 #define _CRT_SECURE_NO_WARNINGS
 #include "calendar.h"
-#include "ui_coords.h"   // SX/SY
-#include "task.h"        // Task_LoadAll, TaskItem
-#include "app.h"
+#include "ui_coords.h"
+#include "task.h"
+#include "app.h"   // ✅ g_screen / Screen 사용
 
 #include <windows.h>
 #include <wchar.h>
@@ -25,24 +18,6 @@
 #define CAL_TITLE_MAX           64
 #endif
 
-// ===========================
-// ✅ 여기서만 조정하면 됨
-// ===========================
-#define CAL_COLS 7
-#define CAL_ROWS 6   // ✅ 요일줄 없으면 6주(최대 6행) 필요
-
-// 1: 안쪽 선 그리기, 0: 안쪽 선 숨김
-#define CAL_DRAW_INNER_LINES 0
-
-// 바깥 테두리(겉선)는 항상 그릴지 (1/0)
-#define CAL_DRAW_OUTER_BORDER 1
-
-// 선 두께
-#define CAL_BORDER_THICK 2
-#define CAL_INNER_THICK  1
-
-// ===========================
-
 static wchar_t g_calTeamId[64] = L"";
 
 typedef struct {
@@ -50,7 +25,9 @@ typedef struct {
     wchar_t title[CAL_MAX_EVENTS_PER_DAY][CAL_TITLE_MAX];
 } CalDayEvents;
 
+// ------------------------------------------------------------
 // 상태
+// ------------------------------------------------------------
 static int g_calYear = 2026;
 static int g_calMonth = 1;
 static CalDayEvents g_day[32]; // 1..31
@@ -77,8 +54,11 @@ static int ParseDate_YYYYMMDD_local(const wchar_t* s, int* y, int* m, int* d)
 
     int yy = 0, mm = 0, dd = 0;
 
+    // 1) YYYY/MM/DD
     if (swscanf(s, L"%d/%d/%d", &yy, &mm, &dd) != 3) {
+        // 2) YYYY-MM-DD
         if (swscanf(s, L"%d-%d-%d", &yy, &mm, &dd) != 3) {
+            // 3) YYYY.MM.DD
             if (swscanf(s, L"%d.%d.%d", &yy, &mm, &dd) != 3) {
                 return 0;
             }
@@ -127,21 +107,16 @@ static void ClearEvents(void)
     for (int d = 1; d <= 31; d++) g_day[d].count = 0;
 }
 
-// ✅ 선/칸 계산을 “누적 나눗셈”으로 통일 (끝까지 딱 맞음)
-static int CellLeft(int x1, int W, int c) { return x1 + (W * c) / CAL_COLS; }
-static int CellTop(int y1, int H, int r) { return y1 + (H * r) / CAL_ROWS; }
-
 // ------------------------------------------------------------
 // 외부에서 팀ID 세팅
 // ------------------------------------------------------------
-void Calendar_RebuildFromTasks(const wchar_t* teamId); // forward
-
 void Calendar_SetTeamId(const wchar_t* teamId)
 {
     if (!teamId) teamId = L"";
     lstrcpynW(g_calTeamId, teamId, 64);
 
     if (g_calTeamId[0]) {
+        extern void Calendar_RebuildFromTasks(const wchar_t* teamId);
         Calendar_RebuildFromTasks(g_calTeamId);
     }
 }
@@ -174,7 +149,7 @@ void Calendar_GetYM(int* outYear, int* outMonth)
 }
 
 // ------------------------------------------------------------
-// 과제 -> 이벤트 재구성
+// 과제 -> 이벤트(현재 월) 재구성
 // ------------------------------------------------------------
 void Calendar_RebuildFromTasks(const wchar_t* teamId)
 {
@@ -210,37 +185,36 @@ void Calendar_RebuildFromTasks(const wchar_t* teamId)
 void Calendar_NotifyTasksChanged(HWND hWnd, const wchar_t* teamId)
 {
     if (!teamId || !teamId[0]) return;
+
     Calendar_RebuildFromTasks(teamId);
     if (hWnd) InvalidateRect(hWnd, NULL, FALSE);
 }
 
-// ===============================
-// ✅ 캘린더 "칸 크기 직접 조정" 버전
-// - cellW/cellH 숫자만 바꾸면 칸 넓이/높이 변경됨
-// - 그리드 위치는 R_CAL_X1/Y1 기준 + 오프셋으로 미세조정 가능
-// ===============================
-
+// ------------------------------------------------------------
+// 그리기
+// ------------------------------------------------------------
 void Calendar_Draw(HDC hdc)
 {
+    int x1 = SX(R_CAL_X1), y1 = SY(R_CAL_Y1);
+    int x2 = SX(R_CAL_X2), y2 = SY(R_CAL_Y2);
 
-    // ------------------------------
-    // 1) 그리드 실제 위치 계산
-    // ------------------------------
-    int baseX1 = SX(R_CAL_X1);
-    int baseY1 = SY(R_CAL_Y1);
+    int W = x2 - x1;
+    int H = y2 - y1;
 
-    int x1 = baseX1 + CAL_GRID_OFFX;
-    int y1 = baseY1 + CAL_GRID_OFFY;
+    const int cols = 7;
+    const int rows = 5; // ✅ 네 코드 유지
 
-    int W = CAL_CELL_W * CAL_COLS;
-    int H = CAL_CELL_H * CAL_ROWS;
+    int cellW = W / cols;
+    int cellH = H / rows;
 
-    int x2 = x1 + W;
-    int y2 = y1 + H;
+    // ✅ 오늘 날짜 구하기
+    SYSTEMTIME st;
+    GetLocalTime(&st);
+    int todayY = (int)st.wYear;
+    int todayM = (int)st.wMonth;
+    int todayD = (int)st.wDay;
 
-    // ------------------------------
-    // 2) 월 라벨(2026년 \n 2월) - 너 좌표 그대로 사용
-    // ------------------------------
+    // 0) 월 라벨
     {
         HFONT fMonth = MakeFont(30, 1);
         HFONT old = (HFONT)SelectObject(hdc, fMonth);
@@ -248,7 +222,7 @@ void Calendar_Draw(HDC hdc)
         SetTextColor(hdc, RGB(0, 0, 0));
 
         wchar_t monthText[64];
-        swprintf(monthText, 64, L"%d년\n%d월", g_calYear, g_calMonth);
+        swprintf(monthText, 64, L"%d\n%d월", g_calYear, g_calMonth);
 
         RECT rc;
         rc.left = SX(R_CAL_LABEL_X1);
@@ -256,42 +230,53 @@ void Calendar_Draw(HDC hdc)
         rc.right = SX(R_CAL_LABEL_X2);
         rc.bottom = SY(R_CAL_LABEL_Y2);
 
-        DrawTextW(hdc, monthText, -1, &rc,
-            DT_CENTER | DT_VCENTER | DT_WORDBREAK | DT_NOPREFIX);
+        DrawTextW(hdc, monthText, -1, &rc, DT_CENTER | DT_VCENTER | DT_WORDBREAK | DT_NOPREFIX);
 
         SelectObject(hdc, old);
         DeleteObject(fMonth);
     }
 
-    // ------------------------------
-    // 3) 선(지금은 "선 없애고 싶다" 했으니까 OFF)
-    //    - 다시 켜고 싶으면 if(1)로 바꾸기
-    // ------------------------------
-    if (0)
-    {
-        HPEN pen = CreatePen(PS_SOLID, 2, RGB(0, 0, 0));
-        HGDIOBJ oldPen = SelectObject(hdc, pen);
+    // ✅✅ 핵심: 화면별로 "실제로 보이는 캘린더 영역"만 그리도록 CLIP
+    // (DEADLINE 화면: 수~토만 보이는 레이아웃 / TEAM_CREATE/JOIN: 오른쪽 패널이 덮음)
+    int savedDC = SaveDC(hdc);
 
-        for (int c = 0; c <= CAL_COLS; c++) {
-            int x = x1 + c * CAL_CELL_W;
-            MoveToEx(hdc, x, y1, NULL);
-            LineTo(hdc, x, y2);
-        }
-        for (int r = 0; r <= CAL_ROWS; r++) {
-            int y = y1 + r * CAL_CELL_H;
-            MoveToEx(hdc, x1, y, NULL);
-            LineTo(hdc, x2, y);
-        }
+    int clipL = x1, clipT = y1, clipR = x2, clipB = y2;
 
-        SelectObject(hdc, oldPen);
-        DeleteObject(pen);
+    // app.c 전역 g_screen 사용
+    extern Screen g_screen;
+
+    if (g_screen == SCR_DEADLINE) {
+        // 왼쪽 3칸(일/월/화)은 패널에 가려지므로 그리지 않게
+        clipL = x1 + cellW * 3;
+    }
+    else if (g_screen == SCR_TEAM_CREATE || g_screen == SCR_TEAM_JOIN) {
+        // 오른쪽 3칸(목/금/토)은 폼 패널에 가려지므로 그리지 않게
+        clipR = x1 + cellW * 4;
     }
 
-    // ------------------------------
-    // 4) 날짜 / 이벤트
-    //    - 토/일 숫자 빨간색 처리
-    // ------------------------------
-    HFONT fDay = MakeFont(16, 1);
+    IntersectClipRect(hdc, clipL, clipT, clipR, clipB);
+
+    // 1) 그리드(네 코드 유지: PS_NULL 이면 선이 안 그려짐)
+    HPEN pen = CreatePen(PS_NULL, 0, 0);
+    HGDIOBJ oldPen = SelectObject(hdc, pen);
+
+    for (int c = 0; c <= cols; c++) {
+        int x = x1 + (W * c) / cols;
+        MoveToEx(hdc, x, y1, NULL);
+        LineTo(hdc, x, y2);
+    }
+    for (int r = 0; r <= rows; r++) {
+        int y = y1 + (H * r) / rows;
+        MoveToEx(hdc, x1, y, NULL);
+        LineTo(hdc, x2, y);
+    }
+
+    SelectObject(hdc, oldPen);
+    DeleteObject(pen);
+
+    // 2) 날짜/이벤트
+    HFONT fDayNormal = MakeFont(16, 0); // 기본
+    HFONT fDayBold = MakeFont(16, 1);   // 오늘 날짜용 굵게
     HFONT fEvt = MakeFont(14, 0);
 
     SetBkMode(hdc, TRANSPARENT);
@@ -301,25 +286,31 @@ void Calendar_Draw(HDC hdc)
 
     for (int day = 1; day <= dim; day++) {
         int idx = firstDow + (day - 1);
-        int r = idx / CAL_COLS;
-        int c = idx % CAL_COLS;
-        if (r < 0 || r >= CAL_ROWS) continue;
+        int r = idx / 7;
+        int c = idx % 7;
 
-        int cx = x1 + c * CAL_CELL_W;
-        int cy = y1 + r * CAL_CELL_H;
+        if (r < 0 || r >= rows) continue;
 
-        // ✅ 일/토 텍스트 빨간색
-        // col 0 = 일요일, col 6 = 토요일 (firstDow 반영된 idx 기준)
+        int cx = x1 + c * cellW;
+        int cy = y1 + r * cellH;
+
+        // ✅ 일/토 빨간색
         int isWeekend = (c == 0 || c == 6);
+
+        // ✅ 오늘 날짜면 굵게
+        int isToday = (g_calYear == todayY && g_calMonth == todayM && day == todayD);
 
         // 날짜 숫자
         {
             wchar_t dtext[8];
             swprintf(dtext, 8, L"%d", day);
 
-            HFONT old = (HFONT)SelectObject(hdc, fDay);
+            HFONT useFont = isToday ? fDayBold : fDayNormal;
+            HFONT old = (HFONT)SelectObject(hdc, useFont);
+
             SetTextColor(hdc, isWeekend ? RGB(220, 0, 0) : RGB(0, 0, 0));
             TextOutW(hdc, cx + 6, cy + 4, dtext, (int)wcslen(dtext));
+
             SelectObject(hdc, old);
         }
 
@@ -332,19 +323,24 @@ void Calendar_Draw(HDC hdc)
             for (int k = 0; k < g_day[day].count; k++) {
                 wchar_t line[CAL_TITLE_MAX + 8];
                 lstrcpynW(line, g_day[day].title[k], CAL_TITLE_MAX);
+
                 if ((int)wcslen(line) > 12) { line[12] = 0; wcscat(line, L".."); }
 
                 TextOutW(hdc, cx + 6, yy, line, (int)wcslen(line));
                 yy += 18;
             }
+
             SelectObject(hdc, old2);
         }
     }
 
-    DeleteObject(fDay);
+    DeleteObject(fDayNormal);
+    DeleteObject(fDayBold);
     DeleteObject(fEvt);
-}
 
+    // ✅ clip 복구
+    RestoreDC(hdc, savedDC);
+}
 
 // ------------------------------------------------------------
 // 클릭 처리(◀▶ 월 이동, 날짜칸 클릭)
@@ -355,6 +351,7 @@ int Calendar_OnClick(HWND hWnd, int mx, int my)
     if (PtInScaled(R_CAL_PREV_X1, R_CAL_PREV_Y1, R_CAL_PREV_X2, R_CAL_PREV_Y2, mx, my)) {
         g_calMonth--;
         if (g_calMonth < 1) { g_calMonth = 12; g_calYear--; }
+
         Calendar_RebuildFromTasks(g_calTeamId);
         InvalidateRect(hWnd, NULL, FALSE);
         return 1;
@@ -364,6 +361,7 @@ int Calendar_OnClick(HWND hWnd, int mx, int my)
     if (PtInScaled(R_CAL_NEXT_X1, R_CAL_NEXT_Y1, R_CAL_NEXT_X2, R_CAL_NEXT_Y2, mx, my)) {
         g_calMonth++;
         if (g_calMonth > 12) { g_calMonth = 1; g_calYear++; }
+
         Calendar_RebuildFromTasks(g_calTeamId);
         InvalidateRect(hWnd, NULL, FALSE);
         return 1;
@@ -377,16 +375,32 @@ int Calendar_OnClick(HWND hWnd, int mx, int my)
     int W = x2 - x1;
     int H = y2 - y1;
 
-    // ✅ 클릭도 “누적 나눗셈”과 동일한 칸 기준으로 계산
-    int col = (int)(((long long)(mx - x1) * CAL_COLS) / (W ? W : 1));
-    int row = (int)(((long long)(my - y1) * CAL_ROWS) / (H ? H : 1));
+    const int cols = 7;
+    const int rows = 5;
 
+    int cellW = (W / cols);
+    int cellH = (H / rows);
+
+    // ✅✅ 그리기와 동일하게 "화면별 보이는 영역"만 클릭 인정
+    extern Screen g_screen;
+
+    int clipL = x1, clipR = x2;
+    if (g_screen == SCR_DEADLINE) {
+        clipL = x1 + cellW * 3; // 수~토만
+    }
+    else if (g_screen == SCR_TEAM_CREATE || g_screen == SCR_TEAM_JOIN) {
+        clipR = x1 + cellW * 4; // 일~수만
+    }
+    if (mx < clipL || mx > clipR) return 0;
+
+    int col = (mx - x1) / (cellW ? cellW : 1);
+    int row = (my - y1) / (cellH ? cellH : 1);
     if (col < 0) col = 0;
-    if (col >= CAL_COLS) col = CAL_COLS - 1;
+    if (col >= cols) col = cols - 1;
     if (row < 0) row = 0;
-    if (row >= CAL_ROWS) row = CAL_ROWS - 1;
+    if (row >= rows) row = rows - 1;
 
-    int idx = row * CAL_COLS + col;
+    int idx = row * cols + col;
 
     int firstDow = DayOfWeek(g_calYear, g_calMonth, 1);
     int day = idx - firstDow + 1;
@@ -394,10 +408,14 @@ int Calendar_OnClick(HWND hWnd, int mx, int my)
     int dim = DaysInMonth(g_calYear, g_calMonth);
     if (day < 1 || day > dim) return 1;
 
-    // (원하면 여기서 day 클릭 기능)
-    // wchar_t msg[64];
-    // swprintf(msg, 64, L"%d년 %d월 %d일 클릭!", g_calYear, g_calMonth, day);
-    // MessageBoxW(hWnd, msg, L"Calendar", MB_OK);
-
     return 1;
+}
+// calendar.c
+
+static int g_calClipMode = 0;
+
+// mode: 0=전체, 1=왼쪽 가림, 2=오른쪽 가림(너가 쓴 기준)
+void Calendar_SetClipMode(int mode)
+{
+    g_calClipMode = mode;
 }
