@@ -1,9 +1,14 @@
-﻿// calendar.c  (원샷 덮어쓰기)  ✅ 화면별 클리핑(숫자 튀어나옴 방지) + 주말 빨간색 + 오늘 날짜 굵게
+﻿// calendar.c  (원샷 덮어쓰기)
+// ✅ clipMode 기준으로 캘린더 숫자/이벤트 겹침 완전 방지
+// - mode 0: 전체 표시
+// - mode 1: 왼쪽 3칸(일/월/화) 가림  -> 수~토만 보이게
+// - mode 2: 오른쪽 3칸(목/금/토) 가림 -> 일~수만 보이게
+// ✅ 주말(일/토) 빨간색, 오늘 날짜 굵게
 #define _CRT_SECURE_NO_WARNINGS
 #include "calendar.h"
 #include "ui_coords.h"
 #include "task.h"
-#include "app.h"   // ✅ g_screen / Screen 사용
+#include "app.h"   // g_screen 필요없어도 포함 유지
 
 #include <windows.h>
 #include <wchar.h>
@@ -28,6 +33,8 @@ typedef struct {
 // ------------------------------------------------------------
 // 상태
 // ------------------------------------------------------------
+static int g_calClipMode = 0; // 0=전체, 1=왼쪽3칸 가림, 2=오른쪽3칸 가림
+
 static int g_calYear = 2026;
 static int g_calMonth = 1;
 static CalDayEvents g_day[32]; // 1..31
@@ -108,7 +115,7 @@ static void ClearEvents(void)
 }
 
 // ------------------------------------------------------------
-// 외부에서 팀ID 세팅
+// 외부 API
 // ------------------------------------------------------------
 void Calendar_SetTeamId(const wchar_t* teamId)
 {
@@ -116,14 +123,10 @@ void Calendar_SetTeamId(const wchar_t* teamId)
     lstrcpynW(g_calTeamId, teamId, 64);
 
     if (g_calTeamId[0]) {
-        extern void Calendar_RebuildFromTasks(const wchar_t* teamId);
         Calendar_RebuildFromTasks(g_calTeamId);
     }
 }
 
-// ------------------------------------------------------------
-// 초기화
-// ------------------------------------------------------------
 void Calendar_Init(void)
 {
     SYSTEMTIME st;
@@ -148,12 +151,23 @@ void Calendar_GetYM(int* outYear, int* outMonth)
     if (outMonth) *outMonth = g_calMonth;
 }
 
+void Calendar_SetClipMode(int mode)
+{
+    // 0=전체, 1=왼쪽 가림, 2=오른쪽 가림
+    if (mode < 0) mode = 0;
+    if (mode > 2) mode = 2;
+    g_calClipMode = mode;
+}
+
 // ------------------------------------------------------------
 // 과제 -> 이벤트(현재 월) 재구성
 // ------------------------------------------------------------
 void Calendar_RebuildFromTasks(const wchar_t* teamId)
 {
-    if (!teamId || !teamId[0]) return;
+    if (!teamId || !teamId[0]) {
+        ClearEvents();
+        return;
+    }
 
     ClearEvents();
 
@@ -185,7 +199,6 @@ void Calendar_RebuildFromTasks(const wchar_t* teamId)
 void Calendar_NotifyTasksChanged(HWND hWnd, const wchar_t* teamId)
 {
     if (!teamId || !teamId[0]) return;
-
     Calendar_RebuildFromTasks(teamId);
     if (hWnd) InvalidateRect(hWnd, NULL, FALSE);
 }
@@ -202,12 +215,12 @@ void Calendar_Draw(HDC hdc)
     int H = y2 - y1;
 
     const int cols = 7;
-    const int rows = 5; // ✅ 네 코드 유지
+    const int rows = 5; // ✅ 너 UI 기준 유지
 
-    int cellW = W / cols;
-    int cellH = H / rows;
+    int cellW = (cols ? (W / cols) : W);
+    int cellH = (rows ? (H / rows) : H);
 
-    // ✅ 오늘 날짜 구하기
+    // ✅ 오늘 날짜
     SYSTEMTIME st;
     GetLocalTime(&st);
     int todayY = (int)st.wYear;
@@ -236,27 +249,23 @@ void Calendar_Draw(HDC hdc)
         DeleteObject(fMonth);
     }
 
-    // ✅✅ 핵심: 화면별로 "실제로 보이는 캘린더 영역"만 그리도록 CLIP
-    // (DEADLINE 화면: 수~토만 보이는 레이아웃 / TEAM_CREATE/JOIN: 오른쪽 패널이 덮음)
+    // ✅✅ 핵심: clipMode 기준으로 "보이는 영역"만 그리기
     int savedDC = SaveDC(hdc);
 
     int clipL = x1, clipT = y1, clipR = x2, clipB = y2;
 
-    // app.c 전역 g_screen 사용
-    extern Screen g_screen;
-
-    if (g_screen == SCR_DEADLINE) {
-        // 왼쪽 3칸(일/월/화)은 패널에 가려지므로 그리지 않게
+    // mode: 1=왼쪽 3칸(일/월/화) 가림 -> 수~토만
+    if (g_calClipMode == 1) {
         clipL = x1 + cellW * 3;
     }
-    else if (g_screen == SCR_TEAM_CREATE || g_screen == SCR_TEAM_JOIN) {
-        // 오른쪽 3칸(목/금/토)은 폼 패널에 가려지므로 그리지 않게
+    // mode: 2=오른쪽 3칸(목/금/토) 가림 -> 일~수만
+    else if (g_calClipMode == 2) {
         clipR = x1 + cellW * 4;
     }
 
     IntersectClipRect(hdc, clipL, clipT, clipR, clipB);
 
-    // 1) 그리드(네 코드 유지: PS_NULL 이면 선이 안 그려짐)
+    // 1) 그리드 (원래 너 코드가 PS_NULL이면 선 안 그려짐이라면 그대로 유지)
     HPEN pen = CreatePen(PS_NULL, 0, 0);
     HGDIOBJ oldPen = SelectObject(hdc, pen);
 
@@ -275,8 +284,8 @@ void Calendar_Draw(HDC hdc)
     DeleteObject(pen);
 
     // 2) 날짜/이벤트
-    HFONT fDayNormal = MakeFont(16, 0); // 기본
-    HFONT fDayBold = MakeFont(16, 1);   // 오늘 날짜용 굵게
+    HFONT fDayNormal = MakeFont(16, 0);
+    HFONT fDayBold = MakeFont(16, 1);
     HFONT fEvt = MakeFont(14, 0);
 
     SetBkMode(hdc, TRANSPARENT);
@@ -294,10 +303,7 @@ void Calendar_Draw(HDC hdc)
         int cx = x1 + c * cellW;
         int cy = y1 + r * cellH;
 
-        // ✅ 일/토 빨간색
         int isWeekend = (c == 0 || c == 6);
-
-        // ✅ 오늘 날짜면 굵게
         int isToday = (g_calYear == todayY && g_calMonth == todayM && day == todayD);
 
         // 날짜 숫자
@@ -324,6 +330,7 @@ void Calendar_Draw(HDC hdc)
                 wchar_t line[CAL_TITLE_MAX + 8];
                 lstrcpynW(line, g_day[day].title[k], CAL_TITLE_MAX);
 
+                // 길면 줄임
                 if ((int)wcslen(line) > 12) { line[12] = 0; wcscat(line, L".."); }
 
                 TextOutW(hdc, cx + 6, yy, line, (int)wcslen(line));
@@ -352,7 +359,7 @@ int Calendar_OnClick(HWND hWnd, int mx, int my)
         g_calMonth--;
         if (g_calMonth < 1) { g_calMonth = 12; g_calYear--; }
 
-        Calendar_RebuildFromTasks(g_calTeamId);
+        if (g_calTeamId[0]) Calendar_RebuildFromTasks(g_calTeamId);
         InvalidateRect(hWnd, NULL, FALSE);
         return 1;
     }
@@ -362,7 +369,7 @@ int Calendar_OnClick(HWND hWnd, int mx, int my)
         g_calMonth++;
         if (g_calMonth > 12) { g_calMonth = 1; g_calYear++; }
 
-        Calendar_RebuildFromTasks(g_calTeamId);
+        if (g_calTeamId[0]) Calendar_RebuildFromTasks(g_calTeamId);
         InvalidateRect(hWnd, NULL, FALSE);
         return 1;
     }
@@ -378,19 +385,19 @@ int Calendar_OnClick(HWND hWnd, int mx, int my)
     const int cols = 7;
     const int rows = 5;
 
-    int cellW = (W / cols);
-    int cellH = (H / rows);
+    int cellW = (cols ? (W / cols) : W);
+    int cellH = (rows ? (H / rows) : H);
 
-    // ✅✅ 그리기와 동일하게 "화면별 보이는 영역"만 클릭 인정
-    extern Screen g_screen;
-
+    // ✅✅ 그리기와 동일하게 clipMode 기준으로 클릭 허용
     int clipL = x1, clipR = x2;
-    if (g_screen == SCR_DEADLINE) {
-        clipL = x1 + cellW * 3; // 수~토만
+
+    if (g_calClipMode == 1) {
+        clipL = x1 + cellW * 3; // 수~토만 클릭
     }
-    else if (g_screen == SCR_TEAM_CREATE || g_screen == SCR_TEAM_JOIN) {
-        clipR = x1 + cellW * 4; // 일~수만
+    else if (g_calClipMode == 2) {
+        clipR = x1 + cellW * 4; // 일~수만 클릭
     }
+
     if (mx < clipL || mx > clipR) return 0;
 
     int col = (mx - x1) / (cellW ? cellW : 1);
@@ -408,14 +415,6 @@ int Calendar_OnClick(HWND hWnd, int mx, int my)
     int dim = DaysInMonth(g_calYear, g_calMonth);
     if (day < 1 || day > dim) return 1;
 
+    // 날짜 클릭 동작은 현재 없음(원하면 여기서 선택/팝업 처리)
     return 1;
-}
-// calendar.c
-
-static int g_calClipMode = 0;
-
-// mode: 0=전체, 1=왼쪽 가림, 2=오른쪽 가림(너가 쓴 기준)
-void Calendar_SetClipMode(int mode)
-{
-    g_calClipMode = mode;
 }

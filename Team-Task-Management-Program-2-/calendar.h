@@ -1,4 +1,4 @@
-// calendar.h
+ï»¿// calendar.h
 #pragma once
 #include <windows.h>
 
@@ -9,27 +9,28 @@ extern "C" {
 	void Calendar_SetTeamId(const wchar_t* teamId);
 
 
-	// Ä¶¸°´õ ÃÊ±â°ª(·Î±×ÀÎ ÈÄ or ¾Û ½ÃÀÛ ½Ã 1È¸)
+	// ìº˜ë¦°ë” ì´ˆê¸°ê°’(ë¡œê·¸ì¸ í›„ or ì•± ì‹œì‘ ì‹œ 1íšŒ)
 	void Calendar_Init(void);
 
-	// ÇöÀç Ç¥½Ã ¿ù(³â/¿ù) ¼³Á¤ ¹× ÀĞ±â
+	// í˜„ì¬ í‘œì‹œ ì›”(ë…„/ì›”) ì„¤ì • ë° ì½ê¸°
 	void Calendar_SetYM(int year, int month);
 	void Calendar_GetYM(int* outYear, int* outMonth);
 
-	// ¸ŞÀÎÈ­¸é Ä¶¸°´õ ±×¸®±â (App_OnPaint¿¡¼­ È£Ãâ)
+	// ë©”ì¸í™”ë©´ ìº˜ë¦°ë” ê·¸ë¦¬ê¸° (App_OnPaintì—ì„œ í˜¸ì¶œ)
 	void Calendar_Draw(HDC hdc);
 
-	// ¸ŞÀÎÈ­¸é Ä¶¸°´õ Å¬¸¯ Ã³¸® (¢¸¢º/³¯Â¥Ä­ Å¬¸¯ µî)
-	// - Å¬¸¯À» Ä¶¸°´õ°¡ Ã³¸®ÇßÀ¸¸é 1 ¹İÈ¯(±×·³ App_OnLButtonDown¿¡¼­ SAFE_LEAVEÇÏ¸é µÊ)
+	// ë©”ì¸í™”ë©´ ìº˜ë¦°ë” í´ë¦­ ì²˜ë¦¬ (â—€â–¶/ë‚ ì§œì¹¸ í´ë¦­ ë“±)
+	// - í´ë¦­ì„ ìº˜ë¦°ë”ê°€ ì²˜ë¦¬í–ˆìœ¼ë©´ 1 ë°˜í™˜(ê·¸ëŸ¼ App_OnLButtonDownì—ì„œ SAFE_LEAVEí•˜ë©´ ë¨)
 	int  Calendar_OnClick(HWND hWnd, int x, int y);
 
-	// °úÁ¦ ÆÄÀÏÀ» ´Ù½Ã ÀĞ¾î¼­(ÆÀ ±âÁØ) ÇöÀç ¿ù ÀÌº¥Æ®(°úÁ¦ Á¦¸ñ)¸¦ Àç±¸¼º
+	// ê³¼ì œ íŒŒì¼ì„ ë‹¤ì‹œ ì½ì–´ì„œ(íŒ€ ê¸°ì¤€) í˜„ì¬ ì›” ì´ë²¤íŠ¸(ê³¼ì œ ì œëª©)ë¥¼ ì¬êµ¬ì„±
 	void Calendar_RebuildFromTasks(const wchar_t* teamId);
 
-	// °úÁ¦ º¯°æ(µî·Ï/¼öÁ¤/»èÁ¦/¿Ï·á) Á÷ÈÄ È£Ãâ¿ë À¯Æ¿
+	// ê³¼ì œ ë³€ê²½(ë“±ë¡/ìˆ˜ì •/ì‚­ì œ/ì™„ë£Œ) ì§í›„ í˜¸ì¶œìš© ìœ í‹¸
 	void Calendar_NotifyTasksChanged(HWND hWnd, const wchar_t* teamId);
 
 	void Calendar_SetClipMode(int mode);
 #ifdef __cplusplus
 }
 #endif
+void Calendar_SetClipX(int x);   // âœ… ì™¼ìª½ íŒ¨ë„ ë X (ì´ X ì´ì „ì€ ìº˜ë¦°ë”ë¥¼ ì•ˆ ê·¸ë¦¼)

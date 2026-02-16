@@ -83,6 +83,7 @@ static void DrawDebugOverlay(HDC hdc);
 static HFONT GetUIFont(void);
 static void LayoutMyTeamStatics(void);
 static void ApplyMyTeamTextsToUI(void);
+static void HideAllControls(void);
 
 
 
@@ -316,7 +317,8 @@ static LRESULT CALLBACK EditHookProc(HWND hEdit, UINT msg, WPARAM wParam, LPARAM
 
         g_lastX = pt.x;
         g_lastY = pt.y;
-        InvalidateRect(parent, NULL, FALSE);
+        InvalidateRect(parent, NULL, TRUE);
+        UpdateWindow(parent);
 
         // ✅ 직접 호출 X -> 메시지로 우회
         PostMessageW(parent, WM_APP_CHILDCLICK, (WPARAM)pt.x, (LPARAM)pt.y);
@@ -329,14 +331,16 @@ static LRESULT CALLBACK EditHookProc(HWND hEdit, UINT msg, WPARAM wParam, LPARAM
     return CallWindowProcW(oldProc, hEdit, msg, wParam, lParam);
 }
 
-
-
 static void HookEditClick(HWND hEdit)
 {
     if (!hEdit) return;
-    WNDPROC oldProc = (WNDPROC)SetWindowLongPtrW(hEdit, GWLP_WNDPROC, (LONG_PTR)EditHookProc);
+
+    WNDPROC oldProc = (WNDPROC)SetWindowLongPtrW(
+        hEdit, GWLP_WNDPROC, (LONG_PTR)EditHookProc
+    );
     SetPropW(hEdit, PROP_OLD_EDIT_PROC, (HANDLE)(UINT_PTR)oldProc);
 }
+
 
 static LRESULT CALLBACK StaticHookProc(HWND hSt, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -349,7 +353,8 @@ static LRESULT CALLBACK StaticHookProc(HWND hSt, UINT msg, WPARAM wParam, LPARAM
 
         g_lastX = pt.x;
         g_lastY = pt.y;
-        InvalidateRect(parent, NULL, FALSE);
+        InvalidateRect(parent, NULL, TRUE);
+        UpdateWindow(parent);
 
         // ✅ 직접 호출 X
         PostMessageW(parent, WM_APP_CHILDCLICK, (WPARAM)pt.x, (LPARAM)pt.y);
@@ -365,7 +370,10 @@ static LRESULT CALLBACK StaticHookProc(HWND hSt, UINT msg, WPARAM wParam, LPARAM
 static void HookStaticClick(HWND hSt)
 {
     if (!hSt) return;
-    WNDPROC oldProc = (WNDPROC)SetWindowLongPtrW(hSt, GWLP_WNDPROC, (LONG_PTR)StaticHookProc);
+
+    WNDPROC oldProc = (WNDPROC)SetWindowLongPtrW(
+        hSt, GWLP_WNDPROC, (LONG_PTR)StaticHookProc
+    );
     SetPropW(hSt, PROP_OLD_STATIC_PROC, (HANDLE)(UINT_PTR)oldProc);
 }
 
@@ -1120,7 +1128,7 @@ static void RelayoutControls(HWND hWnd)
         MoveEdit(g_edBoardList,
             SX(R_BOARD_LIST_X1), SY(R_BOARD_LIST_Y1),
             SX(R_BOARD_LIST_X2), SY(R_BOARD_LIST_Y2),
-            6, 6, 6, 6
+            0, 0, 0, 0
         );
 
         Board_RelayoutControls(hWnd);
@@ -1152,6 +1160,46 @@ static void RelayoutControls(HWND hWnd)
 
     }
 
+    // app.c
+    static void HideAllControls(void)
+    {
+        // ✅ board.c 컨트롤 숨김 (board.c에 이미 함수 있음)
+        Board_ShowControls(0);
+
+        // ---------------------------
+        // ✅ 아래는 app.c가 직접 만든 컨트롤들(있으면 전부 hide)
+        // 너 app.c에 있는 전역 HWND 이름 그대로 맞춰서 적어줘야 함.
+        // (아래는 예시니까, 네 app.c 변수명에 맞춰 바꿔야 함)
+        // ---------------------------
+
+        if (g_edStartId) ShowWindow(g_edStartId, SW_HIDE);
+        if (g_edStartPw) ShowWindow(g_edStartPw, SW_HIDE);
+
+        if (g_edSignName) ShowWindow(g_edSignName, SW_HIDE);
+        if (g_edSignId)   ShowWindow(g_edSignId, SW_HIDE);
+        if (g_edSignPw)   ShowWindow(g_edSignPw, SW_HIDE);
+
+        if (g_edFindName) ShowWindow(g_edFindName, SW_HIDE);
+        if (g_edFindId)   ShowWindow(g_edFindId, SW_HIDE);
+
+        if (g_edTcTeam) ShowWindow(g_edTcTeam, SW_HIDE);
+        if (g_edTcCode) ShowWindow(g_edTcCode, SW_HIDE);
+
+        if (g_edTjTeam) ShowWindow(g_edTjTeam, SW_HIDE);
+        if (g_edTjCode) ShowWindow(g_edTjCode, SW_HIDE);
+
+        if (g_edTaSearch)   ShowWindow(g_edTaSearch, SW_HIDE);
+        if (g_edTaTitle)    ShowWindow(g_edTaTitle, SW_HIDE);
+        if (g_edTaContent)  ShowWindow(g_edTaContent, SW_HIDE);
+        if (g_edTaDetail)   ShowWindow(g_edTaDetail, SW_HIDE);
+        if (g_edTaFile)     ShowWindow(g_edTaFile, SW_HIDE);
+        if (g_edTaDeadline) ShowWindow(g_edTaDeadline, SW_HIDE);
+
+        // 내팀 STATIC 5칸 같은 거 쓰면 이것도
+        // for (int i=0;i<5;i++) if (g_stMyTeam[i]) ShowWindow(g_stMyTeam[i], SW_HIDE);
+    }
+
+
 
 // ---------------------------------------------------------
 // 화면 전환
@@ -1170,6 +1218,9 @@ static void ResizeToBitmap(HWND hWnd, HBITMAP bmp)
 
 static void SwitchScreen(HWND hWnd, Screen next)
 {
+
+    HideAllControls();
+
     if (next != g_screen) NavPush(g_screen);
     SwitchScreen_NoHistory(hWnd, next);
 }
@@ -1377,10 +1428,7 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
 // -----------------------------------------------------
     if (g_screen == SCR_MAIN)
     {
-
-        if (Calendar_OnClick(hWnd, x, y)) SAFE_LEAVE();
-
-        // ✅ 여기서는 화면전환만 한다 (토글/오버레이 로직 제거)
+        // 1) 먼저 버튼/메뉴 클릭 처리
         if (HitScaled(R_MAIN_BTN_DEADLINE_X1, R_MAIN_BTN_DEADLINE_Y1,
             R_MAIN_BTN_DEADLINE_X2, R_MAIN_BTN_DEADLINE_Y2, x, y))
         {
@@ -1395,14 +1443,50 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
             SAFE_LEAVE();
         }
 
+        if (HitScaled(R_MAIN_BTN_MYTEAM_X1, R_MAIN_BTN_MYTEAM_Y1,
+            R_MAIN_BTN_MYTEAM_X2, R_MAIN_BTN_MYTEAM_Y2, x, y))
+        {
+            SwitchScreen(hWnd, SCR_MYTEAM);
+            SAFE_LEAVE();
+        }
 
-        if (HitScaled(R_MAIN_BTN_MYTEAM_X1, R_MAIN_BTN_MYTEAM_Y1, R_MAIN_BTN_MYTEAM_X2, R_MAIN_BTN_MYTEAM_Y2, x, y)) { SwitchScreen(hWnd, SCR_MYTEAM); SAFE_LEAVE(); }
-        if (HitScaled(R_MAIN_BTN_DONE_X1, R_MAIN_BTN_DONE_Y1, R_MAIN_BTN_DONE_X2, R_MAIN_BTN_DONE_Y2, x, y)) { SwitchScreen(hWnd, SCR_DONE); SAFE_LEAVE(); }
+        if (HitScaled(R_MAIN_BTN_DONE_X1, R_MAIN_BTN_DONE_Y1,
+            R_MAIN_BTN_DONE_X2, R_MAIN_BTN_DONE_Y2, x, y))
+        {
+            SwitchScreen(hWnd, SCR_DONE);
+            SAFE_LEAVE();
+        }
 
-        if (HitScaled(R_MAIN_BTN_TEAM_CREATE_X1, R_MAIN_BTN_TEAM_CREATE_Y1, R_MAIN_BTN_TEAM_CREATE_X2, R_MAIN_BTN_TEAM_CREATE_Y2, x, y)) { SwitchScreen(hWnd, SCR_TEAM_CREATE); SAFE_LEAVE(); }
-        if (HitScaled(R_MAIN_BTN_TEAM_JOIN_X1, R_MAIN_BTN_TEAM_JOIN_Y1, R_MAIN_BTN_TEAM_JOIN_X2, R_MAIN_BTN_TEAM_JOIN_Y2, x, y)) { SwitchScreen(hWnd, SCR_TEAM_JOIN); SAFE_LEAVE(); }
-        if (HitScaled(R_MAIN_BTN_TASK_ADD_X1, R_MAIN_BTN_TASK_ADD_Y1, R_MAIN_BTN_TASK_ADD_X2, R_MAIN_BTN_TASK_ADD_Y2, x, y)) { SwitchScreen(hWnd, SCR_TASK_ADD); SAFE_LEAVE(); }
-        if (HitScaled(R_MAIN_BTN_BOARD_X1, R_MAIN_BTN_BOARD_Y1, R_MAIN_BTN_BOARD_X2, R_MAIN_BTN_BOARD_Y2, x, y)) { SwitchScreen(hWnd, SCR_BOARD); SAFE_LEAVE(); }
+        if (HitScaled(R_MAIN_BTN_TEAM_CREATE_X1, R_MAIN_BTN_TEAM_CREATE_Y1,
+            R_MAIN_BTN_TEAM_CREATE_X2, R_MAIN_BTN_TEAM_CREATE_Y2, x, y))
+        {
+            SwitchScreen(hWnd, SCR_TEAM_CREATE);
+            SAFE_LEAVE();
+        }
+
+        if (HitScaled(R_MAIN_BTN_TEAM_JOIN_X1, R_MAIN_BTN_TEAM_JOIN_Y1,
+            R_MAIN_BTN_TEAM_JOIN_X2, R_MAIN_BTN_TEAM_JOIN_Y2, x, y))
+        {
+            SwitchScreen(hWnd, SCR_TEAM_JOIN);
+            SAFE_LEAVE();
+        }
+
+        if (HitScaled(R_MAIN_BTN_TASK_ADD_X1, R_MAIN_BTN_TASK_ADD_Y1,
+            R_MAIN_BTN_TASK_ADD_X2, R_MAIN_BTN_TASK_ADD_Y2, x, y))
+        {
+            SwitchScreen(hWnd, SCR_TASK_ADD);
+            SAFE_LEAVE();
+        }
+
+        if (HitScaled(R_MAIN_BTN_BOARD_X1, R_MAIN_BTN_BOARD_Y1,
+            R_MAIN_BTN_BOARD_X2, R_MAIN_BTN_BOARD_Y2, x, y))
+        {
+            SwitchScreen(hWnd, SCR_BOARD);
+            SAFE_LEAVE();
+        }
+
+        // 2) 버튼에 안 걸렸을 때만 캘린더 클릭 처리
+        if (Calendar_OnClick(hWnd, x, y)) SAFE_LEAVE();
 
         SAFE_LEAVE();
     }
@@ -1893,13 +1977,15 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
 
 static int ScreenShowsCalendar(Screen s)
 {
-    return (s == SCR_DEADLINE ||
+    return (s == SCR_MAIN ||
+        s == SCR_DEADLINE ||
         s == SCR_TODO ||
         s == SCR_MYTEAM ||
         s == SCR_DONE ||
         s == SCR_TEAM_CREATE ||
         s == SCR_TEAM_JOIN);
 }
+
 
 
 // ---------------------------------------------------------
@@ -1935,33 +2021,28 @@ void App_OnPaint(HWND hWnd, HDC hdc)
     else if (g_screen == SCR_BOARD_WRITE) DrawBitmapFit(mem, g_bmpBoardWrite, w, h);
     else                                  DrawBitmapFit(mem, g_bmpMain, w, h);
 
-    // ✅ 캘린더는 요청한 6개 화면에서만
     if (ScreenShowsCalendar(g_screen))
     {
         int clipMode = 0;
 
-        // 왼쪽 패널이 올라오는 화면들(마감/미완료/내팀/완료)은 왼쪽 가림
-        if (g_screen == SCR_DEADLINE || g_screen == SCR_TODO ||
-            g_screen == SCR_DONE || g_screen == SCR_MYTEAM)
+        if (g_screen == SCR_MAIN)
         {
-            clipMode = 1;
+            clipMode = 0; // ✅ 메인은 전체 보이게
         }
-        // 팀등록/팀참여는 오른쪽 패널 가림(원하면 0으로 바꿔도 됨)
+        else if (g_screen == SCR_DEADLINE ||
+            g_screen == SCR_TODO ||
+            g_screen == SCR_DONE ||
+            g_screen == SCR_MYTEAM)
+        {
+            clipMode = 1; // ✅ 왼쪽 패널 있는 화면들: 수~토만
+        }
         else if (g_screen == SCR_TEAM_CREATE || g_screen == SCR_TEAM_JOIN)
         {
-            clipMode = 2;
+            clipMode = 2; // ✅ 오른쪽 폼 가림: 일~수만
         }
 
         Calendar_SetClipMode(clipMode);
-        Calendar_Draw(mem);   // ✅ 반드시 mem(더블버퍼)
-    }
-
-
-    // ✅ 캘린더는 메인 화면에서만 (년도/월/날짜 전부 메인에서만)
-    if (g_screen == SCR_MAIN)
-    {
-        Calendar_SetClipMode(0);
-        Calendar_Draw(mem);   // ✅ 반드시 mem에만
+        Calendar_Draw(mem);
     }
 
     // ✅ MYTEAM 선택 테두리 표시
