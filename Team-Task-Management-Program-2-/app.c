@@ -629,11 +629,11 @@ static void EnsureMyTeamStatics(HWND hWnd, HFONT font)
     for (int i = 0; i < MYTEAM_SLOT_MAX; i++)
     {
         if (g_stMyTeam[i] && IsWindow(g_stMyTeam[i])) continue;
-        g_stMyTeam[i] = NULL;
-
         g_stMyTeam[i] = CreateWindowExW(
-            0, L"STATIC", L"",
-            WS_CHILD | WS_VISIBLE | SS_LEFT | SS_NOTIFY,
+            0,
+            L"STATIC",
+            L"",
+            WS_CHILD | WS_VISIBLE | SS_LEFT | SS_NOTIFY, // ✅ 여기 WS_BORDER 넣을거면 | WS_BORDER 추가
             0, 0, 10, 10,
             hWnd,
             (HMENU)(INT_PTR)(6000 + i),
@@ -641,10 +641,11 @@ static void EnsureMyTeamStatics(HWND hWnd, HFONT font)
             NULL
         );
 
-        if (font) SendMessageW(g_stMyTeam[i], WM_SETFONT, (WPARAM)font, TRUE);
 
-        HookStaticClick(g_stMyTeam[i]); // ✅ 클릭/LastClick 전달도 확실하게
-        ShowWindow(g_stMyTeam[i], SW_HIDE); // 기본은 숨김, 화면에서 켜줌
+        if (font) SendMessageW(g_stMyTeam[i], WM_SETFONT, (WPARAM)font, TRUE);
+        HookStaticClick(g_stMyTeam[i]);
+        // ✅ 여기서 SW_HIDE 하지마 (숨김은 화면전환 때 RelayoutControls가 하니까)
+        // ShowWindow(g_stMyTeam[i], SW_HIDE);  // ❌ 제거
     }
 }
 
@@ -1135,11 +1136,12 @@ static void RelayoutControls(HWND hWnd)
         return;
     }
 
-
-    // MYTEAM
     if (g_screen == SCR_MYTEAM) {
-        MyTeam_RefreshUI(hWnd);   // 여기서 텍스트/위치 갱신
-        ShowMyTeamStatics(1);     // ✅ 무조건 다시 SHOW
+        EnsureMyTeamStatics(hWnd, GetUIFont());  // ✅ 혹시 없으면 생성
+        LayoutMyTeamStatics();                  // ✅ 먼저 위치/크기 배치
+        MyTeam_RefreshUI(hWnd);                 // ✅ 텍스트 로드/적용
+        ShowMyTeamStatics(1);                   // ✅ 마지막에 SHOW
+        InvalidateRect(hWnd, NULL, FALSE);
         return;
     }
 
@@ -1336,18 +1338,23 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
                 SAFE_LEAVE();
             }
 
-            if (Auth_Login(id, pw)){
+ if (Auth_Login(id, pw)) {
 
-                
-                Calendar_Init();                         
-                Calendar_SetTeamId(g_currentTeamId);     
-                Calendar_NotifyTasksChanged(hWnd, g_currentTeamId); 
+    // ✅ 로그인 아이디 저장 (이거 없어서 내팀 목록이 비어있던거!)
+    lstrcpynW(g_currentUserId, id, 128);
 
-         
+    // (선택) 로그인 시 팀/역할 초기화
+    // g_currentTeamId[0] = 0;
+    // g_currentRole[0] = 0;
 
-                SwitchScreen(hWnd, SCR_MAIN);
-                SAFE_LEAVE();
-            }
+    Calendar_Init();
+    Calendar_SetTeamId(g_currentTeamId);
+    Calendar_NotifyTasksChanged(hWnd, g_currentTeamId);
+
+    SwitchScreen(hWnd, SCR_MAIN);
+    SAFE_LEAVE();
+}
+
             else {
                 MessageBoxW(hWnd, L"로그인 실패! 아이디/비밀번호 확인해 주세요.", L"로그인", MB_OK | MB_ICONERROR);
                 SAFE_LEAVE();
@@ -2044,34 +2051,11 @@ void App_OnPaint(HWND hWnd, HDC hdc)
         Calendar_SetClipMode(clipMode);
         Calendar_Draw(mem);
     }
-
-    // ✅ MYTEAM 선택 테두리 표시
+    // ✅ MYTEAM: 선택된 팀만 테두리 표시
     if (g_screen == SCR_MYTEAM)
     {
-        for (int i = 0; i < MYTEAM_SLOT_MAX; i++)
-        {
-            if (!g_stMyTeam[i]) continue;
-
-            RECT r;
-            GetWindowRect(g_stMyTeam[i], &r);
-
-            POINT p1 = { r.left, r.top };
-            POINT p2 = { r.right, r.bottom };
-            ScreenToClient(hWnd, &p1);
-            ScreenToClient(hWnd, &p2);
-
-            RECT rcSlot = { p1.x, p1.y, p2.x, p2.y };
-
-            HPEN pen1 = CreatePen(PS_SOLID, 1, RGB(180, 200, 215));
-            HGDIOBJ oldPen = SelectObject(mem, pen1);
-            HGDIOBJ oldBrush = SelectObject(mem, GetStockObject(HOLLOW_BRUSH));
-            Rectangle(mem, rcSlot.left, rcSlot.top, rcSlot.right, rcSlot.bottom);
-            SelectObject(mem, oldBrush);
-            SelectObject(mem, oldPen);
-            DeleteObject(pen1);
-        }
-
-        if (g_myTeamSelected >= 0 && g_myTeamSelected < MYTEAM_SLOT_MAX && g_stMyTeam[g_myTeamSelected])
+        if (g_myTeamSelected >= 0 && g_myTeamSelected < MYTEAM_SLOT_MAX &&
+            g_stMyTeam[g_myTeamSelected] && g_myTeams[g_myTeamSelected].team[0] != 0)
         {
             RECT r;
             GetWindowRect(g_stMyTeam[g_myTeamSelected], &r);
@@ -2086,7 +2070,9 @@ void App_OnPaint(HWND hWnd, HDC hdc)
             HPEN pen2 = CreatePen(PS_SOLID, 2, RGB(0, 0, 0));
             HGDIOBJ oldPen = SelectObject(mem, pen2);
             HGDIOBJ oldBrush = SelectObject(mem, GetStockObject(HOLLOW_BRUSH));
+
             Rectangle(mem, rcSel.left - 2, rcSel.top - 2, rcSel.right + 2, rcSel.bottom + 2);
+
             SelectObject(mem, oldBrush);
             SelectObject(mem, oldPen);
             DeleteObject(pen2);
