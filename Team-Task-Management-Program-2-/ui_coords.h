@@ -355,48 +355,50 @@ extern int g_clientH;
 
 
 
-/// ================================
-// BOARD 
+// 목록 1페이지 표시 줄 수
+#define BD_ROWS_PER_PAGE  10
+
+// 페이지 화살표 (네 BMP 하단 화살표 기준으로 last click 잡아서 넣는게 베스트)
+// 지금은 임시로 화면 중앙 아래쯤(너 스샷 기준) 잡아둠
+
+// [SCR_BOARD] 목록 텍스트 박스(번호/제목/글쓴이 출력 영역)
+#define R_BOARD_LIST_X1  91
+#define R_BOARD_LIST_Y1  168
+#define R_BOARD_LIST_X2  1223
+#define R_BOARD_LIST_Y2  619
+
+
+#define R_BD_PAGE_PREV_X1  610
+#define R_BD_PAGE_PREV_Y1  615
+#define R_BD_PAGE_PREV_X2  650
+#define R_BD_PAGE_PREV_Y2  665
+
+#define R_BD_PAGE_NEXT_X1  670
+#define R_BD_PAGE_NEXT_Y1  615
+#define R_BD_PAGE_NEXT_X2  710
+#define R_BD_PAGE_NEXT_Y2  665
+
+
+
 // ================================
-#define R_BD_SEARCH_X1  897
-#define R_BD_SEARCH_Y1  49
-#define R_BD_SEARCH_X2  1214
-#define R_BD_SEARCH_Y2  79
+// BOARD 목록 영역(번호/제목/글쓴이 텍스트가 올라갈 영역)
+// ================================
 
-#define R_BD_BTN_ADD_X1   187
-#define R_BD_BTN_ADD_Y1   39
-#define R_BD_BTN_ADD_X2   378
-#define R_BD_BTN_ADD_Y2   82
-
-#define R_BD_BTN_EDIT_X1  404
-#define R_BD_BTN_EDIT_Y1  60
-#define R_BD_BTN_EDIT_X2  593
-#define R_BD_BTN_EDIT_Y2  84
-
-#define R_BD_BTN_DONE_X1  556
-#define R_BD_BTN_DONE_Y1  43
-#define R_BD_BTN_DONE_X2  581
-#define R_BD_BTN_DONE_Y2  76
-
+//등록버튼
 #define R_BOARD_BTN_REG_X1 188
 #define R_BOARD_BTN_REG_Y1 41
 #define R_BOARD_BTN_REG_X2 376
 #define R_BOARD_BTN_REG_Y2 81
 
-#define R_BOARD_LIST_X1 153
-#define R_BOARD_LIST_Y1 164
-#define R_BOARD_LIST_X2 1221
-#define R_BOARD_LIST_Y2 587
+// (등록 화면) 저장 버튼(등록 완료)
+#define R_BDW_SAVE_X1  182
+#define R_BDW_SAVE_Y1  39
+#define R_BDW_SAVE_X2  370
+#define R_BDW_SAVE_Y2  83
 
-#define R_BD_TITLE_X1 0
-#define R_BD_TITLE_Y1 0
-#define R_BD_TITLE_X2 0 
-#define R_BD_TITLE_Y2 0
 
-#define R_BD_CONTENT_X1 0
-#define R_BD_CONTENT_Y1 0 
-#define R_BD_CONTENT_X2 0
-#define R_BD_CONTENT_Y2 0
+
+
 
 
 // ================================

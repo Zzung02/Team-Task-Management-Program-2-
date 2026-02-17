@@ -56,9 +56,6 @@
     <ClInclude Include="bmp_loader.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="auth.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
     <ClInclude Include="team.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
@@ -69,6 +66,9 @@
       <Filter>헤더 파일</Filter>
     </ClInclude>
     <ClInclude Include="calendar.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="auth.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>

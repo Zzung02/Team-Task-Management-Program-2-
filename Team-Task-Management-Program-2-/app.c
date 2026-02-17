@@ -247,7 +247,6 @@ static HWND g_edOverlayList = NULL;
 
 static HWND g_edMainTodoList = NULL;       // 미완료 과제 표시
 static HWND g_edMainUrgentList = NULL;     // 마감 임박 과제 표시
-static HWND g_edBoardList = NULL;
 
 static int  g_taskSelectedSlot = -1;
 // ---------------------------------------------------------
@@ -757,7 +756,7 @@ static void DestroyAllEdits(void)
 
     DestroyHookedWindow(&g_edOverlayList, PROP_OLD_EDIT_PROC);
     DestroyHookedWindow(&g_edDoneList, PROP_OLD_EDIT_PROC);
-    DestroyHookedWindow(&g_edBoardList, PROP_OLD_EDIT_PROC);
+
     
     Board_DestroyControls();
     ShowMyTeamStatics(0);
@@ -888,15 +887,7 @@ static void CreateControlsForScreen(HWND hWnd, Screen s)
 
     case SCR_BOARD:
     {
-        // ✅ 게시판 목록: 텍스트박스 1개만
-        g_edBoardList = CreateEdit(hWnd, 7210,
-            ES_MULTILINE | ES_AUTOVSCROLL | WS_VSCROLL | ES_READONLY);
-
-        // ✅ 탭 정렬(번호/제목/글쓴이 컬럼 느낌)
-        int tabs[2] = { 80, 520 }; // 너 화면 기준으로 적당히(픽셀 느낌으로 맞출 것)
-        SendMessageW(g_edBoardList, EM_SETTABSTOPS, 2, (LPARAM)tabs);
-
-        Board_CreateControls(hWnd);   // 기존 로직 유지(검색/클릭 등)
+     
         break;
     }
 
@@ -957,7 +948,6 @@ static void RelayoutControls(HWND hWnd)
     if (g_edTaDetail) ShowWindow(g_edTaDetail, SW_HIDE);
     if (g_edTaFile) ShowWindow(g_edTaFile, SW_HIDE);
     if (g_edOverlayList) ShowWindow(g_edOverlayList, SW_HIDE);
-    if (g_edBoardList) ShowWindow(g_edBoardList, SW_HIDE);
 
 
     ShowMyTeamStatics(0);
@@ -1124,15 +1114,7 @@ static void RelayoutControls(HWND hWnd)
 
     // BOARD
     if (g_screen == SCR_BOARD) {
-        if (g_edBoardList) ShowWindow(g_edBoardList, SW_SHOW);
 
-        MoveEdit(g_edBoardList,
-            SX(R_BOARD_LIST_X1), SY(R_BOARD_LIST_Y1),
-            SX(R_BOARD_LIST_X2), SY(R_BOARD_LIST_Y2),
-            0, 0, 0, 0
-        );
-
-        Board_RelayoutControls(hWnd);
         return;
     }
 
@@ -1165,8 +1147,6 @@ static void RelayoutControls(HWND hWnd)
     // app.c
     static void HideAllControls(void)
     {
-        // ✅ board.c 컨트롤 숨김 (board.c에 이미 함수 있음)
-        Board_ShowControls(0);
 
         // ---------------------------
         // ✅ 아래는 app.c가 직접 만든 컨트롤들(있으면 전부 hide)
@@ -2079,6 +2059,12 @@ void App_OnPaint(HWND hWnd, HDC hdc)
         }
     }
 
+    if (g_screen == SCR_BOARD)
+    {
+        Board_Draw(mem);   // ✅ mem HDC에 직접 그리기
+    }
+
+
     // ✅ TASK_ADD 선택 테두리
     if (g_screen == SCR_TASK_ADD)
     {
@@ -2120,6 +2106,7 @@ void App_OnPaint(HWND hWnd, HDC hdc)
     DeleteDC(mem);
     (void)hWnd;
 }
+
 
 
 void App_OnDestroy(void)
