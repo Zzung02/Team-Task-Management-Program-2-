@@ -248,6 +248,9 @@ static HWND g_edOverlayList = NULL;
 static HWND g_edMainTodoList = NULL;       // 미완료 과제 표시
 static HWND g_edMainUrgentList = NULL;     // 마감 임박 과제 표시
 
+static HWND g_edBwTitle = NULL;
+static HWND g_edBwContent = NULL;
+
 static int  g_taskSelectedSlot = -1;
 // ---------------------------------------------------------
 // 화면 히스토리(뒤로가기)  ✅ 하나만 사용
@@ -757,6 +760,10 @@ static void DestroyAllEdits(void)
     DestroyHookedWindow(&g_edOverlayList, PROP_OLD_EDIT_PROC);
     DestroyHookedWindow(&g_edDoneList, PROP_OLD_EDIT_PROC);
 
+
+    DestroyHookedWindow(&g_edBwTitle, PROP_OLD_EDIT_PROC);
+    DestroyHookedWindow(&g_edBwContent, PROP_OLD_EDIT_PROC);
+
     
     Board_DestroyControls();
     ShowMyTeamStatics(0);
@@ -831,7 +838,22 @@ static void CreateControlsForScreen(HWND hWnd, Screen s)
         g_edOverlayList = CreateEdit(hWnd, 1302, ES_MULTILINE | ES_AUTOVSCROLL | WS_VSCROLL | ES_READONLY);
         Todo_RefreshUI();
         break;
-        ;
+        
+    case SCR_BOARD_WRITE:
+    {
+        // 제목: 테두리 없이(=투명 느낌)
+        g_edBwTitle = CreateEdit(hWnd, 8801, 0);
+        // 내용: 멀티라인 + 스크롤
+        g_edBwContent = CreateEdit(hWnd, 8802, ES_MULTILINE | ES_AUTOVSCROLL | WS_VSCROLL);
+
+        // ✅ 제목은 테두리 제거(투명 느낌 핵심)
+        LONG st = GetWindowLongW(g_edBwTitle, GWL_STYLE);
+        st &= ~WS_BORDER;
+        SetWindowLongW(g_edBwTitle, GWL_STYLE, st);
+
+        break;
+    }
+
 
     case SCR_MAIN:
     {
@@ -1111,6 +1133,25 @@ static void RelayoutControls(HWND hWnd)
             SX(R_TA_FILE_X2), SY(R_TA_FILE_Y2), 0, 0, 0, 0);
         return;
     }
+
+    if (g_screen == SCR_BOARD_WRITE)
+    {
+        if (g_edBwTitle)   ShowWindow(g_edBwTitle, SW_SHOW);
+        if (g_edBwContent) ShowWindow(g_edBwContent, SW_SHOW);
+
+        MoveEdit(g_edBwTitle,
+            SX(R_BDW_TITLE_X1), SY(R_BDW_TITLE_Y1),
+            SX(R_BDW_TITLE_X2), SY(R_BDW_TITLE_Y2),
+            0, 0, 0, 0);
+
+        MoveEdit(g_edBwContent,
+            SX(R_BDW_CONTENT_X1), SY(R_BDW_CONTENT_Y1),
+            SX(R_BDW_CONTENT_X2), SY(R_BDW_CONTENT_Y2),
+            0, 0, 0, 0);
+
+        return;
+    }
+    
 
     // BOARD
     if (g_screen == SCR_BOARD) {
@@ -1939,6 +1980,48 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
             SAFE_LEAVE();
         }
 
+
+        SAFE_LEAVE();
+    }
+
+
+    if (g_screen == SCR_BOARD_WRITE)
+    {
+        // ✅ 등록 버튼 좌표(임시) → 너가 눌러서 좌표 맞춰야 함
+        if (HitScaled(
+            R_BDW_SAVE_X1, R_BDW_SAVE_Y1,
+            R_BDW_SAVE_X2, R_BDW_SAVE_Y2,
+            x, y))
+
+        {
+            wchar_t title[128] = { 0 };
+            wchar_t content[2048] = { 0 };
+
+            if (g_edBwTitle)   GetWindowTextW(g_edBwTitle, title, 128);
+            if (g_edBwContent) GetWindowTextW(g_edBwContent, content, 2048);
+
+            if (!title[0]) {
+                MessageBoxW(hWnd, L"제목을 입력해 주세요.", L"게시판", MB_OK | MB_ICONWARNING);
+                SAFE_LEAVE();
+            }
+
+            // ✅ 글쓴이 = 로그인 아이디
+            if (!g_currentUserId[0]) {
+                MessageBoxW(hWnd, L"로그인이 필요합니다.", L"게시판", MB_OK | MB_ICONWARNING);
+                SAFE_LEAVE();
+            }
+
+            if (!Board_AddPost(title, g_currentUserId, content)) {
+                MessageBoxW(hWnd, L"등록 실패(파일 저장 오류)", L"게시판", MB_OK | MB_ICONERROR);
+                SAFE_LEAVE();
+            }
+
+            MessageBoxW(hWnd, L"등록 되었습니다.", L"게시판", MB_OK | MB_ICONINFORMATION);
+
+            // ✅ 게시판 리스트로 복귀
+            SwitchScreen(hWnd, SCR_BOARD);
+            SAFE_LEAVE();
+        }
 
         SAFE_LEAVE();
     }

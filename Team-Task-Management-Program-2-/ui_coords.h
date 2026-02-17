@@ -379,6 +379,28 @@ extern int g_clientH;
 #define R_BD_PAGE_NEXT_Y2  665
 
 
+// ===============================
+// [BOARD WRITE 화면] 좌표
+// ===============================
+
+// 제목 Edit
+#define R_BDW_TITLE_X1   153
+#define R_BDW_TITLE_Y1   122
+#define R_BDW_TITLE_X2   1229
+#define R_BDW_TITLE_Y2   144
+
+// 내용 Edit
+#define R_BDW_CONTENT_X1 112
+#define R_BDW_CONTENT_Y1 169
+#define R_BDW_CONTENT_X2 1217
+#define R_BDW_CONTENT_Y2 609
+
+// 등록 버튼
+#define R_BDW_SAVE_X1    200
+#define R_BDW_SAVE_Y1    50
+#define R_BDW_SAVE_X2    550
+#define R_BDW_SAVE_Y2    130
+
 
 // ================================
 // BOARD 목록 영역(번호/제목/글쓴이 텍스트가 올라갈 영역)

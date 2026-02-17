@@ -12,3 +12,10 @@ void Board_CreateControls(HWND hWnd);
 void Board_RelayoutControls(HWND hWnd);
 void Board_DestroyControls(void);
 void Board_ShowControls(int show);
+void Board_ResetState(void);
+void Board_Draw(HDC hdc);
+int  Board_OnClick(HWND hWnd, int x, int y);
+
+// ✅ 데이터(저장/로드)
+int  Board_AddPost(const wchar_t* title, const wchar_t* author, const wchar_t* content);
+void Board_Reload(void);
