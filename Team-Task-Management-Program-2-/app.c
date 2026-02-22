@@ -764,7 +764,7 @@ static void DestroyAllEdits(void)
     DestroyHookedWindow(&g_edBwTitle, PROP_OLD_EDIT_PROC);
     DestroyHookedWindow(&g_edBwContent, PROP_OLD_EDIT_PROC);
 
-    
+
     Board_DestroyControls();
     ShowMyTeamStatics(0);
 }
@@ -838,7 +838,7 @@ static void CreateControlsForScreen(HWND hWnd, Screen s)
         g_edOverlayList = CreateEdit(hWnd, 1302, ES_MULTILINE | ES_AUTOVSCROLL | WS_VSCROLL | ES_READONLY);
         Todo_RefreshUI();
         break;
-        
+
     case SCR_BOARD_WRITE:
     {
         // 제목: 테두리 없이(=투명 느낌)
@@ -857,7 +857,7 @@ static void CreateControlsForScreen(HWND hWnd, Screen s)
 
     case SCR_MAIN:
     {
-       
+
         break;
     }
 
@@ -909,7 +909,7 @@ static void CreateControlsForScreen(HWND hWnd, Screen s)
 
     case SCR_BOARD:
     {
-     
+
         break;
     }
 
@@ -1015,7 +1015,7 @@ static void RelayoutControls(HWND hWnd)
         return;
     }
 
-    
+
 
 
     // FINDPW
@@ -1059,7 +1059,7 @@ static void RelayoutControls(HWND hWnd)
         return;
     }
 
-    
+
     // TEAM_CREATE
     if (g_screen == SCR_TEAM_CREATE) {
         ShowWindow(g_edTcTeam, SW_SHOW);
@@ -1151,7 +1151,7 @@ static void RelayoutControls(HWND hWnd)
 
         return;
     }
-    
+
 
     // BOARD
     if (g_screen == SCR_BOARD) {
@@ -1168,59 +1168,59 @@ static void RelayoutControls(HWND hWnd)
         return;
     }
 
-    
+
 
     // DONE
     if (g_screen == SCR_DONE) {
         if (g_edDoneList) ShowWindow(g_edDoneList, SW_SHOW);
 
-   
+
         MoveEdit(g_edDoneList,
             SX(R_DONE_LIST_X1), SY(R_DONE_LIST_Y1),
             SX(R_DONE_LIST_X2), SY(R_DONE_LIST_Y2),
             0, 0, 0, 0
         );
         return;
-       }
-
     }
 
-    // app.c
-    static void HideAllControls(void)
-    {
+}
 
-        // ---------------------------
-        // ✅ 아래는 app.c가 직접 만든 컨트롤들(있으면 전부 hide)
-        // 너 app.c에 있는 전역 HWND 이름 그대로 맞춰서 적어줘야 함.
-        // (아래는 예시니까, 네 app.c 변수명에 맞춰 바꿔야 함)
-        // ---------------------------
+// app.c
+static void HideAllControls(void)
+{
 
-        if (g_edStartId) ShowWindow(g_edStartId, SW_HIDE);
-        if (g_edStartPw) ShowWindow(g_edStartPw, SW_HIDE);
+    // ---------------------------
+    // ✅ 아래는 app.c가 직접 만든 컨트롤들(있으면 전부 hide)
+    // 너 app.c에 있는 전역 HWND 이름 그대로 맞춰서 적어줘야 함.
+    // (아래는 예시니까, 네 app.c 변수명에 맞춰 바꿔야 함)
+    // ---------------------------
 
-        if (g_edSignName) ShowWindow(g_edSignName, SW_HIDE);
-        if (g_edSignId)   ShowWindow(g_edSignId, SW_HIDE);
-        if (g_edSignPw)   ShowWindow(g_edSignPw, SW_HIDE);
+    if (g_edStartId) ShowWindow(g_edStartId, SW_HIDE);
+    if (g_edStartPw) ShowWindow(g_edStartPw, SW_HIDE);
 
-        if (g_edFindName) ShowWindow(g_edFindName, SW_HIDE);
-        if (g_edFindId)   ShowWindow(g_edFindId, SW_HIDE);
+    if (g_edSignName) ShowWindow(g_edSignName, SW_HIDE);
+    if (g_edSignId)   ShowWindow(g_edSignId, SW_HIDE);
+    if (g_edSignPw)   ShowWindow(g_edSignPw, SW_HIDE);
 
-        if (g_edTcTeam) ShowWindow(g_edTcTeam, SW_HIDE);
-        if (g_edTcCode) ShowWindow(g_edTcCode, SW_HIDE);
+    if (g_edFindName) ShowWindow(g_edFindName, SW_HIDE);
+    if (g_edFindId)   ShowWindow(g_edFindId, SW_HIDE);
 
-        if (g_edTjTeam) ShowWindow(g_edTjTeam, SW_HIDE);
-        if (g_edTjCode) ShowWindow(g_edTjCode, SW_HIDE);
+    if (g_edTcTeam) ShowWindow(g_edTcTeam, SW_HIDE);
+    if (g_edTcCode) ShowWindow(g_edTcCode, SW_HIDE);
 
-        if (g_edTaSearch)   ShowWindow(g_edTaSearch, SW_HIDE);
-        if (g_edTaTitle)    ShowWindow(g_edTaTitle, SW_HIDE);
-        if (g_edTaContent)  ShowWindow(g_edTaContent, SW_HIDE);
-        if (g_edTaDetail)   ShowWindow(g_edTaDetail, SW_HIDE);
-        if (g_edTaFile)     ShowWindow(g_edTaFile, SW_HIDE);
-        if (g_edTaDeadline) ShowWindow(g_edTaDeadline, SW_HIDE);
+    if (g_edTjTeam) ShowWindow(g_edTjTeam, SW_HIDE);
+    if (g_edTjCode) ShowWindow(g_edTjCode, SW_HIDE);
 
-        // 내팀 STATIC 5칸 같은 거 쓰면 이것도
-        // for (int i=0;i<5;i++) if (g_stMyTeam[i]) ShowWindow(g_stMyTeam[i], SW_HIDE);
-    }
+    if (g_edTaSearch)   ShowWindow(g_edTaSearch, SW_HIDE);
+    if (g_edTaTitle)    ShowWindow(g_edTaTitle, SW_HIDE);
+    if (g_edTaContent)  ShowWindow(g_edTaContent, SW_HIDE);
+    if (g_edTaDetail)   ShowWindow(g_edTaDetail, SW_HIDE);
+    if (g_edTaFile)     ShowWindow(g_edTaFile, SW_HIDE);
+    if (g_edTaDeadline) ShowWindow(g_edTaDeadline, SW_HIDE);
+
+    // 내팀 STATIC 5칸 같은 거 쓰면 이것도
+    // for (int i=0;i<5;i++) if (g_stMyTeam[i]) ShowWindow(g_stMyTeam[i], SW_HIDE);
+}
 
 
 
@@ -1359,22 +1359,22 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
                 SAFE_LEAVE();
             }
 
- if (Auth_Login(id, pw)) {
+            if (Auth_Login(id, pw)) {
 
-    // ✅ 로그인 아이디 저장 (이거 없어서 내팀 목록이 비어있던거!)
-    lstrcpynW(g_currentUserId, id, 128);
+                // ✅ 로그인 아이디 저장 (이거 없어서 내팀 목록이 비어있던거!)
+                lstrcpynW(g_currentUserId, id, 128);
 
-    // (선택) 로그인 시 팀/역할 초기화
-    // g_currentTeamId[0] = 0;
-    // g_currentRole[0] = 0;
+                // (선택) 로그인 시 팀/역할 초기화
+                // g_currentTeamId[0] = 0;
+                // g_currentRole[0] = 0;
 
-    Calendar_Init();
-    Calendar_SetTeamId(g_currentTeamId);
-    Calendar_NotifyTasksChanged(hWnd, g_currentTeamId);
+                Calendar_Init();
+                Calendar_SetTeamId(g_currentTeamId);
+                Calendar_NotifyTasksChanged(hWnd, g_currentTeamId);
 
-    SwitchScreen(hWnd, SCR_MAIN);
-    SAFE_LEAVE();
-}
+                SwitchScreen(hWnd, SCR_MAIN);
+                SAFE_LEAVE();
+            }
 
             else {
                 MessageBoxW(hWnd, L"로그인 실패! 아이디/비밀번호 확인해 주세요.", L"로그인", MB_OK | MB_ICONERROR);
@@ -1548,6 +1548,11 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
             lstrcpynW(g_mainTeamText, out.teamName, 128);
             lstrcpynW(g_currentRole, L"LEADER", 32);
 
+            // ✅ 팀 바뀌었으니 보드/캘린더도 팀 세팅
+            Board_SetTeamId(g_currentTeamId);
+            Calendar_SetTeamId(g_currentTeamId);
+            Calendar_NotifyTasksChanged(hWnd, g_currentTeamId);
+
             LoadMyTeams_FromMembers(g_currentUserId);
             ApplyMyTeamTextsToUI();
 
@@ -1583,11 +1588,14 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
                 MessageBoxW(hWnd, L"팀 참여 실패!\n(코드가 없거나 이미 가입했을 수 있음)", L"팀 참여", MB_OK | MB_ICONERROR);
                 SAFE_LEAVE();
             }
-
             lstrcpynW(g_currentTeamId, out.teamId, 64);
             lstrcpynW(g_mainTeamText, out.teamName, 128);
             lstrcpynW(g_currentRole, L"MEMBER", 32);
 
+            // ✅ 팀 바뀌었으니 보드/캘린더도 팀 세팅
+            Board_SetTeamId(g_currentTeamId);
+            Calendar_SetTeamId(g_currentTeamId);
+            Calendar_NotifyTasksChanged(hWnd, g_currentTeamId);
             LoadMyTeams_FromMembers(g_currentUserId);
             ApplyMyTeamTextsToUI();
 
@@ -1612,10 +1620,14 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
                 MessageBoxW(hWnd, L"팀을 먼저 선택해 주세요.", L"내 팀", MB_OK | MB_ICONWARNING);
                 SAFE_LEAVE();
             }
-
             lstrcpynW(g_mainTeamText, g_myTeams[g_myTeamSelected].team, 128);
             lstrcpynW(g_currentTeamId, g_myTeams[g_myTeamSelected].teamId, 64);
-            lstrcpynW(g_currentRole, g_myTeams[g_myTeamSelected].role, 32); // ✅ 추가
+            lstrcpynW(g_currentRole, g_myTeams[g_myTeamSelected].role, 32);
+
+            // ✅ 팀 바뀌었으니 보드/캘린더도 팀 세팅
+            Board_SetTeamId(g_currentTeamId);
+            Calendar_SetTeamId(g_currentTeamId);
+            Calendar_NotifyTasksChanged(hWnd, g_currentTeamId);
 
             SwitchScreen(hWnd, SCR_MAIN);
             ApplyMainHeaderTextsReal();
@@ -2036,6 +2048,15 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
         if (HitScaled(R_BOARD_BTN_REG_X1, R_BOARD_BTN_REG_Y1,
             R_BOARD_BTN_REG_X2, R_BOARD_BTN_REG_Y2, x, y))
         {
+            // ✅ 팀 선택 안 했으면 막기
+            if (g_currentTeamId[0] == 0) {
+                MessageBoxW(hWnd, L"팀을 먼저 선택해 주세요.", L"알림", MB_OK | MB_ICONINFORMATION);
+                SAFE_LEAVE();
+            }
+
+            // ✅ 혹시라도 보드 팀 세팅 안 돼있을까봐 진입 전에 한 번 보장
+            Board_SetTeamId(g_currentTeamId);
+
             SwitchScreen(hWnd, SCR_BOARD_WRITE);
             SAFE_LEAVE();
         }
@@ -2044,6 +2065,7 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
         SAFE_LEAVE();
     }
 }
+
 
 static int ScreenShowsCalendar(Screen s)
 {
@@ -2213,7 +2235,7 @@ void App_OnDestroy(void)
     if (g_brWhite) { DeleteObject(g_brWhite); g_brWhite = NULL; }
     if (g_bmpBoardWrite) { DeleteObject(g_bmpBoardWrite); g_bmpBoardWrite = NULL; }
 
-    }
+}
 
 
 
@@ -2406,7 +2428,7 @@ static void Task_ClearRightEdits(void)
     if (g_edTaContent) SetWindowTextW(g_edTaContent, L"");
     if (g_edTaDetail)  SetWindowTextW(g_edTaDetail, L"");
     if (g_edTaFile)    SetWindowTextW(g_edTaFile, L"");
-    if (g_edTaDeadline) SetWindowTextW(g_edTaDeadline, L""); 
+    if (g_edTaDeadline) SetWindowTextW(g_edTaDeadline, L"");
 
     g_taskSelectedId = 0;
 }
@@ -2524,22 +2546,20 @@ void RefreshMyTeamList(HWND hWnd)
 
 void SwitchToTeam(HWND hWnd, const wchar_t* teamId)
 {
-    if (!teamId || !teamId[0]) return;
+    if (!teamId || !teamId[0])
+        return;
 
-    TeamInfo t = { 0 };
-    if (!Team_FindByTeamId(teamId, &t)) return;
+    lstrcpynW(g_currentTeamId, teamId, 64);
 
-    lstrcpynW(g_currentTeamId, t.teamId, 64);
-    lstrcpynW(g_mainTeamText, t.teamName, 128);
+    // 🔴 여기 추가
+    Board_SetTeamId(g_currentTeamId);
 
-    g_mainTaskText[0] = 0;
-    g_mainCodeText[0] = 0;
+    // 캘린더도 같이 바꾸는 게 좋음
+    Calendar_SetTeamId(g_currentTeamId);
+    Calendar_RebuildFromTasks(g_currentTeamId);
 
-    SwitchScreen(hWnd, SCR_MAIN);
-
-    ApplyMainHeaderTextsReal();
-} 
-
+    InvalidateRect(hWnd, NULL, TRUE);
+}
 
 static int ParseDateToSystemTime_YYYYMMDD(const wchar_t* s, SYSTEMTIME* out)
 {

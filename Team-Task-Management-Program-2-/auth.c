@@ -147,3 +147,30 @@ BOOL Auth_FindPassword(const wchar_t* id, const wchar_t* name, wchar_t* outPw, i
     fclose(fp);
     return FALSE;
 }
+
+BOOL Auth_GetUserNameById(const wchar_t* userId, wchar_t* outName, int outLen)
+{
+    if (!userId || !userId[0] || !outName || outLen <= 0) return FALSE;
+    outName[0] = 0;
+
+    FILE* fp = OpenUsersFileRead();
+    if (!fp) return FALSE;
+
+    wchar_t line[512];
+    wchar_t fid[128], fpw[128], fname[128];
+
+    while (fgetws(line, 512, fp))
+    {
+        if (!ParseUserLine(line, fid, 128, fpw, 128, fname, 128))
+            continue;
+
+        if (wcscmp(fid, userId) == 0) {
+            lstrcpynW(outName, fname, outLen);
+            fclose(fp);
+            return TRUE;
+        }
+    }
+
+    fclose(fp);
+    return FALSE;
+}

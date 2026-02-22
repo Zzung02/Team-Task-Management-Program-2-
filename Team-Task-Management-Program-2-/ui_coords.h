@@ -418,9 +418,17 @@ extern int g_clientH;
 #define R_BDW_SAVE_X2  370
 #define R_BDW_SAVE_Y2  83
 
+// 수정
+#define R_BDW_EDIT_X1 396
+#define R_BDW_EDIT_Y1 42
+#define R_BDW_EDIT_X2 584
+#define R_BDW_EDIT_Y2 82
 
-
-
+// 삭제버튼
+#define R_BDW_DEL_X1 611
+#define R_BDW_DEL_Y1 45
+#define R_BDW_DEL_X2 798
+#define R_BDW_DEL_Y2 86
 
 
 // ================================

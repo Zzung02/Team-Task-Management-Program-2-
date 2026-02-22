@@ -8,7 +8,6 @@
 
 #define TASK_DEADLINE_MAX  32
 
-#define TASK_DEADLINE_MAX 16
 
 typedef struct {
     int id;
