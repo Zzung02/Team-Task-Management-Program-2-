@@ -285,3 +285,103 @@ BOOL Team_JoinByCode(const wchar_t* joinCode,
     if (outTeam) *outTeam = t;
     return TRUE;
 }
+// ===============================
+// team.c  하단에 추가 (원샷 붙여넣기)
+// ===============================
+static FILE* OpenUtf8Write(const wchar_t* path)
+{
+    FILE* fp = _wfopen(path, L"w, ccs=UTF-8");
+    if (!fp) fp = _wfopen(path, L"w");
+    return fp;
+}
+
+// team_members.txt line: teamId|userId|role
+int Team_LoadMembers(const wchar_t* teamId, TeamMember* outArr, int maxCount)
+{
+    if (!teamId || !teamId[0] || !outArr || maxCount <= 0) return 0;
+
+    FILE* fp = OpenUtf8Read(TEAM_MEMBERS_FILE);
+    if (!fp) return 0;
+
+    int count = 0;
+    wchar_t line[512];
+
+    while (fgetws(line, 512, fp) && count < maxCount) {
+        wchar_t tid[32], uid[128], role[32];
+        if (!Split3(line, tid, 32, uid, 128, role, 32)) continue;
+        if (wcscmp(tid, teamId) != 0) continue;
+
+        lstrcpynW(outArr[count].teamId, tid, 32);
+        lstrcpynW(outArr[count].userId, uid, 128);
+        lstrcpynW(outArr[count].role, role, 32);
+        count++;
+    }
+
+    fclose(fp);
+    return count;
+}
+
+BOOL Team_IsOwner(const wchar_t* teamId, const wchar_t* userId)
+{
+    if (!teamId || !teamId[0] || !userId || !userId[0]) return FALSE;
+
+    TeamInfo t = { 0 };
+    if (!Team_FindByTeamId(teamId, &t)) return FALSE;
+
+    return (wcscmp(t.ownerUserId, userId) == 0) ? TRUE : FALSE;
+}
+
+BOOL Team_SetMemberRole(const wchar_t* teamId,
+    const wchar_t* memberUserId,
+    const wchar_t* newRole)
+{
+    if (!teamId || !teamId[0] || !memberUserId || !memberUserId[0] || !newRole || !newRole[0])
+        return FALSE;
+
+    FILE* fr = OpenUtf8Read(TEAM_MEMBERS_FILE);
+    if (!fr) return FALSE;
+
+    const wchar_t* TMP = L"team_members.tmp";
+    FILE* fw = OpenUtf8Write(TMP);
+    if (!fw) {
+        fclose(fr);
+        return FALSE;
+    }
+
+    int changed = 0;
+    wchar_t line[512];
+
+    while (fgetws(line, 512, fr)) {
+        wchar_t tid[32], uid[128], role[32];
+        if (!Split3(line, tid, 32, uid, 128, role, 32)) {
+            // 파싱 실패 라인은 그대로 복사
+            fputws(line, fw);
+            continue;
+        }
+
+        if (wcscmp(tid, teamId) == 0 && wcscmp(uid, memberUserId) == 0) {
+            fwprintf(fw, L"%s|%s|%s\n", tid, uid, newRole);
+            changed = 1;
+        }
+        else {
+            fwprintf(fw, L"%s|%s|%s\n", tid, uid, role);
+        }
+    }
+
+    fclose(fr);
+    fclose(fw);
+
+    if (!changed) {
+        _wremove(TMP);
+        return FALSE;
+    }
+
+    // 원본 교체
+    _wremove(TEAM_MEMBERS_FILE);
+    if (_wrename(TMP, TEAM_MEMBERS_FILE) != 0) {
+        // rename 실패 시
+        return FALSE;
+    }
+
+    return TRUE;
+}

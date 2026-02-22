@@ -30,7 +30,9 @@ extern "C" {
 	void Calendar_NotifyTasksChanged(HWND hWnd, const wchar_t* teamId);
 
 	void Calendar_SetClipMode(int mode);
+
+	void Calendar_SetClipX(int x);   // ✅ 왼쪽 패널 끝 X (이 X 이전은 캘린더를 안 그림)
+
 #ifdef __cplusplus
 }
 #endif
-void Calendar_SetClipX(int x);   // ✅ 왼쪽 패널 끝 X (이 X 이전은 캘린더를 안 그림)

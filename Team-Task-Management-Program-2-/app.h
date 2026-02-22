@@ -29,21 +29,18 @@ typedef enum {
     SCR_SIGNUP,
     SCR_MAIN,
     SCR_FINDPW,
-
     SCR_DEADLINE,
     SCR_TODO,
     SCR_MYTEAM,
     SCR_DONE,
-
     SCR_TEAM_CREATE,
     SCR_TEAM_JOIN,
-
     SCR_TASK_ADD,
     SCR_BOARD,
-    SCR_BOARD_WRITE
+    SCR_BOARD_WRITE,
+    SCR_MYTEAM_DETAIL     // ✅ 반드시 존재
 } Screen;
 
-extern Screen g_screen;
 
 // --------------------------------------------------
 // BMP 파일명

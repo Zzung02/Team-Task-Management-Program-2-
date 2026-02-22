@@ -165,13 +165,13 @@ extern int g_clientH;
 // =========================================================
 // TEAM_CREATE(팀등록) 필드
 // =========================================================
-#define R_TC_TEAM_X1   787
-#define R_TC_TEAM_Y1   242
+#define R_TC_TEAM_X1   791
+#define R_TC_TEAM_Y1   240
 #define R_TC_TEAM_X2   1025
 #define R_TC_TEAM_Y2   266
 
-#define R_TC_CODE_X1   848
-#define R_TC_CODE_Y1   321
+#define R_TC_CODE_X1   845
+#define R_TC_CODE_Y1   320
 #define R_TC_CODE_X2   984
 #define R_TC_CODE_Y2   345
 
@@ -187,23 +187,63 @@ extern int g_clientH;
 #define R_MYTEAM_LIST_X2   520
 #define R_MYTEAM_LIST_Y2  655
 
-#define R_MYTEAM_SAVE_X1  427
-#define R_MYTEAM_SAVE_Y1  143
-#define R_MYTEAM_SAVE_X2  517
+#define R_MYTEAM_SAVE_X1  387
+#define R_MYTEAM_SAVE_Y1  146
+#define R_MYTEAM_SAVE_X2  478
 #define R_MYTEAM_SAVE_Y2  184
 
+// 팀원 목록 영역(내팀 목록 큰 흰 박스랑 비슷한 곳)
+#define R_MTD_LIST_X1   140
+#define R_MTD_LIST_Y1   215
+#define R_MTD_LIST_X2   660
+#define R_MTD_LIST_Y2   690
 
+// 상세사항 버튼
+#define R_MYTEAM_DETAIL_X1 494
+#define R_MYTEAM_DETAIL_Y1 144
+#define R_MYTEAM_DETAIL_X2 634
+#define R_MYTEAM_DETAIL_Y2 182
+
+// 팀장 위임 버튼
+#define R_MTD_ROLE_LEADER_X1 0
+#define R_MTD_ROLE_LEADER_Y1 0
+#define R_MTD_ROLE_LEADER_X2 0 
+#define R_MTD_ROLE_LEADER_Y2 0
+
+// 팀원 위임 버튼
+#define R_MTD_ROLE_MEMBER_X1 0
+#define R_MTD_ROLE_MEMBER_Y1 0
+#define R_MTD_ROLE_MEMBER_X2 0
+#define R_MTD_ROLE_MEMBER_Y2 0
+
+
+// 팀원 삭제 버튼
+#define R_MTD_REMOVE_X1 0
+#define R_MTD_REMOVE_Y1 0
+#define R_MTD_REMOVE_X2 0
+#define R_MTD_REMOVE_Y2 0
+
+// 버튼들(상세 화면에서 쓸)
+#define R_MTD_BTN_ROLE_X1  360
+#define R_MTD_BTN_ROLE_Y1  170
+#define R_MTD_BTN_ROLE_X2  470
+#define R_MTD_BTN_ROLE_Y2  210
+
+#define R_MTD_BTN_KICK_X1  480
+#define R_MTD_BTN_KICK_Y1  170
+#define R_MTD_BTN_KICK_X2  590
+#define R_MTD_BTN_KICK_Y2  210
 
 // =========================================================
 // TEAM_JOIN(팀참여) 필드
 // =========================================================
-#define R_TJ_TEAM_X1   792
-#define R_TJ_TEAM_Y1   236
+#define R_TJ_TEAM_X1   791
+#define R_TJ_TEAM_Y1   242
 #define R_TJ_TEAM_X2   1026
 #define R_TJ_TEAM_Y2   262
 
-#define R_TJ_CODE_X1   848
-#define R_TJ_CODE_Y1   313
+#define R_TJ_CODE_X1   846
+#define R_TJ_CODE_Y1   321
 #define R_TJ_CODE_X2   1029
 #define R_TJ_CODE_Y2   348
 
@@ -384,14 +424,14 @@ extern int g_clientH;
 // ===============================
 
 // 제목 Edit
-#define R_BDW_TITLE_X1   153
+#define R_BDW_TITLE_X1   121
 #define R_BDW_TITLE_Y1   122
 #define R_BDW_TITLE_X2   1229
 #define R_BDW_TITLE_Y2   144
 
 // 내용 Edit
-#define R_BDW_CONTENT_X1 112
-#define R_BDW_CONTENT_Y1 169
+#define R_BDW_CONTENT_X1 123
+#define R_BDW_CONTENT_Y1 167
 #define R_BDW_CONTENT_X2 1217
 #define R_BDW_CONTENT_Y2 609
 
@@ -425,10 +465,28 @@ extern int g_clientH;
 #define R_BDW_EDIT_Y2 82
 
 // 삭제버튼
-#define R_BDW_DEL_X1 611
-#define R_BDW_DEL_Y1 45
-#define R_BDW_DEL_X2 798
-#define R_BDW_DEL_Y2 86
+#define R_BDW_DEL_X1 608
+#define R_BDW_DEL_Y1 42
+#define R_BDW_DEL_X2 801
+#define R_BDW_DEL_Y2 84
+
+
+// 페이지 숫자(화살표 사이 중앙)
+#define R_BD_PAGE_LABEL_X1  641
+#define R_BD_PAGE_LABEL_Y1  646
+#define R_BD_PAGE_LABEL_X2  667
+#define R_BD_PAGE_LABEL_Y2  674
+
+// 조회(돋보기 버튼 영역)
+#define R_BD_SEARCH_BTN_X1  1224
+#define R_BD_SEARCH_BTN_Y1  44
+#define R_BD_SEARCH_BTN_X2  1276
+#define R_BD_SEARCH_BTN_Y2  81
+
+#define R_BOARD_SEARCH_X1 900
+#define R_BOARD_SEARCH_Y1 54
+#define R_BOARD_SEARCH_X2 1221
+#define R_BOARD_SEARCH_Y2 80
 
 
 // ================================

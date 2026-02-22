@@ -1,14 +1,15 @@
-﻿// calendar.c  (원샷 덮어쓰기)
-// ✅ clipMode 기준으로 캘린더 숫자/이벤트 겹침 완전 방지
+﻿// calendar.c  (원샷 덮어쓰기 / 복붙용)
+// ✅ clipMode + clipX 기준으로 캘린더 숫자/이벤트 겹침 완전 방지
 // - mode 0: 전체 표시
 // - mode 1: 왼쪽 3칸(일/월/화) 가림  -> 수~토만 보이게
 // - mode 2: 오른쪽 3칸(목/금/토) 가림 -> 일~수만 보이게
+// ✅ clipX(픽셀): 이 X 이전은 캘린더를 아예 안 그림/클릭 안 됨
 // ✅ 주말(일/토) 빨간색, 오늘 날짜 굵게
 #define _CRT_SECURE_NO_WARNINGS
 #include "calendar.h"
 #include "ui_coords.h"
 #include "task.h"
-#include "app.h"   // g_screen 필요없어도 포함 유지
+#include "app.h"
 
 #include <windows.h>
 #include <wchar.h>
@@ -34,6 +35,7 @@ typedef struct {
 // 상태
 // ------------------------------------------------------------
 static int g_calClipMode = 0; // 0=전체, 1=왼쪽3칸 가림, 2=오른쪽3칸 가림
+static int g_calClipX = 0;    // 0=미사용, >0이면 이 X 이전은 캘린더 그리기/클릭 금지
 
 static int g_calYear = 2026;
 static int g_calMonth = 1;
@@ -153,10 +155,15 @@ void Calendar_GetYM(int* outYear, int* outMonth)
 
 void Calendar_SetClipMode(int mode)
 {
-    // 0=전체, 1=왼쪽 가림, 2=오른쪽 가림
     if (mode < 0) mode = 0;
     if (mode > 2) mode = 2;
     g_calClipMode = mode;
+}
+
+void Calendar_SetClipX(int x)
+{
+    if (x < 0) x = 0;
+    g_calClipX = x;
 }
 
 // ------------------------------------------------------------
@@ -215,7 +222,7 @@ void Calendar_Draw(HDC hdc)
     int H = y2 - y1;
 
     const int cols = 7;
-    const int rows = 5; // ✅ 너 UI 기준 유지
+    const int rows = 5;
 
     int cellW = (cols ? (W / cols) : W);
     int cellH = (rows ? (H / rows) : H);
@@ -249,23 +256,20 @@ void Calendar_Draw(HDC hdc)
         DeleteObject(fMonth);
     }
 
-    // ✅✅ 핵심: clipMode 기준으로 "보이는 영역"만 그리기
+    // ✅✅ 핵심: clipMode + clipX 기준으로 "보이는 영역"만 그리기
     int savedDC = SaveDC(hdc);
 
     int clipL = x1, clipT = y1, clipR = x2, clipB = y2;
 
-    // mode: 1=왼쪽 3칸(일/월/화) 가림 -> 수~토만
-    if (g_calClipMode == 1) {
-        clipL = x1 + cellW * 3;
-    }
-    // mode: 2=오른쪽 3칸(목/금/토) 가림 -> 일~수만
-    else if (g_calClipMode == 2) {
-        clipR = x1 + cellW * 4;
-    }
+    if (g_calClipMode == 1) clipL = x1 + cellW * 3;      // 수~토
+    else if (g_calClipMode == 2) clipR = x1 + cellW * 4; // 일~수
+
+    // ✅ ClipX 적용 (왼쪽 패널 완전 차단)
+    if (g_calClipX > 0 && clipL < g_calClipX) clipL = g_calClipX;
 
     IntersectClipRect(hdc, clipL, clipT, clipR, clipB);
 
-    // 1) 그리드 (원래 너 코드가 PS_NULL이면 선 안 그려짐이라면 그대로 유지)
+    // 1) 그리드
     HPEN pen = CreatePen(PS_NULL, 0, 0);
     HGDIOBJ oldPen = SelectObject(hdc, pen);
 
@@ -331,7 +335,10 @@ void Calendar_Draw(HDC hdc)
                 lstrcpynW(line, g_day[day].title[k], CAL_TITLE_MAX);
 
                 // 길면 줄임
-                if ((int)wcslen(line) > 12) { line[12] = 0; wcscat(line, L".."); }
+                if ((int)wcslen(line) > 12) {
+                    line[12] = 0;
+                    wcscat(line, L"..");
+                }
 
                 TextOutW(hdc, cx + 6, yy, line, (int)wcslen(line));
                 yy += 18;
@@ -388,15 +395,13 @@ int Calendar_OnClick(HWND hWnd, int mx, int my)
     int cellW = (cols ? (W / cols) : W);
     int cellH = (rows ? (H / rows) : H);
 
-    // ✅✅ 그리기와 동일하게 clipMode 기준으로 클릭 허용
+    // ✅✅ 그리기와 동일하게 clipMode+clipX 기준으로 클릭 허용
     int clipL = x1, clipR = x2;
 
-    if (g_calClipMode == 1) {
-        clipL = x1 + cellW * 3; // 수~토만 클릭
-    }
-    else if (g_calClipMode == 2) {
-        clipR = x1 + cellW * 4; // 일~수만 클릭
-    }
+    if (g_calClipMode == 1) clipL = x1 + cellW * 3;
+    else if (g_calClipMode == 2) clipR = x1 + cellW * 4;
+
+    if (g_calClipX > 0 && clipL < g_calClipX) clipL = g_calClipX;
 
     if (mx < clipL || mx > clipR) return 0;
 
