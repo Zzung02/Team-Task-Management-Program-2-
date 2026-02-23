@@ -33,6 +33,7 @@ extern "C" {
 
 	void Calendar_SetClipX(int x);   // ✅ 왼쪽 패널 끝 X (이 X 이전은 캘린더를 안 그림)
 
+	void Calendar_SetShowDayNumbers(int show);
 #ifdef __cplusplus
 }
 #endif

@@ -57,6 +57,7 @@ extern const wchar_t* BMP_TEAM_CREATE;
 extern const wchar_t* BMP_TEAM_JOIN;
 extern const wchar_t* BMP_TASK_ADD;
 extern const wchar_t* BMP_BOARD;
+extern const wchar_t* BMP_MYTEAM_DETAIL;
 
 // --------------------------------------------------
 // 전역 사용자 정보
@@ -79,7 +80,7 @@ extern HBITMAP g_bmpTeamCreate;
 extern HBITMAP g_bmpTeamJoin;
 extern HBITMAP g_bmpTaskAdd;
 extern HBITMAP g_bmpBoard;
-
+extern HBITMAP g_bmpMyTeamDetail;
 // --------------------------------------------------
 // 공통 상태
 // --------------------------------------------------

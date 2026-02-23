@@ -14,6 +14,8 @@ extern "C" {
 #define TEAM_MEMBERS_FILE   L"team_members.txt"
 #endif
 
+
+
     // -------------------------
     // TeamInfo
     // -------------------------
@@ -61,6 +63,16 @@ extern "C" {
     BOOL Team_SetMemberRole(const wchar_t* teamId,
         const wchar_t* memberUserId,
         const wchar_t* newRole);
+
+
+    // 팀 삭제(teams.txt + team_members.txt 정리 + 관련 파일 삭제)
+    BOOL Team_DeleteTeam(const wchar_t* teamId, const wchar_t* requestUserId);
+
+    // 팀장 위임(teams.txt owner 변경 + team_members 역할 스왑)
+    BOOL Team_TransferOwner(const wchar_t* teamId,
+        const wchar_t* requestUserId,
+        const wchar_t* newOwnerUserId);
+
 
 #ifdef __cplusplus
 }

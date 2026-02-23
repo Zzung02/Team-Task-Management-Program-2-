@@ -37,10 +37,16 @@ typedef struct {
 static int g_calClipMode = 0; // 0=전체, 1=왼쪽3칸 가림, 2=오른쪽3칸 가림
 static int g_calClipX = 0;    // 0=미사용, >0이면 이 X 이전은 캘린더 그리기/클릭 금지
 
+
+static int g_calShowDayNumber = 1;   // ✅ 1=날짜 숫자 보임, 0=숨김
 static int g_calYear = 2026;
 static int g_calMonth = 1;
 static CalDayEvents g_day[32]; // 1..31
 
+void Calendar_SetShowDayNumber(int show)
+{
+    g_calShowDayNumber = show ? 1 : 0;
+}
 // ------------------------------------------------------------
 // 유틸
 // ------------------------------------------------------------
@@ -310,7 +316,8 @@ void Calendar_Draw(HDC hdc)
         int isWeekend = (c == 0 || c == 6);
         int isToday = (g_calYear == todayY && g_calMonth == todayM && day == todayD);
 
-        // 날짜 숫자
+        // 날짜 숫자 (✅ 숨김 옵션)
+        if (g_calShowDayNumber)
         {
             wchar_t dtext[8];
             swprintf(dtext, 8, L"%d", day);
@@ -323,7 +330,6 @@ void Calendar_Draw(HDC hdc)
 
             SelectObject(hdc, old);
         }
-
         // 이벤트(과제 제목)
         if (g_day[day].count > 0) {
             HFONT old2 = (HFONT)SelectObject(hdc, fEvt);

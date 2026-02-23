@@ -385,3 +385,166 @@ BOOL Team_SetMemberRole(const wchar_t* teamId,
 
     return TRUE;
 }
+
+
+// ===============================
+// ✅ 팀 삭제 / 팀장 위임 (team.c 하단 원샷 추가)
+// ===============================
+static BOOL RewriteTeamsFile_RemoveTeam(const wchar_t* teamId)
+{
+    FILE* fr = OpenUtf8Read(TEAMS_FILE);
+    if (!fr) return FALSE;
+
+    const wchar_t* TMP = L"teams.tmp";
+    FILE* fw = OpenUtf8Write(TMP);
+    if (!fw) { fclose(fr); return FALSE; }
+
+    int removed = 0;
+    wchar_t line[1024];
+
+    while (fgetws(line, 1024, fr)) {
+        TeamInfo t = { 0 };
+        if (!ParseTeamLine(line, &t)) {
+            fputws(line, fw);
+            continue;
+        }
+
+        if (wcscmp(t.teamId, teamId) == 0) {
+            removed = 1;
+            continue; // skip
+        }
+
+        // 신형 4칸으로 다시 저장
+        fwprintf(fw, L"%s|%s|%s|%s\n", t.teamId, t.teamName, t.joinCode, t.ownerUserId);
+    }
+
+    fclose(fr);
+    fclose(fw);
+
+    if (!removed) { _wremove(TMP); return FALSE; }
+
+    _wremove(TEAMS_FILE);
+    if (_wrename(TMP, TEAMS_FILE) != 0) return FALSE;
+    return TRUE;
+}
+
+static BOOL RewriteMembersFile_RemoveTeam(const wchar_t* teamId)
+{
+    FILE* fr = OpenUtf8Read(TEAM_MEMBERS_FILE);
+    if (!fr) return FALSE;
+
+    const wchar_t* TMP = L"team_members.tmp";
+    FILE* fw = OpenUtf8Write(TMP);
+    if (!fw) { fclose(fr); return FALSE; }
+
+    int removedAny = 0;
+    wchar_t line[512];
+
+    while (fgetws(line, 512, fr)) {
+        wchar_t tid[32], uid[128], role[32];
+        if (!Split3(line, tid, 32, uid, 128, role, 32)) {
+            fputws(line, fw);
+            continue;
+        }
+
+        if (wcscmp(tid, teamId) == 0) {
+            removedAny = 1;
+            continue; // skip
+        }
+        fwprintf(fw, L"%s|%s|%s\n", tid, uid, role);
+    }
+
+    fclose(fr);
+    fclose(fw);
+
+    // 팀원이 하나도 없던 케이스도 있을 수 있으니 removedAny가 0이어도 교체는 허용
+    _wremove(TEAM_MEMBERS_FILE);
+    if (_wrename(TMP, TEAM_MEMBERS_FILE) != 0) return FALSE;
+    return TRUE;
+}
+
+static BOOL RewriteTeamsFile_ChangeOwner(const wchar_t* teamId, const wchar_t* newOwnerUserId)
+{
+    FILE* fr = OpenUtf8Read(TEAMS_FILE);
+    if (!fr) return FALSE;
+
+    const wchar_t* TMP = L"teams.tmp";
+    FILE* fw = OpenUtf8Write(TMP);
+    if (!fw) { fclose(fr); return FALSE; }
+
+    int changed = 0;
+    wchar_t line[1024];
+
+    while (fgetws(line, 1024, fr)) {
+        TeamInfo t = { 0 };
+        if (!ParseTeamLine(line, &t)) {
+            fputws(line, fw);
+            continue;
+        }
+
+        if (wcscmp(t.teamId, teamId) == 0) {
+            lstrcpynW(t.ownerUserId, newOwnerUserId, 128);
+            changed = 1;
+        }
+
+        fwprintf(fw, L"%s|%s|%s|%s\n", t.teamId, t.teamName, t.joinCode, t.ownerUserId);
+    }
+
+    fclose(fr);
+    fclose(fw);
+
+    if (!changed) { _wremove(TMP); return FALSE; }
+
+    _wremove(TEAMS_FILE);
+    if (_wrename(TMP, TEAMS_FILE) != 0) return FALSE;
+    return TRUE;
+}
+
+BOOL Team_DeleteTeam(const wchar_t* teamId, const wchar_t* requestUserId)
+{
+    if (!teamId || !teamId[0] || !requestUserId || !requestUserId[0]) return FALSE;
+
+    // ✅ 팀장만 삭제 가능
+    if (!Team_IsOwner(teamId, requestUserId)) return FALSE;
+
+    if (!RewriteTeamsFile_RemoveTeam(teamId)) return FALSE;
+    RewriteMembersFile_RemoveTeam(teamId);
+
+    // ✅ 관련 데이터 파일도 삭제(원하면 유지해도 됨)
+    {
+        wchar_t path[260];
+        _snwprintf_s(path, 260, _TRUNCATE, L"tasks_%s.txt", teamId);
+        _wremove(path);
+
+        _snwprintf_s(path, 260, _TRUNCATE, L"board_%s.txt", teamId);
+        _wremove(path);
+    }
+
+    return TRUE;
+}
+
+BOOL Team_TransferOwner(const wchar_t* teamId,
+    const wchar_t* requestUserId,
+    const wchar_t* newOwnerUserId)
+{
+    if (!teamId || !teamId[0] || !requestUserId || !requestUserId[0] ||
+        !newOwnerUserId || !newOwnerUserId[0]) return FALSE;
+
+    // ✅ 팀장만 위임 가능
+    if (!Team_IsOwner(teamId, requestUserId)) return FALSE;
+
+    // ✅ 새 팀장이 팀 멤버인지 확인(멤버가 아니면 안 됨)
+    if (!MemberExists(teamId, newOwnerUserId)) return FALSE;
+
+    // teams.txt owner 변경
+    if (!RewriteTeamsFile_ChangeOwner(teamId, newOwnerUserId)) return FALSE;
+
+    // team_members.txt 역할 스왑
+    // 기존 OWNER -> MEMBER, newOwner -> OWNER
+    Team_SetMemberRole(teamId, requestUserId, L"MEMBER");
+    Team_SetMemberRole(teamId, newOwnerUserId, L"OWNER");
+
+    return TRUE;
+
+
+}

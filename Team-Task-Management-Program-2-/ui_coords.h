@@ -187,10 +187,22 @@ extern int g_clientH;
 #define R_MYTEAM_LIST_X2   520
 #define R_MYTEAM_LIST_Y2  655
 
-#define R_MYTEAM_SAVE_X1  387
-#define R_MYTEAM_SAVE_Y1  146
-#define R_MYTEAM_SAVE_X2  478
-#define R_MYTEAM_SAVE_Y2  184
+// 상세사항
+#define R_MYTEAM_DETAIL_X1 496
+#define R_MYTEAM_DETAIL_Y1 141
+#define R_MYTEAM_DETAIL_X2 630
+#define R_MYTEAM_DETAIL_Y2 184
+
+//저장
+#define R_MYTEAM_SAVE_X1  383
+#define R_MYTEAM_SAVE_Y1  144
+#define R_MYTEAM_SAVE_X2  474
+#define R_MYTEAM_SAVE_Y2  186
+//삭제
+#define R_MTD_DEL_X1    488
+#define R_MTD_DEL_Y1    143
+#define R_MTD_DEL_X2    378
+#define R_MTD_DEL_Y2    184
 
 // 팀원 목록 영역(내팀 목록 큰 흰 박스랑 비슷한 곳)
 #define R_MTD_LIST_X1   140
@@ -198,30 +210,25 @@ extern int g_clientH;
 #define R_MTD_LIST_X2   660
 #define R_MTD_LIST_Y2   690
 
-// 상세사항 버튼
-#define R_MYTEAM_DETAIL_X1 494
-#define R_MYTEAM_DETAIL_Y1 144
-#define R_MYTEAM_DETAIL_X2 634
-#define R_MYTEAM_DETAIL_Y2 182
+// ===============================
+// MYTEAM_DETAIL 버튼 (저장/삭제/역할교차)
+// ===============================
+#define R_MTD_SAVE_X1   360
+#define R_MTD_SAVE_Y1   150
+#define R_MTD_SAVE_X2   460
+#define R_MTD_SAVE_Y2   200
 
-// 팀장 위임 버튼
-#define R_MTD_ROLE_LEADER_X1 0
-#define R_MTD_ROLE_LEADER_Y1 0
-#define R_MTD_ROLE_LEADER_X2 0 
-#define R_MTD_ROLE_LEADER_Y2 0
+#define R_MTD_DEL_X1    470
+#define R_MTD_DEL_Y1    150
+#define R_MTD_DEL_X2    570
+#define R_MTD_DEL_Y2    200
 
-// 팀원 위임 버튼
-#define R_MTD_ROLE_MEMBER_X1 0
-#define R_MTD_ROLE_MEMBER_Y1 0
-#define R_MTD_ROLE_MEMBER_X2 0
-#define R_MTD_ROLE_MEMBER_Y2 0
+#define R_MTD_SWAP_X1   580
+#define R_MTD_SWAP_Y1   150
+#define R_MTD_SWAP_X2   680
+#define R_MTD_SWAP_Y2   200
 
 
-// 팀원 삭제 버튼
-#define R_MTD_REMOVE_X1 0
-#define R_MTD_REMOVE_Y1 0
-#define R_MTD_REMOVE_X2 0
-#define R_MTD_REMOVE_Y2 0
 
 // 버튼들(상세 화면에서 쓸)
 #define R_MTD_BTN_ROLE_X1  360
