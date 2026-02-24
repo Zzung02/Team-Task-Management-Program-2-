@@ -105,3 +105,11 @@ void SwitchToTeam(HWND hWnd, const wchar_t* teamId);
 
 // Edit 생성 헬퍼
 HWND App_CreateEdit(HWND parent, int ctrlId, DWORD extraStyle);
+
+// 오버레이(메인 위에 뜨는 패널)
+typedef enum Overlay {
+    OV_NONE = 0,
+    OV_DEADLINE,
+    OV_TODO,
+    OV_DONE
+} Overlay;

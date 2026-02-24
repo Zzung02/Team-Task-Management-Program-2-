@@ -3,10 +3,12 @@
 #include <windowsx.h>
 #include "app.h"
 
-
-
+#ifndef WM_APP_CHILDCLICK
+#define WM_APP_CHILDCLICK (WM_APP + 10)
+#endif
 
 static HBRUSH g_brWhite = NULL;
+static HBRUSH g_brTitleBg = NULL;   // 제목 Edit 배경용
 
 static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -14,11 +16,24 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
     {
     case WM_CREATE:
         if (!g_brWhite) g_brWhite = (HBRUSH)GetStockObject(WHITE_BRUSH);
+        if (!g_brTitleBg) g_brTitleBg = CreateSolidBrush(RGB(255, 255, 255)); // ✅ 필요시 변경
         return (App_OnCreate(hWnd) == 0) ? 0 : -1;
 
     case WM_SIZE:
         App_OnSize(hWnd, LOWORD(lParam), HIWORD(lParam));
         return 0;
+
+    case WM_PAINT:
+    {
+        PAINTSTRUCT ps;
+        HDC hdc = BeginPaint(hWnd, &ps);
+        App_OnPaint(hWnd, hdc);
+        EndPaint(hWnd, &ps);
+        return 0;
+    }
+
+    case WM_ERASEBKGND:
+        return 1; // ✅ 우리가 전체 그리기 하니까 배경 지우기 막기(하얀 깜빡임 방지)
 
     case WM_DRAWITEM:
         return App_OnDrawItemWndProc(hWnd, wParam, lParam);
@@ -30,9 +45,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
         App_OnLButtonDown(hWnd, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
         return 0;
 
-
-        // ✅⭐ 핵심: 자식(EDIT/STATIC)에서 PostMessage로 보낸 클릭 좌표를 여기서 받아서
-        //          똑같이 App_OnLButtonDown으로 전달해야 함
+    // ✅ 자식(EDIT/STATIC)에서 PostMessage로 보낸 클릭 좌표 전달
     case WM_APP_CHILDCLICK:
         App_OnLButtonDown(hWnd, (int)wParam, (int)lParam);
         return 0;
@@ -51,25 +64,17 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
         HWND hCtrl = (HWND)lParam;
         int id = GetDlgCtrlID(hCtrl);
 
-        if (id == 8801) { // ✅ 제목칸만
-            SetBkMode(hdc, TRANSPARENT);
-            return (INT_PTR)GetStockObject(NULL_BRUSH);
+        if (id == 8801) { // ✅ 제목칸
+            SetBkMode(hdc, OPAQUE);
+            SetBkColor(hdc, RGB(220, 234, 247));
+            SetTextColor(hdc, RGB(0, 0, 0));
+            return (INT_PTR)g_brTitleBg;
         }
         break;
     }
-    case WM_ERASEBKGND:
-        return 1;
-
-    case WM_PAINT:
-    {
-        PAINTSTRUCT ps;
-        HDC hdc = BeginPaint(hWnd, &ps);
-        App_OnPaint(hWnd, hdc);
-        EndPaint(hWnd, &ps);
-        return 0;
-    }
 
     case WM_DESTROY:
+        if (g_brTitleBg) { DeleteObject(g_brTitleBg); g_brTitleBg = NULL; }
         App_OnDestroy();
         PostQuitMessage(0);
         return 0;
@@ -111,6 +116,3 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrev, PWSTR cmd, int nCmdShow)
     }
     return 0;
 }
-#ifndef WM_APP_CHILDCLICK
-#define WM_APP_CHILDCLICK (WM_APP + 10)
-#endif

@@ -339,6 +339,11 @@ extern int g_clientH;
 #define R_TA_PAGE_NEXT_X2 358
 #define R_TA_PAGE_NEXT_Y2 686
 
+#define R_TA_PAGE_LABEL_X1 282
+#define R_TA_PAGE_LABEL_Y1 644
+#define R_TA_PAGE_LABEL_X2 327
+#define R_TA_PAGE_LABEL_Y2 673
+
 //과제목록들 1~2
 #define R_TA_ITEM1_X1  92
 #define R_TA_ITEM1_Y1  253
@@ -580,3 +585,20 @@ extern int g_clientH;
 #define SIGNUP_PWBTN_Y1  404
 #define SIGNUP_PWBTN_X2  713
 #define SIGNUP_PWBTN_Y2  448
+
+
+
+#define R_DL_CLOSE_X1   330
+#define R_DL_CLOSE_Y1   140
+#define R_DL_CLOSE_X2   520
+#define R_DL_CLOSE_Y2   190
+
+#define R_TODO_CLOSE_X1 330
+#define R_TODO_CLOSE_Y1 140
+#define R_TODO_CLOSE_X2 520
+#define R_TODO_CLOSE_Y2 190
+
+#define R_DONE_CLOSE_X1 330
+#define R_DONE_CLOSE_Y1 140
+#define R_DONE_CLOSE_X2 520
+#define R_DONE_CLOSE_Y2 190

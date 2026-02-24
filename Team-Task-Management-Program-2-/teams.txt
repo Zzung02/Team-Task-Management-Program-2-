@@ -2,3 +2,4 @@
 T000002|2|2|1
 T000005|김정민과 아이들|KJMZ|wjdala0206
 T000006|정민나라|ABCDEFG|wjdala1178
+T0007|김정민 2조|KJM|wjdala0202

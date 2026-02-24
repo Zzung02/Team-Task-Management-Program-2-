@@ -43,6 +43,31 @@ static int GetMaxRightEdgeInClient(HWND hWnd, HWND* arr, int n)
     }
     return maxRight;
 }
+static void DrawTaskPageLabelCenter(HDC hdc, int page0, int maxPage0)
+{
+    RECT rc = { SX(R_TA_PAGE_LABEL_X1), SY(R_TA_PAGE_LABEL_Y1),
+                SX(R_TA_PAGE_LABEL_X2), SY(R_TA_PAGE_LABEL_Y2) };
+
+    HFONT f = CreateFontW(
+        26, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
+        DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+        CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Segoe UI"
+    );
+
+    HFONT oldF = (HFONT)SelectObject(hdc, f);
+    SetBkMode(hdc, TRANSPARENT);
+
+    wchar_t buf[32];
+    wsprintfW(buf, L"%d", page0 + 1);     // 게시판이랑 동일하게 현재 페이지만 표시
+
+    DrawTextW(hdc, buf, -1, &rc,
+        DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
+
+    SelectObject(hdc, oldF);
+    DeleteObject(f);
+}
+
+
 
 // ===============================
 // ✅ Deadline util (YYYY/MM/DD)
@@ -114,6 +139,8 @@ static int  ParseDateToSystemTime_YYYYMMDD(const wchar_t* s, SYSTEMTIME* out);
 static void Deadline_RefreshUI(void);
 static void Todo_RefreshUI(void);
 
+
+
 // -------------------------
 // ✅ 파란박스 기능 상태
 // -------------------------
@@ -133,7 +160,7 @@ static int g_tcCodeOk = 0;                 // ✅ 팀코드 중복확인 통과 
 static wchar_t g_tcCheckedCode[128] = L""; // ✅ 중복확인 통과한 코드 저장
 // SIGNUP: 비번 보이기 토글
 static int g_suPwVisible = 0;
-
+static int g_mtdDirty = 0;
 
 static int SelectFileDialog(HWND hWnd, wchar_t* outPath, int maxLen)
 {
@@ -1793,12 +1820,86 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
         SAFE_LEAVE();
     }
 
+    // ✅ DEADLINE/TODO/DONE 화면 닫기(X) -> 뒤로가기
+    if (g_screen == SCR_DEADLINE &&
+        HitScaled(R_DL_CLOSE_X1, R_DL_CLOSE_Y1, R_DL_CLOSE_X2, R_DL_CLOSE_Y2, x, y))
+    {
+        GoBack(hWnd);
+        SAFE_LEAVE();
+    }
+
+    if (g_screen == SCR_TODO &&
+        HitScaled(R_TODO_CLOSE_X1, R_TODO_CLOSE_Y1, R_TODO_CLOSE_X2, R_TODO_CLOSE_Y2, x, y))
+    {
+        GoBack(hWnd);
+        SAFE_LEAVE();
+    }
+
+    if (g_screen == SCR_DONE &&
+        HitScaled(R_DONE_CLOSE_X1, R_DONE_CLOSE_Y1, R_DONE_CLOSE_X2, R_DONE_CLOSE_Y2, x, y))
+    {
+        GoBack(hWnd);
+        SAFE_LEAVE();
+    }
+    // ✅ 오버레이 떠있으면: 닫기 버튼만 처리
+    if (g_screen == SCR_MAIN && g_overlay != OV_NONE)
+    {
+        // DEADLINE
+        if (g_overlay == OV_DEADLINE &&
+            HitScaled(R_DL_CLOSE_X1, R_DL_CLOSE_Y1,
+                R_DL_CLOSE_X2, R_DL_CLOSE_Y2, x, y))
+        {
+            g_overlay = OV_NONE;
+            InvalidateRect(hWnd, NULL, TRUE);
+            SAFE_LEAVE();
+        }
+
+        // TODO
+        if (g_overlay == OV_TODO &&
+            HitScaled(R_TODO_CLOSE_X1, R_TODO_CLOSE_Y1,
+                R_TODO_CLOSE_X2, R_TODO_CLOSE_Y2, x, y))
+        {
+            g_overlay = OV_NONE;
+            InvalidateRect(hWnd, NULL, TRUE);
+            SAFE_LEAVE();
+        }
+
+        // DONE
+        if (g_overlay == OV_DONE &&
+            HitScaled(R_DONE_CLOSE_X1, R_DONE_CLOSE_Y1,
+                R_DONE_CLOSE_X2, R_DONE_CLOSE_Y2, x, y))
+        {
+            g_overlay = OV_NONE;
+            InvalidateRect(hWnd, NULL, TRUE);
+            SAFE_LEAVE();
+        }
+
+        // 닫기 버튼 아니면 클릭 차단
+        SAFE_LEAVE();
+    }
     // -----------------------------------------------------
     // START
     // -----------------------------------------------------
     if (g_screen == SCR_START)
     {
+        g_lastX = x;
+        g_lastY = y;
+        InvalidateRect(hWnd, NULL, FALSE);
 
+        // =====================================================
+        // ✅ 공통 뒤로가기 버튼 (START는 제외)
+        // =====================================================
+        if (g_screen != SCR_START &&
+            HitScaled(R_BTN_BACK_GLOBAL_X1, R_BTN_BACK_GLOBAL_Y1,
+                R_BTN_BACK_GLOBAL_X2, R_BTN_BACK_GLOBAL_Y2, x, y))
+        {
+            GoBack(hWnd);
+            SAFE_LEAVE();
+        }
+
+
+
+        
         // ✅ 비밀번호 보이기/숨기기 파란박스
         if (HitScaled(R_START_PW_TOGGLE_X1, R_START_PW_TOGGLE_Y1,
             R_START_PW_TOGGLE_X2, R_START_PW_TOGGLE_Y2, x, y))
@@ -2250,6 +2351,7 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
             lstrcpynW(g_currentRole, g_myTeams[g_myTeamSelected].role, 32);
 
             SwitchScreen(hWnd, SCR_MYTEAM_DETAIL);
+            g_mtdDirty = 0;
             SAFE_LEAVE();
         }
 
@@ -2384,10 +2486,15 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
                 SAFE_LEAVE();
 
             if (!Members_Remove(g_detailTeamId, targetId)) {
-                MessageBoxW(hWnd, L"삭제 실패",
-                    L"오류", MB_OK | MB_ICONERROR);
+                MessageBoxW(hWnd, L"삭제 실패", L"오류", MB_OK | MB_ICONERROR);
                 SAFE_LEAVE();
             }
+
+            g_mtdDirty = 1;   // ✅ 변경 발생
+
+            MessageBoxW(hWnd, L"삭제 완료!", L"내 팀", MB_OK | MB_ICONINFORMATION);
+            MyTeamDetail_RefreshUI(hWnd);
+            SAFE_LEAVE();
 
             MessageBoxW(hWnd, L"삭제 완료!",
                 L"내 팀", MB_OK | MB_ICONINFORMATION);
@@ -3004,16 +3111,21 @@ void App_OnPaint(HWND hWnd, HDC hdc)
             DeleteObject(pen2);
         }
     }
-
-    // ✅ BOARD
-    if (g_screen == SCR_BOARD)
-    {
-        Board_Draw(mem);
-    }
-
-    // ✅ TASK_ADD 선택 테두리
+    // ✅ TASK_ADD 선택 테두리 + 페이지 라벨
     if (g_screen == SCR_TASK_ADD)
     {
+        int maxPage = 0;
+        if (g_currentTeamId[0]) {
+            TaskItem* tmp = (TaskItem*)calloc(512, sizeof(TaskItem));
+            int n = tmp ? Task_LoadActiveOnly(g_currentTeamId, tmp, 512) : 0;
+            if (tmp) free(tmp);
+            maxPage = (n <= 0) ? 0 : ((n - 1) / 4);
+        }
+
+        // ✅ "1 / N" 같은 페이지 숫자 표시 (게시판 페이지처럼)
+        DrawTaskPageLabelCenter(mem, g_taskPage, maxPage);
+
+        // ✅ 4칸 테두리 그리기
         RECT slots[4] = {
             MakeRcScaled(R_TA_ITEM1_X1, R_TA_ITEM1_Y1, R_TA_ITEM1_X2, R_TA_ITEM1_Y2),
             MakeRcScaled(R_TA_ITEM2_X1, R_TA_ITEM2_Y1, R_TA_ITEM2_X2, R_TA_ITEM2_Y2),
@@ -3029,24 +3141,25 @@ void App_OnPaint(HWND hWnd, HDC hdc)
             Rectangle(mem, slots[i].left, slots[i].top, slots[i].right, slots[i].bottom);
         }
 
-        SelectObject(mem, oldBrush);
-        SelectObject(mem, oldPen);
-        DeleteObject(penThin);
-
+        // ✅ 선택된 칸 굵게 표시
         if (g_taskSelectedSlot >= 0 && g_taskSelectedSlot < 4) {
             RECT r2 = slots[g_taskSelectedSlot];
+
             HPEN penBold = CreatePen(PS_SOLID, 2, RGB(0, 0, 0));
-            oldPen = SelectObject(mem, penBold);
-            oldBrush = SelectObject(mem, GetStockObject(HOLLOW_BRUSH));
+            SelectObject(mem, penBold);
 
             Rectangle(mem, r2.left - 2, r2.top - 2, r2.right + 2, r2.bottom + 2);
 
-            SelectObject(mem, oldBrush);
-            SelectObject(mem, oldPen);
+            SelectObject(mem, penThin);   // 원래 펜으로 복귀
             DeleteObject(penBold);
         }
+
+        SelectObject(mem, oldBrush);
+        SelectObject(mem, oldPen);
+        DeleteObject(penThin);
     }
 
+    // (여기부터는 공통)
     DrawDebugOverlay(mem);
 
     BitBlt(hdc, 0, 0, w, h, mem, 0, 0, SRCCOPY);
@@ -3054,8 +3167,6 @@ void App_OnPaint(HWND hWnd, HDC hdc)
     SelectObject(mem, oldBack);
     DeleteObject(back);
     DeleteDC(mem);
-
-    (void)hWnd;
 }
 
 void App_OnDestroy(void)
@@ -3322,33 +3433,6 @@ static void Task_RefreshLeftList(void)
     free(buf);
 }
 
-
-// ---------------------------------------------------------
-// 디버그 오버레이
-// ---------------------------------------------------------
-static void DrawDebugOverlay(HDC hdc)
-{
-    SetBkMode(hdc, TRANSPARENT);
-    SetTextColor(hdc, RGB(0, 0, 0));
-
-    HFONT f = CreateFontW(
-        18, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
-        DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-        CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Segoe UI"
-    );
-    HFONT old = (HFONT)SelectObject(hdc, f);
-
-    wchar_t buf2[128];
-    swprintf(buf2, 128, L"User:%s Team:%s Role:%s", g_currentUserId, g_currentTeamId, g_currentRole);
-    TextOutW(hdc, 20, 10, buf2, (int)wcslen(buf2));   // ✅ 더 위로
-
-    wchar_t buf3[128];
-    swprintf(buf3, 128, L"Last Click: (%d, %d)", g_lastX, g_lastY);
-    TextOutW(hdc, 20, 30, buf3, (int)wcslen(buf3));   // ✅ 좌표 복구
-
-    SelectObject(hdc, old);
-    DeleteObject(f);
-}
 // ---------------------------------------------------------
 // 링크 에러 방지용
 // ---------------------------------------------------------
@@ -3641,7 +3725,6 @@ static void ApplyCalendarClipForScreen(Screen s)
         break;
     }
 }
-
 // -----------------------------------------------------
 // 팀장 자동 위임 (참여 순)
 // - OWNER → MEMBER
@@ -3650,7 +3733,7 @@ static void ApplyCalendarClipForScreen(Screen s)
 static int Members_TransferOwnerAuto(const wchar_t* teamId,
     const wchar_t* currentOwnerId)
 {
-    if (!teamId || !teamId[0]) return 0;
+    if (!teamId || !teamId[0] || !currentOwnerId || !currentOwnerId[0]) return 0;
 
     TMRow* rows = NULL;
     int n = 0;
@@ -3659,7 +3742,7 @@ static int Members_TransferOwnerAuto(const wchar_t* teamId,
 
     int nextIdx = -1;
 
-    // 1️⃣ 같은 팀의 첫 MEMBER 찾기
+    // 1) 같은 팀의 첫 MEMBER 찾기
     for (int i = 0; i < n; i++) {
         if (wcscmp(rows[i].tid, teamId) != 0) continue;
 
@@ -3670,23 +3753,48 @@ static int Members_TransferOwnerAuto(const wchar_t* teamId,
     }
 
     if (nextIdx == -1) {
-        if (rows) free(rows);
+        free(rows);
         return 0; // 위임할 사람 없음
     }
 
-    // 2️⃣ 현재 OWNER → MEMBER로 변경
+    // 2) 현재 OWNER → MEMBER로 변경 (현재 OWNER가 실제로 존재하는지 확인)
+    int foundOwner = 0;
     for (int i = 0; i < n; i++) {
         if (wcscmp(rows[i].tid, teamId) != 0) continue;
-        if (wcscmp(rows[i].uid, currentOwnerId) == 0) {
+
+        if (wcscmp(rows[i].uid, currentOwnerId) == 0 &&
+            wcscmp(rows[i].role, L"OWNER") == 0)
+        {
             lstrcpynW(rows[i].role, L"MEMBER", 32);
+            foundOwner = 1;
             break;
         }
     }
 
-    // 3️⃣ 새 OWNER 지정
+    if (!foundOwner) {
+        free(rows);
+        return 0; // 현재 OWNER를 못 찾음(데이터 꼬임 방지)
+    }
+
+    // 3) 새 OWNER 지정
     lstrcpynW(rows[nextIdx].role, L"OWNER", 32);
 
     int ok = WriteAllTeamMembers(rows, n);
     free(rows);
     return ok;
+}
+
+static int PtInRcScaled(int x, int y, int x1, int y1, int x2, int y2)
+{
+    RECT r = MakeRcScaled(x1, y1, x2, y2);
+    return (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom);
+}
+
+
+
+
+static void DrawDebugOverlay(HDC hdc)
+{
+    (void)hdc; // 경고 방지
+    // TODO: 필요하면 디버그 글씨/사각형 그리기
 }
