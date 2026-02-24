@@ -114,6 +114,27 @@ static int  ParseDateToSystemTime_YYYYMMDD(const wchar_t* s, SYSTEMTIME* out);
 static void Deadline_RefreshUI(void);
 static void Todo_RefreshUI(void);
 
+// -------------------------
+// ✅ 파란박스 기능 상태
+// -------------------------
+static int g_pwVisible = 0;              // START: 비번 보이기 토글
+
+// TEAM_CREATE: 팀명 중복확인 통과 여부
+static int g_tcNameOk = 0;
+static wchar_t g_tcCheckedName[128] = L"";
+
+
+// TEAM_JOIN: 팀명/코드 확인 통과 여부
+static int g_tjNameOk = 0;
+static int g_tjCodeOk = 0;
+static wchar_t g_tjCheckedName[128] = L"";
+static wchar_t g_tjCheckedCode[128] = L"";
+static int g_tcCodeOk = 0;                 // ✅ 팀코드 중복확인 통과 여부
+static wchar_t g_tcCheckedCode[128] = L""; // ✅ 중복확인 통과한 코드 저장
+// SIGNUP: 비번 보이기 토글
+static int g_suPwVisible = 0;
+
+
 static int SelectFileDialog(HWND hWnd, wchar_t* outPath, int maxLen)
 {
     OPENFILENAMEW ofn;
@@ -794,6 +815,9 @@ static void CreateControlsForScreen(HWND hWnd, Screen s)
     case SCR_START:
         g_edStartId = CreateEdit(hWnd, 101, 0);
         g_edStartPw = CreateEdit(hWnd, 102, ES_PASSWORD);
+        g_pwVisible = 0;
+        SendMessageW(g_edStartPw, EM_SETPASSWORDCHAR, (WPARAM)L'*', 0);
+        InvalidateRect(g_edStartPw, NULL, TRUE);
         break;
 
     case SCR_SIGNUP:
@@ -858,11 +882,17 @@ static void CreateControlsForScreen(HWND hWnd, Screen s)
     case SCR_TEAM_CREATE:
         g_edTcTeam = CreateEdit(hWnd, 701, 0);
         g_edTcCode = CreateEdit(hWnd, 703, 0);
+        g_tcNameOk = 0;
+        g_tcCheckedName[0] = 0;
         break;
+
 
     case SCR_TEAM_JOIN:
         g_edTjTeam = CreateEdit(hWnd, 801, 0);
         g_edTjCode = CreateEdit(hWnd, 802, 0);
+        g_tjNameOk = 0; g_tjCodeOk = 0;
+        g_tjCheckedName[0] = 0;
+        g_tjCheckedCode[0] = 0;
         break;
 
     case SCR_TASK_ADD:
@@ -1470,7 +1500,7 @@ static void MyTeamDetail_RefreshUI(HWND hWnd)
 
         wchar_t buf[256] = L"";
         if (i < g_memberCount) {
-            swprintf(buf, 256, L"%d   [%d]",
+            swprintf(buf, 256, L"%ls   [%ls]",
                 g_mtdMembers[i].userId,
                 RoleToKorean(g_mtdMembers[i].role));
         }
@@ -1768,6 +1798,21 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
     // -----------------------------------------------------
     if (g_screen == SCR_START)
     {
+
+        // ✅ 비밀번호 보이기/숨기기 파란박스
+        if (HitScaled(R_START_PW_TOGGLE_X1, R_START_PW_TOGGLE_Y1,
+            R_START_PW_TOGGLE_X2, R_START_PW_TOGGLE_Y2, x, y))
+        {
+            g_pwVisible = !g_pwVisible;
+
+            if (g_edStartPw) {
+                SendMessageW(g_edStartPw, EM_SETPASSWORDCHAR, g_pwVisible ? 0 : (WPARAM)L'*', 0);
+                InvalidateRect(g_edStartPw, NULL, TRUE);
+                UpdateWindow(g_edStartPw);
+            }
+            SAFE_LEAVE();
+        }
+
         if (HitScaled(R_BTN_LOGIN_X1, R_BTN_LOGIN_Y1, R_BTN_LOGIN_X2, R_BTN_LOGIN_Y2, x, y))
         {
             wchar_t id[128] = { 0 }, pw[128] = { 0 };
@@ -1816,10 +1861,27 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
     }
 
     // -----------------------------------------------------
-    // SIGNUP
-    // -----------------------------------------------------
+  // SIGNUP  ✅ 복붙용(이 블록 그대로 교체)
+  // -----------------------------------------------------
     if (g_screen == SCR_SIGNUP)
     {
+        // ✅ 파란 네모(비번 보이기) 토글
+        // 아래 좌표 매크로는 너가 찍은 회원가입 파란네모 좌표로 바꿔줘
+        if (HitScaled(SIGNUP_PWBTN_X1, SIGNUP_PWBTN_Y1,
+            SIGNUP_PWBTN_X2, SIGNUP_PWBTN_Y2, x, y))
+        {
+            g_suPwVisible = !g_suPwVisible;
+
+            if (g_edSignPw && IsWindow(g_edSignPw))
+            {
+                SendMessageW(g_edSignPw, EM_SETPASSWORDCHAR, g_suPwVisible ? 0 : L'*', 0);
+                InvalidateRect(g_edSignPw, NULL, TRUE);
+                UpdateWindow(g_edSignPw);
+            }
+            SAFE_LEAVE();
+        }
+
+        // ✅ 생성하기 버튼
         if (HitScaled(R_BTN_CREATE_X1, R_BTN_CREATE_Y1, R_BTN_CREATE_X2, R_BTN_CREATE_Y2, x, y))
         {
             wchar_t name[128] = { 0 }, id[128] = { 0 }, pw[128] = { 0 };
@@ -1845,6 +1907,7 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
 
         SAFE_LEAVE();
     }
+
 
     // -----------------------------------------------------
     // FINDPW
@@ -1942,46 +2005,108 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
 
 
     // -----------------------------------------------------
-    // TEAM_CREATE
-    // -----------------------------------------------------
+// TEAM_CREATE  ✅ 복붙용(이 블록 그대로 교체)
+// -----------------------------------------------------
     if (g_screen == SCR_TEAM_CREATE)
     {
+        // ✅ 팀명 중복확인 파란박스
+        if (HitScaled(R_TEAM_CREATE_NAMECHK_X1, R_TEAM_CREATE_NAMECHK_Y1,
+            R_TEAM_CREATE_NAMECHK_X2, R_TEAM_CREATE_NAMECHK_Y2, x, y))
+        {
+            wchar_t team[128] = { 0 };
+            if (g_edTcTeam) GetWindowTextW(g_edTcTeam, team, 128);
+
+            if (!team[0]) {
+                MessageBoxW(hWnd, L"팀명을 먼저 입력해 주세요.", L"중복확인", MB_OK | MB_ICONWARNING);
+                SAFE_LEAVE();
+            }
+
+            if (Team_ExistsByName(team)) {
+                g_tcNameOk = 0;
+                g_tcCheckedName[0] = 0;
+                MessageBoxW(hWnd, L"이미 존재하는 팀명입니다.", L"중복확인", MB_OK | MB_ICONERROR);
+                SAFE_LEAVE();
+            }
+
+            // ✅ 통과: 저장용으로 팀명 기억
+            g_tcNameOk = 1;
+            lstrcpynW(g_tcCheckedName, team, 128);
+
+            MessageBoxW(hWnd, L"사용 가능한 팀명입니다.", L"중복확인", MB_OK | MB_ICONINFORMATION);
+            SAFE_LEAVE();
+        }
+        // ✅ 팀코드 중복확인 버튼 (파란박스)
+        if (HitScaled(TEAM_CREATE_CODEBTN_X1, TEAM_CREATE_CODEBTN_Y1,
+            TEAM_CREATE_CODEBTN_X2, TEAM_CREATE_CODEBTN_Y2, x, y))
+        {
+            wchar_t code[128] = { 0 };
+            if (g_edTcCode) GetWindowTextW(g_edTcCode, code, 128);
+
+            if (!code[0]) {
+                MessageBoxW(hWnd, L"팀 코드를 먼저 입력해 주세요.", L"코드 중복확인", MB_OK | MB_ICONWARNING);
+                SAFE_LEAVE();
+            }
+
+            if (Team_ExistsByCode(code)) {
+                g_tcCodeOk = 0;
+                g_tcCheckedCode[0] = 0;
+                MessageBoxW(hWnd, L"이미 사용 중인 팀 코드입니다.", L"코드 중복확인", MB_OK | MB_ICONERROR);
+                SAFE_LEAVE();
+            }
+
+            g_tcCodeOk = 1;
+            lstrcpynW(g_tcCheckedCode, code, 128);
+
+            MessageBoxW(hWnd, L"사용 가능한 팀 코드입니다.", L"코드 중복확인", MB_OK | MB_ICONINFORMATION);
+            SAFE_LEAVE();
+        }
+        // ✅ 저장 버튼
         if (HitScaled(R_TC_SAVE_X1, R_TC_SAVE_Y1, R_TC_SAVE_X2, R_TC_SAVE_Y2, x, y))
         {
             wchar_t team[128] = { 0 };
             wchar_t code[128] = { 0 };
 
-            GetWindowTextW(g_edTcTeam, team, 128);
-            GetWindowTextW(g_edTcCode, code, 128);
+            if (g_edTcTeam) GetWindowTextW(g_edTcTeam, team, 128);
+            if (g_edTcCode) GetWindowTextW(g_edTcCode, code, 128);
 
             if (team[0] == 0 || code[0] == 0) {
                 MessageBoxW(hWnd, L"팀명/코드를 모두 입력해 주세요.", L"팀 등록", MB_OK | MB_ICONWARNING);
                 SAFE_LEAVE();
             }
-
+            // ✅✅ 핵심: 코드도 중복확인 강제 + 확인 후 코드 바꾸면 다시 확인
+            if (!g_tcCodeOk || wcscmp(code, g_tcCheckedCode) != 0) {
+                MessageBoxW(hWnd,
+                    L"팀 코드 중복확인을 먼저 해 주세요.\n(중복확인 후 코드를 바꾸면 다시 확인해야 합니다.)",
+                    L"팀 등록", MB_OK | MB_ICONWARNING);
+                SAFE_LEAVE();
+            }
             TeamInfo out = { 0 };
             if (!Team_Create(team, code, g_currentUserId, &out)) {
                 MessageBoxW(hWnd, L"팀 등록 실패!\n(코드 중복이거나 파일 저장 오류일 수 있음)", L"팀 등록", MB_OK | MB_ICONERROR);
                 SAFE_LEAVE();
             }
 
+            // ✅ 현재 선택 팀/헤더/권한 세팅
             lstrcpynW(g_currentTeamId, out.teamId, 64);
             lstrcpynW(g_mainTeamText, out.teamName, 128);
-            lstrcpynW(g_currentRole, L"LEADER", 32);
+            lstrcpynW(g_currentRole, L"OWNER", 32);   // ✅ 생성자는 OWNER 권장(LEADER도 가능)
 
             // ✅ 팀 바뀌었으니 보드/캘린더도 팀 세팅
             Board_SetTeamId(g_currentTeamId);
             Calendar_SetTeamId(g_currentTeamId);
             Calendar_NotifyTasksChanged(hWnd, g_currentTeamId);
 
+            // ✅ 내 팀 목록 갱신
             LoadMyTeams_FromMembers(g_currentUserId);
             ApplyMyTeamTextsToUI();
 
             MessageBoxW(hWnd, L"팀 등록 완료!", L"팀 등록", MB_OK | MB_ICONINFORMATION);
+
             SwitchScreen(hWnd, SCR_MAIN);
             ApplyMainHeaderTextsReal();
             SAFE_LEAVE();
         }
+
         SAFE_LEAVE();
     }
 
@@ -1990,6 +2115,57 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
     // -----------------------------------------------------
     if (g_screen == SCR_TEAM_JOIN)
     {
+ 
+        if (HitScaled(R_TEAM_JOIN_NAMECHK_X1, R_TEAM_JOIN_NAMECHK_Y1,
+            R_TEAM_JOIN_NAMECHK_X2, R_TEAM_JOIN_NAMECHK_Y2, x, y))
+        {
+            wchar_t team[128] = { 0 };
+            if (g_edTjTeam) GetWindowTextW(g_edTjTeam, team, 128);
+
+            if (!team[0]) {
+                MessageBoxW(hWnd, L"팀명을 먼저 입력해 주세요.", L"확인", MB_OK | MB_ICONWARNING);
+                SAFE_LEAVE();
+            }
+
+            if (!Team_ExistsByName(team)) {
+                g_tjNameOk = 0;
+                g_tjCheckedName[0] = 0;
+                MessageBoxW(hWnd, L"존재하지 않는 팀명입니다.", L"확인", MB_OK | MB_ICONERROR);
+                SAFE_LEAVE();
+            }
+
+            g_tjNameOk = 1;
+            lstrcpynW(g_tjCheckedName, team, 128);
+            MessageBoxW(hWnd, L"팀명이 확인되었습니다.", L"확인", MB_OK | MB_ICONINFORMATION);
+            SAFE_LEAVE();
+        }
+
+        if (HitScaled(R_TEAM_JOIN_CODECHK_X1, R_TEAM_JOIN_CODECHK_Y1,
+            R_TEAM_JOIN_CODECHK_X2, R_TEAM_JOIN_CODECHK_Y2, x, y))
+        {
+            wchar_t team[128] = { 0 };
+            wchar_t code[128] = { 0 };
+            if (g_edTjTeam) GetWindowTextW(g_edTjTeam, team, 128);
+            if (g_edTjCode) GetWindowTextW(g_edTjCode, code, 128);
+
+            if (!team[0] || !code[0]) {
+                MessageBoxW(hWnd, L"팀명과 참여코드를 모두 입력해 주세요.", L"확인", MB_OK | MB_ICONWARNING);
+                SAFE_LEAVE();
+            }
+
+            if (!Team_CheckJoinCode(team, code)) {
+                g_tjCodeOk = 0;
+                g_tjCheckedCode[0] = 0;
+                MessageBoxW(hWnd, L"참여코드가 일치하지 않습니다.", L"확인", MB_OK | MB_ICONERROR);
+                SAFE_LEAVE();
+            }
+
+            g_tjCodeOk = 1;
+            lstrcpynW(g_tjCheckedName, team, 128);
+            lstrcpynW(g_tjCheckedCode, code, 128);
+            MessageBoxW(hWnd, L"참여코드가 확인되었습니다.", L"확인", MB_OK | MB_ICONINFORMATION);
+            SAFE_LEAVE();
+        }
         if (HitScaled(R_TJ_SAVE_X1, R_TJ_SAVE_Y1, R_TJ_SAVE_X2, R_TJ_SAVE_Y2, x, y))
         {
             wchar_t joinCode[128] = { 0 };
@@ -2006,7 +2182,7 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
 
             TeamInfo out = { 0 };
             if (!Team_JoinByCode(joinCode, g_currentUserId, &out)) {
-                MessageBoxW(hWnd, L"팀 참여 실패!\n(코드가 없거나 이미 가입했을 수 있음)", L"팀 참여", MB_OK | MB_ICONERROR);
+                MessageBoxW(hWnd, L"팀 참여 실패!\n(코드가 없거나 이미 가입했을 수 있습니다.)", L"팀 참여", MB_OK | MB_ICONERROR);
                 SAFE_LEAVE();
             }
             lstrcpynW(g_currentTeamId, out.teamId, 64);
@@ -2142,6 +2318,7 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
 
         // ------------------------------------
         // 2) 멤버 삭제 (팀장만 가능)
+        //  - ✅ 단, 팀장(OWNER)이 '본인'을 삭제(탈퇴)하면 자동위임/팀삭제 처리
         // ------------------------------------
         if (HitScaled(R_MTD_DEL_X1, R_MTD_DEL_Y1,
             R_MTD_DEL_X2, R_MTD_DEL_Y2, x, y))
@@ -2161,13 +2338,47 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
             const wchar_t* targetId = g_mtdMembers[g_memberSelected].userId;
             const wchar_t* role = g_mtdMembers[g_memberSelected].role;
 
-            // OWNER 삭제 금지
-            if (wcscmp(role, L"OWNER") == 0) {
-                MessageBoxW(hWnd, L"OWNER는 삭제할 수 없습니다.",
+            // ✅ OWNER 처리
+            if (wcscmp(role, L"OWNER") == 0)
+            {
+                // ✅ 팀장이 '본인'을 삭제(=탈퇴)하는 경우만 허용 → 자동위임(참여순)
+                if (wcscmp(targetId, g_currentUserId) == 0)
+                {
+                    if (MessageBoxW(hWnd,
+                        L"팀장 탈퇴를 진행할까요?\n"
+                        L"팀원 있으면 참여 순서대로 자동 위임됩니다.\n"
+                        L"팀원이 없으면 팀이 삭제됩니다.",
+                        L"팀장 탈퇴", MB_YESNO | MB_ICONQUESTION) != IDYES)
+                        SAFE_LEAVE();
+
+                    // ✅ 핵심: 자동 위임/팀삭제
+                    if (!Team_LeaveAutoTransfer(g_detailTeamId, g_currentUserId)) {
+                        MessageBoxW(hWnd, L"팀장 탈퇴 처리 실패!", L"오류", MB_OK | MB_ICONERROR);
+                        SAFE_LEAVE();
+                    }
+
+                    MessageBoxW(hWnd, L"처리 완료!", L"내 팀", MB_OK | MB_ICONINFORMATION);
+
+                    // ✅ 내 팀 목록 갱신 + 화면 전환
+                    g_currentTeamId[0] = 0;
+                    g_mainTeamText[0] = 0;
+                    g_currentRole[0] = 0;
+
+                    LoadMyTeams_FromMembers(g_currentUserId);
+                    ApplyMyTeamTextsToUI();
+                    ApplyMainHeaderTextsReal();
+
+                    SwitchScreen(hWnd, SCR_MAIN);
+                    SAFE_LEAVE();
+                }
+
+                // OWNER인데 본인이 아니면 삭제 금지
+                MessageBoxW(hWnd, L"팀장은 삭제할 수 없습니다.",
                     L"알림", MB_OK | MB_ICONWARNING);
                 SAFE_LEAVE();
             }
 
+            // ✅ 일반 멤버 삭제
             if (MessageBoxW(hWnd, L"정말 삭제할까요?",
                 L"삭제", MB_YESNO | MB_ICONQUESTION) != IDYES)
                 SAFE_LEAVE();
@@ -2199,7 +2410,7 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
 
             if (!Members_TransferOwnerAuto(g_detailTeamId, g_currentUserId)) {
                 MessageBoxW(hWnd,
-                    L"위임 실패 (위임할 팀원이 없거나 오류)",
+                    L"위임 실패 (위임할 팀원이 없습니다.)",
                     L"오류", MB_OK | MB_ICONERROR);
                 SAFE_LEAVE();
             }
@@ -2288,7 +2499,7 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
             t.file[0] = 0;
 
             if (!Task_Update(g_currentTeamId, &t)) {
-                MessageBoxW(hWnd, L"삭제 실패(Task_Update)", L"삭제", MB_OK | MB_ICONERROR);
+                MessageBoxW(hWnd, L"삭제 실패", L"삭제", MB_OK | MB_ICONERROR);
                 SAFE_LEAVE();
             }
 

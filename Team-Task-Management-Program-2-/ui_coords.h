@@ -539,3 +539,44 @@ extern int g_clientH;
 
 
 
+
+
+
+// =========================================================
+// 네모박스 
+// =========================================================
+
+// 첫 로그인 비번
+#define R_START_PW_TOGGLE_X1 574
+#define R_START_PW_TOGGLE_Y1 497
+#define R_START_PW_TOGGLE_X2 618
+#define R_START_PW_TOGGLE_Y2 540
+
+
+// 팀등록
+#define R_TEAM_CREATE_NAMECHK_X1 1050
+#define R_TEAM_CREATE_NAMECHK_Y1 229
+#define R_TEAM_CREATE_NAMECHK_X2 1090
+#define R_TEAM_CREATE_NAMECHK_Y2 269
+
+#define TEAM_CREATE_CODEBTN_X1 1049
+#define TEAM_CREATE_CODEBTN_Y1 304
+#define TEAM_CREATE_CODEBTN_X2 1086
+#define TEAM_CREATE_CODEBTN_Y2 345
+
+// 팀참여
+#define R_TEAM_JOIN_NAMECHK_X1 1050
+#define R_TEAM_JOIN_NAMECHK_Y1 229
+#define R_TEAM_JOIN_NAMECHK_X2 1069
+#define R_TEAM_JOIN_NAMECHK_Y2 267
+
+#define R_TEAM_JOIN_CODECHK_X1 1049
+#define R_TEAM_JOIN_CODECHK_Y1 305
+#define R_TEAM_JOIN_CODECHK_X2 1069
+#define R_TEAM_JOIN_CODECHK_Y2 345
+
+//회원가입
+#define SIGNUP_PWBTN_X1  668
+#define SIGNUP_PWBTN_Y1  404
+#define SIGNUP_PWBTN_X2  713
+#define SIGNUP_PWBTN_Y2  448

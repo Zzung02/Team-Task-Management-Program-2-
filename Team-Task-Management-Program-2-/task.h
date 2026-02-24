@@ -1,4 +1,5 @@
-﻿#pragma once
+﻿//task.h
+#pragma once
 #include <windows.h>
 
 #ifdef __cplusplus

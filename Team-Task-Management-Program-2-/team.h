@@ -1,4 +1,4 @@
-﻿// team.h
+﻿// team.h (중복 제거 버전) ✅ 이것으로 교체
 #pragma once
 #include <windows.h>
 
@@ -27,19 +27,19 @@ extern "C" {
         wchar_t role[32];   // OWNER / MEMBER
     } TeamMember;
 
-
     // ====== 기본 기능 ======
     BOOL Team_FindByTeamId(const wchar_t* teamId, TeamInfo* outTeam);
     BOOL Team_FindByJoinCode(const wchar_t* joinCode, TeamInfo* outTeam);
     BOOL Team_IsOwner(const wchar_t* teamId, const wchar_t* userId);
     int  Team_LoadMembers(const wchar_t* teamId, TeamMember* outArr, int maxCount);
-
+    const wchar_t* RoleToKorean(const wchar_t* role);
 
     // ====== 삭제 / 위임 ======
     BOOL Team_DeleteTeam(const wchar_t* teamId, const wchar_t* requestUserId);
     BOOL Team_TransferOwner(const wchar_t* teamId,
         const wchar_t* requestUserId,
         const wchar_t* newOwnerUserId);
+
     // ====== 팀 생성/참여 (app.c에서 사용) ======
     BOOL Team_Create(const wchar_t* teamName, const wchar_t* joinCode,
         const wchar_t* ownerUserId, TeamInfo* outTeam);
@@ -47,7 +47,13 @@ extern "C" {
     BOOL Team_JoinByCode(const wchar_t* joinCode, const wchar_t* userId,
         TeamInfo* outTeam);
 
-    const wchar_t* RoleToKorean(const wchar_t* role);
+    int Team_ExistsByName(const wchar_t* teamName);
+    int Team_CheckJoinCode(const wchar_t* teamName, const wchar_t* joinCode);
+    int Team_ExistsByCode(const wchar_t* code);
+
+    // ✅ 팀장 탈퇴 자동위임
+    int Team_LeaveAutoTransfer(const wchar_t* teamId, const wchar_t* userId);
+
 #ifdef __cplusplus
 }
 #endif
