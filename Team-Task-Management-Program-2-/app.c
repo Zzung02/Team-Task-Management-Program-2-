@@ -1,4 +1,6 @@
-﻿// app.c
+﻿
+
+// app.c
 #define _CRT_SECURE_NO_WARNINGS
 #include "task.h"
 #include "app.h"
@@ -23,6 +25,24 @@
 #ifndef WM_APP_CHILDCLICK
 #define WM_APP_CHILDCLICK (WM_APP + 10)
 #endif
+
+static int GetMaxRightEdgeInClient(HWND hWnd, HWND* arr, int n)
+{
+    int maxRight = 0;
+    for (int i = 0; i < n; i++) {
+        if (!arr[i] || !IsWindow(arr[i])) continue;
+        if (!IsWindowVisible(arr[i])) continue;
+
+        RECT r;
+        GetWindowRect(arr[i], &r);
+
+        POINT p = { r.right, r.top };
+        ScreenToClient(hWnd, &p);
+
+        if (p.x > maxRight) maxRight = p.x;
+    }
+    return maxRight;
+}
 
 // ===============================
 // ✅ Deadline util (YYYY/MM/DD)
@@ -65,14 +85,9 @@ static int DaysUntil_YYYYMMDD(const wchar_t* deadline)
     return (int)days;
 }
 
-
 #define TASK_OWNERS_FILE L"task_owners.txt"
 
-
 static HBRUSH g_brWhite = NULL;
-
-
-
 
 // ---------------------------------------------------------
 // Forward decl
@@ -86,8 +101,7 @@ static HFONT GetUIFont(void);
 static void LayoutMyTeamStatics(void);
 static void ApplyMyTeamTextsToUI(void);
 static void HideAllControls(void);
-
-
+static void ApplyCalendarClipForScreen(Screen s);
 
 // TASK_ADD helper
 static void Task_LoadToRightEdits(const TaskItem* t);
@@ -101,7 +115,6 @@ static void Deadline_RefreshUI(void);
 static void Todo_RefreshUI(void);
 
 static int SelectFileDialog(HWND hWnd, wchar_t* outPath, int maxLen)
-
 {
     OPENFILENAMEW ofn;
     ZeroMemory(&ofn, sizeof(ofn));
@@ -122,7 +135,6 @@ static int SelectFileDialog(HWND hWnd, wchar_t* outPath, int maxLen)
     lstrcpynW(outPath, buf, maxLen);
     return 1;
 }
-
 
 // ---------------------------------------------------------
 // [DO NOT TOUCH] 좌표/히트테스트 유틸
@@ -189,6 +201,7 @@ HBITMAP g_bmpTaskAdd = NULL;
 HBITMAP g_bmpBoard = NULL;
 HBITMAP g_bmpBoardWrite = NULL;
 HBITMAP g_bmpMyTeamDetail = NULL;
+
 // 디버그/클라이언트 크기
 int g_lastX = -1, g_lastY = -1;
 int g_clientW = 0, g_clientH = 0;
@@ -197,6 +210,7 @@ int g_clientW = 0, g_clientH = 0;
 wchar_t g_currentUserId[128] = L"";
 wchar_t g_currentTeamId[64] = L"";
 static int g_boardEditPostId = 0;
+
 // ---------------------------------------------------------
 // MAIN 상단 텍스트 유지용
 // ---------------------------------------------------------
@@ -216,6 +230,7 @@ static HWND g_edBwContent = NULL;
 static HWND g_edBdSearch = NULL;   // ✅ 게시판 조회 입력칸
 
 static int  g_taskSelectedSlot = -1;
+
 // ---------------------------------------------------------
 // 화면 히스토리(뒤로가기)  ✅ 하나만 사용
 // ---------------------------------------------------------
@@ -271,7 +286,6 @@ static HFONT GetUIFont(void)
 #define PROP_OLD_EDIT_PROC    L"TTM_OLD_EDIT_PROC"
 #define PROP_OLD_STATIC_PROC  L"TTM_OLD_STATIC_PROC"
 
-
 static LRESULT CALLBACK EditHookProc(HWND hEdit, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     if (msg == WM_LBUTTONDOWN) {
@@ -288,8 +302,6 @@ static LRESULT CALLBACK EditHookProc(HWND hEdit, UINT msg, WPARAM wParam, LPARAM
 
         // ✅ 직접 호출 X -> 메시지로 우회
         PostMessageW(parent, WM_APP_CHILDCLICK, (WPARAM)pt.x, (LPARAM)pt.y);
-
-        // ✅ 여기서 oldProc 계속 타게 두면 안전(화면전환은 부모에서 처리)
     }
 
     WNDPROC oldProc = (WNDPROC)GetPropW(hEdit, PROP_OLD_EDIT_PROC);
@@ -306,7 +318,6 @@ static void HookEditClick(HWND hEdit)
     );
     SetPropW(hEdit, PROP_OLD_EDIT_PROC, (HANDLE)(UINT_PTR)oldProc);
 }
-
 
 static LRESULT CALLBACK StaticHookProc(HWND hSt, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -439,6 +450,10 @@ static void Task_ResetPageStatesIfTeamChanged(void)
         lstrcpynW(g_taskStateTeamId, g_currentTeamId, 64);
     }
 }
+
+/* =========================
+   app.c  (Part 2/4)
+   ========================= */
 static void Done_RefreshUI(void)
 {
     if (!g_edDoneList) return;
@@ -486,7 +501,6 @@ static void Task_SaveCurrentPageState(void)
     if (g_edTaDetail)  GetWindowTextW(g_edTaDetail, t.detail, TASK_TEXT_MAX);
     if (g_edTaDeadline) GetWindowTextW(g_edTaDeadline, t.deadline, TASK_DEADLINE_MAX);
 
-
     g_taskPageState[g_taskPage].used = 1;
     g_taskPageState[g_taskPage].selectedSlot = g_taskSelectedSlot;
     g_taskPageState[g_taskPage].item = t;
@@ -531,7 +545,6 @@ static int CanDeleteOrDone(void)
 {
     return IsLeaderRole(); // 팀장만 가능
 }
-
 
 static MyTeamInfo g_myTeams[MYTEAM_SLOT_MAX];
 static int g_myTeamSelected = -1;
@@ -607,14 +620,10 @@ static void EnsureMyTeamStatics(HWND hWnd, HFONT font)
             NULL
         );
 
-
         if (font) SendMessageW(g_stMyTeam[i], WM_SETFONT, (WPARAM)font, TRUE);
         HookStaticClick(g_stMyTeam[i]);
-        // ✅ 여기서 SW_HIDE 하지마 (숨김은 화면전환 때 RelayoutControls가 하니까)
-        // ShowWindow(g_stMyTeam[i], SW_HIDE);  // ❌ 제거
     }
 }
-
 
 static void ApplyMyTeamTextsToUI(void)
 {
@@ -639,7 +648,6 @@ static void ApplyMyTeamTextsToUI(void)
         SetWindowTextW(g_stMyTeam[i], buf);
     }
 }
-
 
 static void ShowMyTeamStatics(int show)
 {
@@ -725,7 +733,6 @@ static void DestroyAllEdits(void)
     DestroyHookedWindow(&g_edOverlayList, PROP_OLD_EDIT_PROC);
     DestroyHookedWindow(&g_edDoneList, PROP_OLD_EDIT_PROC);
 
-
     DestroyHookedWindow(&g_edBwTitle, PROP_OLD_EDIT_PROC);
     DestroyHookedWindow(&g_edBwContent, PROP_OLD_EDIT_PROC);
 
@@ -734,8 +741,6 @@ static void DestroyAllEdits(void)
     Board_DestroyControls();
     ShowMyTeamStatics(0);
 }
-
-
 
 // ---------------------------------------------------------
 // 헤더 텍스트 적용
@@ -747,12 +752,11 @@ static void ApplyMainHeaderTextsReal(void)
     if (g_stMainCode) SetWindowTextW(g_stMainCode, L"");
 }
 
-
-
 static void EnsureMemberStatics(HWND hWnd, HFONT font);
 static void ShowMemberStatics(int show);
 static void LayoutMemberStatics(void);
 static void MyTeamDetail_RefreshUI(HWND hWnd);
+
 
 
 
@@ -907,7 +911,7 @@ static void CreateControlsForScreen(HWND hWnd, Screen s)
         break;
     }
     case SCR_MYTEAM_DETAIL:
-        EnsureMemberStatics(hWnd, GetUIFont());  
+        EnsureMemberStatics(hWnd, GetUIFont());
         MyTeamDetail_RefreshUI(hWnd);
         break;
 
@@ -969,7 +973,7 @@ static void RelayoutControls(HWND hWnd)
     if (g_edOverlayList) ShowWindow(g_edOverlayList, SW_HIDE);
 
     if (g_edBdSearch) ShowWindow(g_edBdSearch, SW_HIDE);
- 
+
     ShowMemberStatics(0);
     ShowMyTeamStatics(0);
 
@@ -1265,6 +1269,7 @@ static void SwitchScreen_NoHistory(HWND hWnd, Screen next)
 {
     DestroyAllEdits();
     g_screen = next;
+    ApplyCalendarClipForScreen(next);
     if (next == SCR_START)            ResizeToBitmap(hWnd, g_bmpStart);
     else if (next == SCR_SIGNUP)      ResizeToBitmap(hWnd, g_bmpSignup);
     else if (next == SCR_FINDPW)      ResizeToBitmap(hWnd, g_bmpFindPw);
@@ -1277,6 +1282,7 @@ static void SwitchScreen_NoHistory(HWND hWnd, Screen next)
     else if (next == SCR_TEAM_JOIN)   ResizeToBitmap(hWnd, g_bmpTeamJoin);
     else if (next == SCR_TASK_ADD)    ResizeToBitmap(hWnd, g_bmpTaskAdd);
     else if (next == SCR_BOARD)       ResizeToBitmap(hWnd, g_bmpBoard);
+
     if (next == SCR_BOARD) {
         Board_SetTeamId(g_currentTeamId);
         Board_Reload();
@@ -1314,7 +1320,7 @@ int App_OnCreate(HWND hWnd)
     g_bmpTaskAdd = LoadBmpFromExeDir(hWnd, BMP_TASK_ADD, NULL, NULL);
     g_bmpBoard = LoadBmpFromExeDir(hWnd, BMP_BOARD, NULL, NULL);
     g_bmpBoardWrite = LoadBmpFromExeDir(hWnd, BMP_BOARD_WRITE, NULL, NULL);
-g_bmpMyTeamDetail = LoadBmpFromExeDir(hWnd, BMP_MYTEAM_DETAIL, NULL, NULL);
+    g_bmpMyTeamDetail = LoadBmpFromExeDir(hWnd, BMP_MYTEAM_DETAIL, NULL, NULL);
     if (!g_bmpBoardWrite) return -1;
 
     if (!g_bmpSignup || !g_bmpMain || !g_bmpFindPw ||
@@ -1464,9 +1470,9 @@ static void MyTeamDetail_RefreshUI(HWND hWnd)
 
         wchar_t buf[256] = L"";
         if (i < g_memberCount) {
-            swprintf(buf, 256, L"%ls   [%ls]",
+            swprintf(buf, 256, L"%d   [%d]",
                 g_mtdMembers[i].userId,
-                g_mtdMembers[i].role);
+                RoleToKorean(g_mtdMembers[i].role));
         }
         else {
             buf[0] = 0;
@@ -1503,7 +1509,7 @@ static void Member_UpdateSelectionBorder(void)
 }
 
 
-static int Members_UpdateRole(const wchar_t* teamId, const wchar_t* userId, const wchar_t* newRole)
+static int Members_UpdateRole_Legacy(const wchar_t* teamId, const wchar_t* userId, const wchar_t* newRole)
 {
     if (!teamId || !teamId[0] || !userId || !userId[0] || !newRole || !newRole[0]) return 0;
 
@@ -1559,24 +1565,177 @@ static int Members_UpdateRole(const wchar_t* teamId, const wchar_t* userId, cons
 }
 
 
+// team_members.txt 전체를 읽어서 수정 후 재저장하는 헬퍼
+typedef struct {
+    wchar_t tid[64];
+    wchar_t uid[128];
+    wchar_t role[32];
+} TMRow;
 
-
-
-
-
-
-
-
-
-
-
-static int Members_Remove(const wchar_t* teamId, const wchar_t* userId)
+static int ReadAllTeamMembers(TMRow** outRows, int* outCount)
 {
-    // TODO: team_members.txt에서 teamId|userId 라인 삭제 후 재저장
-    (void)teamId; (void)userId;
+    if (!outRows || !outCount) return 0;
+    *outRows = NULL; *outCount = 0;
+
+    FILE* fp = NULL;
+    _wfopen_s(&fp, L"team_members.txt", L"r, ccs=UTF-8");
+    if (!fp) _wfopen_s(&fp, L"team_members.txt", L"r");
+    if (!fp) return 1; // 파일 없으면 비어있다고 보고 성공
+
+    int cap = 128, n = 0;
+    TMRow* rows = (TMRow*)calloc(cap, sizeof(TMRow));
+    if (!rows) { fclose(fp); return 0; }
+
+    wchar_t line[512];
+    while (fgetws(line, 512, fp))
+    {
+        wchar_t tid[64] = { 0 }, uid[128] = { 0 }, role[32] = { 0 };
+        if (swscanf(line, L"%63[^|]|%127[^|]|%31[^|\r\n]", tid, uid, role) != 3) continue;
+
+        if (n >= cap) {
+            cap *= 2;
+            TMRow* nr = (TMRow*)realloc(rows, sizeof(TMRow) * cap);
+            if (!nr) { free(rows); fclose(fp); return 0; }
+            rows = nr;
+            ZeroMemory(&rows[n], sizeof(TMRow) * (cap - n));
+        }
+
+        lstrcpynW(rows[n].tid, tid, 64);
+        lstrcpynW(rows[n].uid, uid, 128);
+        lstrcpynW(rows[n].role, role, 32);
+        n++;
+    }
+
+    fclose(fp);
+    *outRows = rows;
+    *outCount = n;
     return 1;
 }
 
+static int WriteAllTeamMembers(const TMRow* rows, int count)
+{
+    FILE* fp = NULL;
+    _wfopen_s(&fp, L"team_members.txt", L"w, ccs=UTF-8");
+    if (!fp) return 0;
+
+    for (int i = 0; i < count; i++) {
+        fwprintf(fp, L"%s|%s|%s\n", rows[i].tid, rows[i].uid, rows[i].role);
+    }
+    fclose(fp);
+    return 1;
+}
+
+// ✅ 역할 변경 (OWNER는 변경 금지)
+static int Members_UpdateRole(const wchar_t* teamId, const wchar_t* userId, const wchar_t* newRole)
+{
+    if (!teamId || !teamId[0] || !userId || !userId[0] || !newRole || !newRole[0]) return 0;
+
+    TMRow* rows = NULL; int n = 0;
+    if (!ReadAllTeamMembers(&rows, &n)) return 0;
+
+    int changed = 0;
+    for (int i = 0; i < n; i++) {
+        if (wcscmp(rows[i].tid, teamId) != 0) continue;
+        if (wcscmp(rows[i].uid, userId) != 0) continue;
+
+        if (wcscmp(rows[i].role, L"OWNER") == 0) { // OWNER 보호
+            if (rows) free(rows);
+            return 0;
+        }
+        lstrcpynW(rows[i].role, newRole, 32);
+        changed = 1;
+        break;
+    }
+
+    int ok = 1;
+    if (changed) ok = WriteAllTeamMembers(rows, n);
+
+    if (rows) free(rows);
+    return ok && changed;
+}
+
+// ✅ 팀장 위임: newLeader를 LEADER로, 기존 LEADER(OWNER 제외)는 MEMBER로 내림
+static int Members_DelegateLeader(const wchar_t* teamId, const wchar_t* newLeaderUserId)
+{
+    if (!teamId || !teamId[0] || !newLeaderUserId || !newLeaderUserId[0]) return 0;
+
+    TMRow* rows = NULL; int n = 0;
+    if (!ReadAllTeamMembers(&rows, &n)) return 0;
+
+    // newLeader가 이 팀 멤버인지 확인 + OWNER면 불가(OWNER는 바꾸지 않는다는 정책)
+    int foundNew = 0;
+    for (int i = 0; i < n; i++) {
+        if (wcscmp(rows[i].tid, teamId) != 0) continue;
+        if (wcscmp(rows[i].uid, newLeaderUserId) != 0) continue;
+
+        if (wcscmp(rows[i].role, L"OWNER") == 0) { // OWNER에게 위임은 의미 없음(이미 최고)
+            if (rows) free(rows);
+            return 0;
+        }
+        foundNew = 1;
+        break;
+    }
+    if (!foundNew) { if (rows) free(rows); return 0; }
+
+    // 1) 기존 LEADER들(OWNER 제외) -> MEMBER
+    for (int i = 0; i < n; i++) {
+        if (wcscmp(rows[i].tid, teamId) != 0) continue;
+        if (wcscmp(rows[i].role, L"LEADER") == 0) {
+            lstrcpynW(rows[i].role, L"MEMBER", 32);
+        }
+    }
+
+    // 2) newLeader -> LEADER
+    for (int i = 0; i < n; i++) {
+        if (wcscmp(rows[i].tid, teamId) != 0) continue;
+        if (wcscmp(rows[i].uid, newLeaderUserId) != 0) continue;
+        lstrcpynW(rows[i].role, L"LEADER", 32);
+        break;
+    }
+
+    int ok = WriteAllTeamMembers(rows, n);
+    if (rows) free(rows);
+    return ok;
+}
+
+// ✅ 멤버 삭제: teamId|userId 라인 제거 (OWNER는 삭제 금지)
+static int Members_Remove(const wchar_t* teamId, const wchar_t* userId)
+{
+    if (!teamId || !teamId[0] || !userId || !userId[0]) return 0;
+
+    TMRow* rows = NULL; int n = 0;
+    if (!ReadAllTeamMembers(&rows, &n)) return 0;
+
+    // 새 배열로 필터링
+    TMRow* out = (TMRow*)calloc(n, sizeof(TMRow));
+    if (!out) { if (rows) free(rows); return 0; }
+
+    int outN = 0;
+    int removed = 0;
+
+    for (int i = 0; i < n; i++) {
+        int isTarget = (wcscmp(rows[i].tid, teamId) == 0 && wcscmp(rows[i].uid, userId) == 0);
+        if (isTarget) {
+            if (wcscmp(rows[i].role, L"OWNER") == 0) {
+                // OWNER는 삭제 불가 -> 그대로 유지
+                out[outN++] = rows[i];
+            }
+            else {
+                removed = 1; // 제거
+            }
+        }
+        else {
+            out[outN++] = rows[i];
+        }
+    }
+
+    int ok = 1;
+    if (removed) ok = WriteAllTeamMembers(out, outN);
+
+    free(out);
+    if (rows) free(rows);
+    return ok && removed;
+}
 
 
 
@@ -1945,6 +2104,9 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
         SAFE_LEAVE();
     }
 
+
+
+
     // -----------------------------------------------------
  // MYTEAM_DETAIL
  // -----------------------------------------------------
@@ -1952,44 +2114,9 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
     {
         POINT pt = { x, y };
 
-        // 1) 저장 버튼 (팀장만)
-        if (HitScaled(R_MTD_SAVE_X1, R_MTD_SAVE_Y1, R_MTD_SAVE_X2, R_MTD_SAVE_Y2, x, y))
-        {
-            if (!IsLeaderRole()) {
-                MessageBoxW(hWnd, L"팀장만 역할을 변경할 수 있어요.", L"권한 없음", MB_OK | MB_ICONWARNING);
-                SAFE_LEAVE();
-            }
-            if (g_memberSelected < 0 || g_memberSelected >= g_memberCount) {
-                MessageBoxW(hWnd, L"팀원을 먼저 선택해 주세요.", L"알림", MB_OK | MB_ICONINFORMATION);
-                SAFE_LEAVE();
-            }
-
-            const wchar_t* cur = g_mtdMembers[g_memberSelected].role;
-
-            // OWNER 보호
-            if (wcscmp(cur, L"OWNER") == 0) {
-                MessageBoxW(hWnd, L"OWNER 역할은 변경할 수 없어요.", L"알림", MB_OK | MB_ICONINFORMATION);
-                SAFE_LEAVE();
-            }
-
-            // 예시: MEMBER <-> LEADER 토글
-            const wchar_t* nextRole = (wcscmp(cur, L"LEADER") == 0) ? L"MEMBER" : L"LEADER";
-
-
-
-
-
-            if (!Team_SetMemberRole(g_detailTeamId, g_mtdMembers[g_memberSelected].userId, nextRole)) {
-                MessageBoxW(hWnd, L"저장 실패(team_members.txt 수정 실패)", L"오류", MB_OK | MB_ICONERROR);
-                SAFE_LEAVE();
-            }
-
-            MessageBoxW(hWnd, L"저장 완료!", L"내 팀", MB_OK | MB_ICONINFORMATION);
-            SwitchScreen(hWnd, SCR_MYTEAM);
-            SAFE_LEAVE();
-        }
-
-        // 2) 멤버 클릭 -> 선택 테두리 이동
+        // ------------------------------------
+        // 1) 멤버 클릭 → 선택 테두리
+        // ------------------------------------
         for (int i = 0; i < g_memberCount; i++)
         {
             if (!g_stMembers[i]) continue;
@@ -2007,43 +2134,85 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
             if (PtInRect(&rcSlot, pt))
             {
                 g_memberSelected = i;
-                lstrcpynW(g_selMemberUserId, g_mtdMembers[i].userId, 128);
-
                 Member_UpdateSelectionBorder();
                 InvalidateRect(hWnd, NULL, FALSE);
                 SAFE_LEAVE();
             }
         }
 
-        // 3) 삭제 버튼 (팀장만) - 지금은 TODO
-        if (HitScaled(R_MTD_DEL_X1, R_MTD_DEL_Y1, R_MTD_DEL_X2, R_MTD_DEL_Y2, x, y))
+        // ------------------------------------
+        // 2) 멤버 삭제 (팀장만 가능)
+        // ------------------------------------
+        if (HitScaled(R_MTD_DEL_X1, R_MTD_DEL_Y1,
+            R_MTD_DEL_X2, R_MTD_DEL_Y2, x, y))
         {
             if (!IsLeaderRole()) {
-                MessageBoxW(hWnd, L"팀장만 삭제할 수 있어요.", L"권한 없음", MB_OK | MB_ICONWARNING);
+                MessageBoxW(hWnd, L"팀장만 삭제할 수 있습니다.",
+                    L"권한 없음", MB_OK | MB_ICONWARNING);
                 SAFE_LEAVE();
             }
-            MessageBoxW(hWnd, L"(TODO) 팀 삭제 기능 연결", L"알림", MB_OK);
+
+            if (g_memberSelected < 0 || g_memberSelected >= g_memberCount) {
+                MessageBoxW(hWnd, L"삭제할 팀원을 선택해 주세요.",
+                    L"알림", MB_OK | MB_ICONINFORMATION);
+                SAFE_LEAVE();
+            }
+
+            const wchar_t* targetId = g_mtdMembers[g_memberSelected].userId;
+            const wchar_t* role = g_mtdMembers[g_memberSelected].role;
+
+            // OWNER 삭제 금지
+            if (wcscmp(role, L"OWNER") == 0) {
+                MessageBoxW(hWnd, L"OWNER는 삭제할 수 없습니다.",
+                    L"알림", MB_OK | MB_ICONWARNING);
+                SAFE_LEAVE();
+            }
+
+            if (MessageBoxW(hWnd, L"정말 삭제할까요?",
+                L"삭제", MB_YESNO | MB_ICONQUESTION) != IDYES)
+                SAFE_LEAVE();
+
+            if (!Members_Remove(g_detailTeamId, targetId)) {
+                MessageBoxW(hWnd, L"삭제 실패",
+                    L"오류", MB_OK | MB_ICONERROR);
+                SAFE_LEAVE();
+            }
+
+            MessageBoxW(hWnd, L"삭제 완료!",
+                L"내 팀", MB_OK | MB_ICONINFORMATION);
+
+            MyTeamDetail_RefreshUI(hWnd);
             SAFE_LEAVE();
         }
 
-        // 4) 역할 변경/팀장 위임 버튼 (팀장만) - 지금은 TODO
-        if (HitScaled(R_MTD_SWAP_X1, R_MTD_SWAP_Y1, R_MTD_SWAP_X2, R_MTD_SWAP_Y2, x, y))
+        // ------------------------------------
+        // 3) 팀장 자동 위임 (참여 순)
+        // ------------------------------------
+        if (HitScaled(R_MTD_SWAP_X1, R_MTD_SWAP_Y1,
+            R_MTD_SWAP_X2, R_MTD_SWAP_Y2, x, y))
         {
             if (!IsLeaderRole()) {
-                MessageBoxW(hWnd, L"팀장만 권한 변경할 수 있어요.", L"권한 없음", MB_OK | MB_ICONWARNING);
+                MessageBoxW(hWnd, L"팀장만 위임 가능합니다.",
+                    L"권한 없음", MB_OK | MB_ICONWARNING);
                 SAFE_LEAVE();
             }
-            if (!g_selMemberUserId[0]) {
-                MessageBoxW(hWnd, L"팀원을 먼저 선택해 주세요.", L"알림", MB_OK);
+
+            if (!Members_TransferOwnerAuto(g_detailTeamId, g_currentUserId)) {
+                MessageBoxW(hWnd,
+                    L"위임 실패 (위임할 팀원이 없거나 오류)",
+                    L"오류", MB_OK | MB_ICONERROR);
                 SAFE_LEAVE();
             }
-            MessageBoxW(hWnd, L"(TODO) 팀장 위임 기능 연결", L"알림", MB_OK);
+
+            MessageBoxW(hWnd, L"팀장 위임 완료!",
+                L"내 팀", MB_OK | MB_ICONINFORMATION);
+
+            SwitchScreen(hWnd, SCR_MYTEAM);
             SAFE_LEAVE();
         }
 
         SAFE_LEAVE();
     }
-    
 
     if (g_screen == SCR_TASK_ADD)
     {
@@ -2544,194 +2713,139 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
 }
 
 
+static int ScreenShowsCalendar(Screen s)
+{
+    return (s == SCR_MAIN ||
+        s == SCR_DEADLINE ||
+        s == SCR_TODO ||
+        s == SCR_MYTEAM ||
+        s == SCR_MYTEAM_DETAIL ||
+        s == SCR_DONE ||
+        s == SCR_TEAM_CREATE ||
+        s == SCR_TEAM_JOIN);
+}
 
-    static int ScreenShowsCalendar(Screen s)
+// ---------------------------------------------------------
+// Paint  ✅ 캘린더: ScreenShowsCalendar()인 화면에서만 표시
+// ---------------------------------------------------------
+void App_OnPaint(HWND hWnd, HDC hdc)
+{
+    RECT rc;
+    GetClientRect(hWnd, &rc);
+
+    int w = rc.right - rc.left;
+    int h = rc.bottom - rc.top;
+    g_clientW = w;
+    g_clientH = h;
+
+    HDC mem = CreateCompatibleDC(hdc);
+    HBITMAP back = CreateCompatibleBitmap(hdc, w, h);
+    HBITMAP oldBack = (HBITMAP)SelectObject(mem, back);
+
+    FillRect(mem, &rc, (HBRUSH)GetStockObject(WHITE_BRUSH));
+
+    if (g_screen == SCR_START)                 DrawBitmapFit(mem, g_bmpStart, w, h);
+    else if (g_screen == SCR_SIGNUP)           DrawBitmapFit(mem, g_bmpSignup, w, h);
+    else if (g_screen == SCR_FINDPW)           DrawBitmapFit(mem, g_bmpFindPw, w, h);
+    else if (g_screen == SCR_DEADLINE)         DrawBitmapFit(mem, g_bmpDeadline, w, h);
+    else if (g_screen == SCR_TODO)             DrawBitmapFit(mem, g_bmpTodo, w, h);
+    else if (g_screen == SCR_MYTEAM)           DrawBitmapFit(mem, g_bmpMyTeam, w, h);
+    else if (g_screen == SCR_MYTEAM_DETAIL)    DrawBitmapFit(mem, g_bmpMyTeamDetail, w, h);
+    else if (g_screen == SCR_DONE)             DrawBitmapFit(mem, g_bmpDone, w, h);
+    else if (g_screen == SCR_TEAM_CREATE)      DrawBitmapFit(mem, g_bmpTeamCreate, w, h);
+    else if (g_screen == SCR_TEAM_JOIN)        DrawBitmapFit(mem, g_bmpTeamJoin, w, h);
+    else if (g_screen == SCR_TASK_ADD)         DrawBitmapFit(mem, g_bmpTaskAdd, w, h);
+    else if (g_screen == SCR_BOARD)            DrawBitmapFit(mem, g_bmpBoard, w, h);
+    else if (g_screen == SCR_BOARD_WRITE)      DrawBitmapFit(mem, g_bmpBoardWrite, w, h);
+    else                                       DrawBitmapFit(mem, g_bmpMain, w, h);
+
+    // ✅ 캘린더(필요한 화면에서만)
+    if (ScreenShowsCalendar(g_screen))
     {
-        return (s == SCR_MAIN ||
-            s == SCR_DEADLINE ||
-            s == SCR_TODO ||
-            s == SCR_MYTEAM ||
-            s == SCR_MYTEAM_DETAIL ||   // ✅ 추가
-            s == SCR_DONE ||
-            s == SCR_TEAM_CREATE ||
-            s == SCR_TEAM_JOIN);
+        ApplyCalendarClipForScreen(g_screen);
+        Calendar_Draw(mem);
     }
 
-
-    // ---------------------------------------------------------
-    // Paint  ✅ 캘린더: 메인(SCR_MAIN)에서만 표시 + 다른 화면에서는 절대 안 그림
-    // ---------------------------------------------------------
-    void App_OnPaint(HWND hWnd, HDC hdc)
+    // ✅ MYTEAM: 선택 테두리
+    if (g_screen == SCR_MYTEAM)
     {
-        RECT rc;
-        GetClientRect(hWnd, &rc);
-
-        int w = rc.right - rc.left;
-        int h = rc.bottom - rc.top;
-        g_clientW = w;
-        g_clientH = h;
-
-        HDC mem = CreateCompatibleDC(hdc);
-        HBITMAP back = CreateCompatibleBitmap(hdc, w, h);
-        HBITMAP oldBack = (HBITMAP)SelectObject(mem, back);
-
-        FillRect(mem, &rc, (HBRUSH)GetStockObject(WHITE_BRUSH));
-
-        if (g_screen == SCR_START)            DrawBitmapFit(mem, g_bmpStart, w, h);
-        else if (g_screen == SCR_SIGNUP)      DrawBitmapFit(mem, g_bmpSignup, w, h);
-        else if (g_screen == SCR_FINDPW)      DrawBitmapFit(mem, g_bmpFindPw, w, h);
-        else if (g_screen == SCR_DEADLINE)    DrawBitmapFit(mem, g_bmpDeadline, w, h);
-        else if (g_screen == SCR_TODO)        DrawBitmapFit(mem, g_bmpTodo, w, h);
-        else if (g_screen == SCR_MYTEAM)      DrawBitmapFit(mem, g_bmpMyTeam, w, h);
-        else if (g_screen == SCR_MYTEAM_DETAIL) DrawBitmapFit(mem, g_bmpMyTeamDetail, w, h);
-        else if (g_screen == SCR_DONE)        DrawBitmapFit(mem, g_bmpDone, w, h);
-        else if (g_screen == SCR_TEAM_CREATE) DrawBitmapFit(mem, g_bmpTeamCreate, w, h);
-        else if (g_screen == SCR_TEAM_JOIN)   DrawBitmapFit(mem, g_bmpTeamJoin, w, h);
-        else if (g_screen == SCR_TASK_ADD)    DrawBitmapFit(mem, g_bmpTaskAdd, w, h);
-        else if (g_screen == SCR_BOARD)       DrawBitmapFit(mem, g_bmpBoard, w, h);
-        else if (g_screen == SCR_BOARD_WRITE) DrawBitmapFit(mem, g_bmpBoardWrite, w, h);
-        else                                  DrawBitmapFit(mem, g_bmpMain, w, h);
-
-        // ============================================================
- // ✅ 캘린더
- // ============================================================
-        if (ScreenShowsCalendar(g_screen))
+        if (g_myTeamSelected >= 0 && g_myTeamSelected < MYTEAM_SLOT_MAX &&
+            g_stMyTeam[g_myTeamSelected] && g_myTeams[g_myTeamSelected].team[0] != 0)
         {
-            // 🔥 0) 항상 먼저 초기화 (이전 화면 clipX 값 잔류 방지)
-            Calendar_SetClipX(0);
+            RECT r;
+            GetWindowRect(g_stMyTeam[g_myTeamSelected], &r);
 
-            int clipMode = 0;
-        
-            // --------------------------------------------------------
-            // 1) clipMode 설정
-            // --------------------------------------------------------
-            if (g_screen == SCR_MAIN)
-            {
-                clipMode = 0;  // 전체 표시
-            }
-            else if (g_screen == SCR_DEADLINE ||
-                g_screen == SCR_TODO ||
-                g_screen == SCR_DONE ||
-                g_screen == SCR_MYTEAM ||
-                g_screen == SCR_MYTEAM_DETAIL)
-            {
-                clipMode = 1;  // 왼쪽 3칸 가림 (수~토만 표시)
-            }
+            POINT p1 = { r.left, r.top };
+            POINT p2 = { r.right, r.bottom };
+            ScreenToClient(hWnd, &p1);
+            ScreenToClient(hWnd, &p2);
 
-            Calendar_SetClipMode(clipMode);
+            RECT rcSel = { p1.x, p1.y, p2.x, p2.y };
 
-            // --------------------------------------------------------
-            // 2) clipX 설정 (왼쪽 패널 겹침 완전 차단)
-            // --------------------------------------------------------
-            if (g_screen == SCR_MYTEAM)
-            {
-                // 내팀 목록 오른쪽 끝 기준으로 차단
-                Calendar_SetClipX(SX(R_MYTEAM_LIST_X2) + 40);
-            }
-            else if (g_screen == SCR_MYTEAM_DETAIL)
-            {
-                // 팀원 목록 화면도 동일하게 차단
-                Calendar_SetClipX(SX(R_MTD_LIST_X2) + 40);
-            }
-            else if (g_screen == SCR_DEADLINE)
-            {
-                Calendar_SetClipX(SX(R_DEADLINE_LIST_X2) + 40);
-            }
-            else if (g_screen == SCR_TODO)
-            {
-                Calendar_SetClipX(SX(R_TODO_LIST_X2) + 40);
-            }
-            else if (g_screen == SCR_DONE)
-            {
-                Calendar_SetClipX(SX(R_DONE_LIST_X2) + 40);
-            }
-
-            // --------------------------------------------------------
-            // 3) 실제 그리기
-            // --------------------------------------------------------
-            Calendar_Draw(mem);
-        }
-            // ✅ MYTEAM: 선택된 팀만 테두리 
-        if (g_screen == SCR_MYTEAM)
-        {
-            if (g_myTeamSelected >= 0 && g_myTeamSelected < MYTEAM_SLOT_MAX &&
-                g_stMyTeam[g_myTeamSelected] && g_myTeams[g_myTeamSelected].team[0] != 0)
-            {
-                RECT r;
-                GetWindowRect(g_stMyTeam[g_myTeamSelected], &r);
-
-                POINT p1 = { r.left, r.top };
-                POINT p2 = { r.right, r.bottom };
-                ScreenToClient(hWnd, &p1);
-                ScreenToClient(hWnd, &p2);
-
-                RECT rcSel = { p1.x, p1.y, p2.x, p2.y };
-
-                HPEN pen2 = CreatePen(PS_SOLID, 2, RGB(0, 0, 0));
-                HGDIOBJ oldPen = SelectObject(mem, pen2);
-                HGDIOBJ oldBrush = SelectObject(mem, GetStockObject(HOLLOW_BRUSH));
-
-                Rectangle(mem, rcSel.left - 2, rcSel.top - 2, rcSel.right + 2, rcSel.bottom + 2);
-
-                SelectObject(mem, oldBrush);
-                SelectObject(mem, oldPen);
-                DeleteObject(pen2);
-            }
-        }
-
-        // ✅ BOARD: 그리기 (페이지표시 포함)  -> app.c에서 따로 페이지 숫자 그리지 말 것!
-        if (g_screen == SCR_BOARD)
-        {
-            Board_Draw(mem);
-        }
-
-        // ✅ TASK_ADD 선택 테두리
-        if (g_screen == SCR_TASK_ADD)
-        {
-            RECT slots[4] = {
-                MakeRcScaled(R_TA_ITEM1_X1, R_TA_ITEM1_Y1, R_TA_ITEM1_X2, R_TA_ITEM1_Y2),
-                MakeRcScaled(R_TA_ITEM2_X1, R_TA_ITEM2_Y1, R_TA_ITEM2_X2, R_TA_ITEM2_Y2),
-                MakeRcScaled(R_TA_ITEM3_X1, R_TA_ITEM3_Y1, R_TA_ITEM3_X2, R_TA_ITEM3_Y2),
-                MakeRcScaled(R_TA_ITEM4_X1, R_TA_ITEM4_Y1, R_TA_ITEM4_X2, R_TA_ITEM4_Y2),
-            };
-
-            HPEN penThin = CreatePen(PS_SOLID, 1, RGB(180, 200, 215));
-            HGDIOBJ oldPen = SelectObject(mem, penThin);
+            HPEN pen2 = CreatePen(PS_SOLID, 2, RGB(0, 0, 0));
+            HGDIOBJ oldPen = SelectObject(mem, pen2);
             HGDIOBJ oldBrush = SelectObject(mem, GetStockObject(HOLLOW_BRUSH));
 
-            for (int i = 0; i < 4; i++) {
-                Rectangle(mem, slots[i].left, slots[i].top, slots[i].right, slots[i].bottom);
-            }
+            Rectangle(mem, rcSel.left - 2, rcSel.top - 2, rcSel.right + 2, rcSel.bottom + 2);
 
             SelectObject(mem, oldBrush);
             SelectObject(mem, oldPen);
-            DeleteObject(penThin);
-
-            if (g_taskSelectedSlot >= 0 && g_taskSelectedSlot < 4) {
-                RECT r2 = slots[g_taskSelectedSlot];
-                HPEN penBold = CreatePen(PS_SOLID, 2, RGB(0, 0, 0));
-                oldPen = SelectObject(mem, penBold);
-                oldBrush = SelectObject(mem, GetStockObject(HOLLOW_BRUSH));
-
-                Rectangle(mem, r2.left - 2, r2.top - 2, r2.right + 2, r2.bottom + 2);
-
-                SelectObject(mem, oldBrush);
-                SelectObject(mem, oldPen);
-                DeleteObject(penBold);
-            }
+            DeleteObject(pen2);
         }
-
-        DrawDebugOverlay(mem);
-
-        BitBlt(hdc, 0, 0, w, h, mem, 0, 0, SRCCOPY);
-
-        SelectObject(mem, oldBack);
-        DeleteObject(back);
-        DeleteDC(mem);
-        (void)hWnd;
     }
 
+    // ✅ BOARD
+    if (g_screen == SCR_BOARD)
+    {
+        Board_Draw(mem);
+    }
 
+    // ✅ TASK_ADD 선택 테두리
+    if (g_screen == SCR_TASK_ADD)
+    {
+        RECT slots[4] = {
+            MakeRcScaled(R_TA_ITEM1_X1, R_TA_ITEM1_Y1, R_TA_ITEM1_X2, R_TA_ITEM1_Y2),
+            MakeRcScaled(R_TA_ITEM2_X1, R_TA_ITEM2_Y1, R_TA_ITEM2_X2, R_TA_ITEM2_Y2),
+            MakeRcScaled(R_TA_ITEM3_X1, R_TA_ITEM3_Y1, R_TA_ITEM3_X2, R_TA_ITEM3_Y2),
+            MakeRcScaled(R_TA_ITEM4_X1, R_TA_ITEM4_Y1, R_TA_ITEM4_X2, R_TA_ITEM4_Y2),
+        };
+
+        HPEN penThin = CreatePen(PS_SOLID, 1, RGB(180, 200, 215));
+        HGDIOBJ oldPen = SelectObject(mem, penThin);
+        HGDIOBJ oldBrush = SelectObject(mem, GetStockObject(HOLLOW_BRUSH));
+
+        for (int i = 0; i < 4; i++) {
+            Rectangle(mem, slots[i].left, slots[i].top, slots[i].right, slots[i].bottom);
+        }
+
+        SelectObject(mem, oldBrush);
+        SelectObject(mem, oldPen);
+        DeleteObject(penThin);
+
+        if (g_taskSelectedSlot >= 0 && g_taskSelectedSlot < 4) {
+            RECT r2 = slots[g_taskSelectedSlot];
+            HPEN penBold = CreatePen(PS_SOLID, 2, RGB(0, 0, 0));
+            oldPen = SelectObject(mem, penBold);
+            oldBrush = SelectObject(mem, GetStockObject(HOLLOW_BRUSH));
+
+            Rectangle(mem, r2.left - 2, r2.top - 2, r2.right + 2, r2.bottom + 2);
+
+            SelectObject(mem, oldBrush);
+            SelectObject(mem, oldPen);
+            DeleteObject(penBold);
+        }
+    }
+
+    DrawDebugOverlay(mem);
+
+    BitBlt(hdc, 0, 0, w, h, mem, 0, 0, SRCCOPY);
+
+    SelectObject(mem, oldBack);
+    DeleteObject(back);
+    DeleteDC(mem);
+
+    (void)hWnd;
+}
 
 void App_OnDestroy(void)
 {
@@ -3285,4 +3399,83 @@ LRESULT App_OnAppChildClickWndProc(HWND hWnd, WPARAM wParam, LPARAM lParam)
     return 0;
 }
 
+static void ApplyCalendarClipForScreen(Screen s)
+{
+    Calendar_SetClipMode(0);
+    Calendar_SetClipX(0);
 
+    switch (s)
+    {
+    case SCR_TEAM_CREATE:
+    case SCR_TEAM_JOIN:
+        // 일~수만 보이게
+        Calendar_SetClipMode(2);
+        break;
+
+    case SCR_MYTEAM:
+    case SCR_MYTEAM_DETAIL:
+        // 목~토만 보이게
+        Calendar_SetClipMode(3);
+        break;
+
+    case SCR_DEADLINE:
+    case SCR_TODO:
+    case SCR_DONE:
+        // ✅ 마감/미완료/완료: 왼쪽 박스가 일월화 영역 덮음 → 수~토만 보이게
+        Calendar_SetClipMode(1);
+        break;
+
+    default:
+        Calendar_SetClipMode(0);
+        break;
+    }
+}
+
+// -----------------------------------------------------
+// 팀장 자동 위임 (참여 순)
+// - OWNER → MEMBER
+// - 가장 먼저 가입한 MEMBER → OWNER
+// -----------------------------------------------------
+static int Members_TransferOwnerAuto(const wchar_t* teamId,
+    const wchar_t* currentOwnerId)
+{
+    if (!teamId || !teamId[0]) return 0;
+
+    TMRow* rows = NULL;
+    int n = 0;
+
+    if (!ReadAllTeamMembers(&rows, &n)) return 0;
+
+    int nextIdx = -1;
+
+    // 1️⃣ 같은 팀의 첫 MEMBER 찾기
+    for (int i = 0; i < n; i++) {
+        if (wcscmp(rows[i].tid, teamId) != 0) continue;
+
+        if (wcscmp(rows[i].role, L"MEMBER") == 0) {
+            nextIdx = i;
+            break;
+        }
+    }
+
+    if (nextIdx == -1) {
+        if (rows) free(rows);
+        return 0; // 위임할 사람 없음
+    }
+
+    // 2️⃣ 현재 OWNER → MEMBER로 변경
+    for (int i = 0; i < n; i++) {
+        if (wcscmp(rows[i].tid, teamId) != 0) continue;
+        if (wcscmp(rows[i].uid, currentOwnerId) == 0) {
+            lstrcpynW(rows[i].role, L"MEMBER", 32);
+            break;
+        }
+    }
+
+    // 3️⃣ 새 OWNER 지정
+    lstrcpynW(rows[nextIdx].role, L"OWNER", 32);
+
+    int ok = WriteAllTeamMembers(rows, n);
+    free(rows);
+    return ok;
+}

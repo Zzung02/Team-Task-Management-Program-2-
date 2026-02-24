@@ -3,8 +3,10 @@
 // - mode 0: 전체 표시
 // - mode 1: 왼쪽 3칸(일/월/화) 가림  -> 수~토만 보이게
 // - mode 2: 오른쪽 3칸(목/금/토) 가림 -> 일~수만 보이게
+// - mode 3: 왼쪽 4칸(일/월/화/수) 가림 -> 목~토만 보이게  ✅(수 칸까지 없애기)
 // ✅ clipX(픽셀): 이 X 이전은 캘린더를 아예 안 그림/클릭 안 됨
 // ✅ 주말(일/토) 빨간색, 오늘 날짜 굵게
+
 #define _CRT_SECURE_NO_WARNINGS
 #include "calendar.h"
 #include "ui_coords.h"
@@ -34,19 +36,14 @@ typedef struct {
 // ------------------------------------------------------------
 // 상태
 // ------------------------------------------------------------
-static int g_calClipMode = 0; // 0=전체, 1=왼쪽3칸 가림, 2=오른쪽3칸 가림
+static int g_calClipMode = 0; // 0=전체, 1=왼쪽3칸, 2=오른쪽3칸, 3=왼쪽4칸(목~토)
 static int g_calClipX = 0;    // 0=미사용, >0이면 이 X 이전은 캘린더 그리기/클릭 금지
 
-
-static int g_calShowDayNumber = 1;   // ✅ 1=날짜 숫자 보임, 0=숨김
+static int g_calShowDayNumber = 1;   // 1=날짜 숫자 보임, 0=숨김
 static int g_calYear = 2026;
 static int g_calMonth = 1;
 static CalDayEvents g_day[32]; // 1..31
 
-void Calendar_SetShowDayNumber(int show)
-{
-    g_calShowDayNumber = show ? 1 : 0;
-}
 // ------------------------------------------------------------
 // 유틸
 // ------------------------------------------------------------
@@ -125,6 +122,18 @@ static void ClearEvents(void)
 // ------------------------------------------------------------
 // 외부 API
 // ------------------------------------------------------------
+void Calendar_SetShowDayNumbers(int show)
+{
+    g_calShowDayNumber = show ? 1 : 0;
+}
+
+void Calendar_SetCompactMode(int on)
+{
+    // compact=1 이면 날짜숫자 숨김 같은 용도(원하면 바꿔도 됨)
+    if (on) Calendar_SetShowDayNumbers(0);
+    else    Calendar_SetShowDayNumbers(1);
+}
+
 void Calendar_SetTeamId(const wchar_t* teamId)
 {
     if (!teamId) teamId = L"";
@@ -162,7 +171,7 @@ void Calendar_GetYM(int* outYear, int* outMonth)
 void Calendar_SetClipMode(int mode)
 {
     if (mode < 0) mode = 0;
-    if (mode > 2) mode = 2;
+    if (mode > 3) mode = 3;
     g_calClipMode = mode;
 }
 
@@ -170,6 +179,35 @@ void Calendar_SetClipX(int x)
 {
     if (x < 0) x = 0;
     g_calClipX = x;
+}
+
+// ✅ 요일 마스크 API를 clipMode로 변환
+void Calendar_SetVisibleWeekMask(unsigned int mask)
+{
+    const unsigned int MASK_ALL = 0x7F;                         // 일~토
+    const unsigned int MASK_SUN_WED = (1u << 0) | (1u << 1) | (1u << 2) | (1u << 3); // 일월화수
+    const unsigned int MASK_THU_SAT = (1u << 4) | (1u << 5) | (1u << 6);         // 목금토
+    const unsigned int MASK_WED_SAT = (1u << 3) | (1u << 4) | (1u << 5) | (1u << 6); // 수~토 (참고)
+
+    if (mask == 0 || mask == MASK_ALL) {
+        Calendar_SetClipMode(0);
+        return;
+    }
+    if (mask == MASK_WED_SAT) {
+        Calendar_SetClipMode(1);
+        return;
+    }
+    if (mask == MASK_SUN_WED) {
+        Calendar_SetClipMode(2);
+        return;
+    }
+    if (mask == MASK_THU_SAT) {
+        Calendar_SetClipMode(3);
+        return;
+    }
+
+    // 그 외 마스크는 일단 전체(안전)
+    Calendar_SetClipMode(0);
 }
 
 // ------------------------------------------------------------
@@ -230,10 +268,6 @@ void Calendar_Draw(HDC hdc)
     const int cols = 7;
     const int rows = 5;
 
-    int cellW = (cols ? (W / cols) : W);
-    int cellH = (rows ? (H / rows) : H);
-
-    // ✅ 오늘 날짜
     SYSTEMTIME st;
     GetLocalTime(&st);
     int todayY = (int)st.wYear;
@@ -262,36 +296,17 @@ void Calendar_Draw(HDC hdc)
         DeleteObject(fMonth);
     }
 
-    // ✅✅ 핵심: clipMode + clipX 기준으로 "보이는 영역"만 그리기
     int savedDC = SaveDC(hdc);
 
     int clipL = x1, clipT = y1, clipR = x2, clipB = y2;
 
-    if (g_calClipMode == 1) clipL = x1 + cellW * 3;      // 수~토
-    else if (g_calClipMode == 2) clipR = x1 + cellW * 4; // 일~수
+    if (g_calClipMode == 1) clipL = x1 + (W * 3) / cols;      // 수~토
+    else if (g_calClipMode == 2) clipR = x1 + (W * 4) / cols; // 일~수
+    else if (g_calClipMode == 3) clipL = x1 + (W * 4) / cols; // 목~토
 
-    // ✅ ClipX 적용 (왼쪽 패널 완전 차단)
     if (g_calClipX > 0 && clipL < g_calClipX) clipL = g_calClipX;
 
     IntersectClipRect(hdc, clipL, clipT, clipR, clipB);
-
-    // 1) 그리드
-    HPEN pen = CreatePen(PS_NULL, 0, 0);
-    HGDIOBJ oldPen = SelectObject(hdc, pen);
-
-    for (int c = 0; c <= cols; c++) {
-        int x = x1 + (W * c) / cols;
-        MoveToEx(hdc, x, y1, NULL);
-        LineTo(hdc, x, y2);
-    }
-    for (int r = 0; r <= rows; r++) {
-        int y = y1 + (H * r) / rows;
-        MoveToEx(hdc, x1, y, NULL);
-        LineTo(hdc, x2, y);
-    }
-
-    SelectObject(hdc, oldPen);
-    DeleteObject(pen);
 
     // 2) 날짜/이벤트
     HFONT fDayNormal = MakeFont(16, 0);
@@ -305,20 +320,17 @@ void Calendar_Draw(HDC hdc)
 
     for (int day = 1; day <= dim; day++) {
         int idx = firstDow + (day - 1);
-        int r = idx / 7;
-        int c = idx % 7;
+        int rr = idx / cols;
+        int cc = idx % cols;
+        if (rr < 0 || rr >= rows) continue;
 
-        if (r < 0 || r >= rows) continue;
+        int cx = x1 + (W * cc) / cols;
+        int cy = y1 + (H * rr) / rows;
 
-        int cx = x1 + c * cellW;
-        int cy = y1 + r * cellH;
-
-        int isWeekend = (c == 0 || c == 6);
+        int isWeekend = (cc == 0 || cc == 6);
         int isToday = (g_calYear == todayY && g_calMonth == todayM && day == todayD);
 
-        // 날짜 숫자 (✅ 숨김 옵션)
-        if (g_calShowDayNumber)
-        {
+        if (g_calShowDayNumber) {
             wchar_t dtext[8];
             swprintf(dtext, 8, L"%d", day);
 
@@ -330,7 +342,7 @@ void Calendar_Draw(HDC hdc)
 
             SelectObject(hdc, old);
         }
-        // 이벤트(과제 제목)
+
         if (g_day[day].count > 0) {
             HFONT old2 = (HFONT)SelectObject(hdc, fEvt);
             SetTextColor(hdc, RGB(0, 0, 0));
@@ -340,7 +352,6 @@ void Calendar_Draw(HDC hdc)
                 wchar_t line[CAL_TITLE_MAX + 8];
                 lstrcpynW(line, g_day[day].title[k], CAL_TITLE_MAX);
 
-                // 길면 줄임
                 if ((int)wcslen(line) > 12) {
                     line[12] = 0;
                     wcscat(line, L"..");
@@ -349,7 +360,6 @@ void Calendar_Draw(HDC hdc)
                 TextOutW(hdc, cx + 6, yy, line, (int)wcslen(line));
                 yy += 18;
             }
-
             SelectObject(hdc, old2);
         }
     }
@@ -358,7 +368,6 @@ void Calendar_Draw(HDC hdc)
     DeleteObject(fDayBold);
     DeleteObject(fEvt);
 
-    // ✅ clip 복구
     RestoreDC(hdc, savedDC);
 }
 
@@ -371,7 +380,6 @@ int Calendar_OnClick(HWND hWnd, int mx, int my)
     if (PtInScaled(R_CAL_PREV_X1, R_CAL_PREV_Y1, R_CAL_PREV_X2, R_CAL_PREV_Y2, mx, my)) {
         g_calMonth--;
         if (g_calMonth < 1) { g_calMonth = 12; g_calYear--; }
-
         if (g_calTeamId[0]) Calendar_RebuildFromTasks(g_calTeamId);
         InvalidateRect(hWnd, NULL, FALSE);
         return 1;
@@ -381,13 +389,11 @@ int Calendar_OnClick(HWND hWnd, int mx, int my)
     if (PtInScaled(R_CAL_NEXT_X1, R_CAL_NEXT_Y1, R_CAL_NEXT_X2, R_CAL_NEXT_Y2, mx, my)) {
         g_calMonth++;
         if (g_calMonth > 12) { g_calMonth = 1; g_calYear++; }
-
         if (g_calTeamId[0]) Calendar_RebuildFromTasks(g_calTeamId);
         InvalidateRect(hWnd, NULL, FALSE);
         return 1;
     }
 
-    // 캘린더 영역 체크
     int x1 = SX(R_CAL_X1), y1 = SY(R_CAL_Y1);
     int x2 = SX(R_CAL_X2), y2 = SY(R_CAL_Y2);
     if (mx < x1 || mx > x2 || my < y1 || my > y2) return 0;
@@ -398,21 +404,16 @@ int Calendar_OnClick(HWND hWnd, int mx, int my)
     const int cols = 7;
     const int rows = 5;
 
-    int cellW = (cols ? (W / cols) : W);
-    int cellH = (rows ? (H / rows) : H);
-
-    // ✅✅ 그리기와 동일하게 clipMode+clipX 기준으로 클릭 허용
     int clipL = x1, clipR = x2;
-
-    if (g_calClipMode == 1) clipL = x1 + cellW * 3;
-    else if (g_calClipMode == 2) clipR = x1 + cellW * 4;
+    if (g_calClipMode == 1) clipL = x1 + (W * 3) / cols;
+    else if (g_calClipMode == 2) clipR = x1 + (W * 4) / cols;
+    else if (g_calClipMode == 3) clipL = x1 + (W * 4) / cols;
 
     if (g_calClipX > 0 && clipL < g_calClipX) clipL = g_calClipX;
-
     if (mx < clipL || mx > clipR) return 0;
 
-    int col = (mx - x1) / (cellW ? cellW : 1);
-    int row = (my - y1) / (cellH ? cellH : 1);
+    int col = (int)((long long)(mx - x1) * cols / (W ? W : 1));
+    int row = (int)((long long)(my - y1) * rows / (H ? H : 1));
     if (col < 0) col = 0;
     if (col >= cols) col = cols - 1;
     if (row < 0) row = 0;
@@ -426,6 +427,5 @@ int Calendar_OnClick(HWND hWnd, int mx, int my)
     int dim = DaysInMonth(g_calYear, g_calMonth);
     if (day < 1 || day > dim) return 1;
 
-    // 날짜 클릭 동작은 현재 없음(원하면 여기서 선택/팝업 처리)
     return 1;
 }

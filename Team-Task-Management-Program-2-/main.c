@@ -57,8 +57,6 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
         }
         break;
     }
-
-
     case WM_ERASEBKGND:
         return 1;
 
@@ -113,4 +111,6 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrev, PWSTR cmd, int nCmdShow)
     }
     return 0;
 }
-  
+#ifndef WM_APP_CHILDCLICK
+#define WM_APP_CHILDCLICK (WM_APP + 10)
+#endif

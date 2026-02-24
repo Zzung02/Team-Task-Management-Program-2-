@@ -93,6 +93,7 @@ extern int g_clientW, g_clientH;
 int  App_OnCreate(HWND hWnd);
 void App_OnSize(HWND hWnd, int w, int h);
 void App_OnLButtonDown(HWND hWnd, int x, int y);
+
 void App_OnPaint(HWND hWnd, HDC hdc);
 void App_OnDestroy(void);
 
