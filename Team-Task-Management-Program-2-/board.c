@@ -39,6 +39,11 @@ static wchar_t g_searchQuery[BD_TITLE_MAX] = L"";
 // ✅ invalidate 대상 윈도우 저장 (GetActiveWindow() 쓰면 갱신 삑남)
 static HWND g_hostWnd = NULL;
 
+// ✅ 더블클릭 감지용
+static DWORD g_lastClickTick = 0;
+static int   g_lastClickRow = -1;
+static int   g_openPostId = 0;   // 더블클릭으로 "열기"할 게시물 id
+
 // --------------------
 // util
 // --------------------
@@ -564,9 +569,9 @@ void Board_Draw(HDC hdc)
 
 int Board_OnClick(HWND hWnd, int x, int y)
 {
-    // hostWnd 업데이트(혹시 CreateControls 안 불리는 구조 대비)
     if (!g_hostWnd) g_hostWnd = hWnd;
 
+    // 페이지 이전
     if (PtInRc(RcScaled(R_BD_PAGE_PREV_X1, R_BD_PAGE_PREV_Y1, R_BD_PAGE_PREV_X2, R_BD_PAGE_PREV_Y2), x, y)) {
         if (g_page > 0) g_page--;
         g_selRow = -1;
@@ -574,6 +579,7 @@ int Board_OnClick(HWND hWnd, int x, int y)
         return 1;
     }
 
+    // 페이지 다음
     if (PtInRc(RcScaled(R_BD_PAGE_NEXT_X1, R_BD_PAGE_NEXT_Y1, R_BD_PAGE_NEXT_X2, R_BD_PAGE_NEXT_Y2), x, y)) {
         int maxPage = (g_viewCount <= 0) ? 0 : ((g_viewCount - 1) / BD_ROWS_PER_PAGE);
         if (g_page < maxPage) g_page++;
@@ -584,24 +590,41 @@ int Board_OnClick(HWND hWnd, int x, int y)
 
     RECT rcList = RcScaled(R_BOARD_LIST_X1, R_BOARD_LIST_Y1, R_BOARD_LIST_X2, R_BOARD_LIST_Y2);
     int row = HitRowIndex(x, y, rcList);
-    if (row >= 0) {
-        int viewPos = g_page * BD_ROWS_PER_PAGE + row;
+    if (row < 0) return 0;
 
-        // ✅ 데이터 없는 줄 클릭이면 선택 안 함(팀선택처럼)
-        if (viewPos < 0 || viewPos >= g_viewCount) {
-            g_selRow = -1; // 선택 해제 (원하면 유지로 바꿔도 됨)
-            InvalidateRect(hWnd, NULL, FALSE);
-            return 1;
-        }
-        g_selRow = row;
+    int viewPos = g_page * BD_ROWS_PER_PAGE + row;
+
+    // ✅ 데이터 없는 줄 클릭이면 선택 안 함
+    if (viewPos < 0 || viewPos >= g_viewCount) {
+        g_selRow = -1;
         InvalidateRect(hWnd, NULL, FALSE);
         return 1;
     }
-    return 0;
-}
 
+    // ✅ 선택 갱신
+    g_selRow = row;
+    InvalidateRect(hWnd, NULL, FALSE);
+
+    // ✅ 더블클릭 감지 (같은 줄 + 350ms 이내)
+    DWORD now = GetTickCount();
+    if (g_lastClickRow == row && (now - g_lastClickTick) <= 350) {
+        g_openPostId = Board_GetSelectedPostId(); // 열기 대상 저장
+        g_lastClickRow = -1;
+        g_lastClickTick = 0;
+        return 2; // ✅ app.c가 2면 "열기" 처리
+    }
+
+    g_lastClickRow = row;
+    g_lastClickTick = now;
+    return 1;
+}
 // ---- app.c 호환용 ----
 void Board_CreateControls(HWND hWnd) { g_hostWnd = hWnd; }
 void Board_RelayoutControls(HWND hWnd) { g_hostWnd = hWnd; }
 void Board_DestroyControls(void) { g_hostWnd = NULL; }
 void Board_ShowControls(int show) { (void)show; }
+
+int Board_GetOpenPostId(void)
+{
+    return g_openPostId;
+}

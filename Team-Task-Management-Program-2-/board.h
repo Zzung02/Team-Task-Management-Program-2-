@@ -42,6 +42,7 @@ extern "C" {
     void Board_ApplySearch(void);
     void Board_ClearSearch(void);
 
+    int Board_GetOpenPostId(void);
 #ifdef __cplusplus
 }
 #endif

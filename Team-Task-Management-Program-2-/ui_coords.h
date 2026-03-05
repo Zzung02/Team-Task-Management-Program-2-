@@ -164,13 +164,13 @@ extern int g_clientH;
 // =========================================================
 // TEAM_CREATE(팀등록) 필드
 // =========================================================
-#define R_TC_TEAM_X1   791
-#define R_TC_TEAM_Y1   240
+#define R_TC_TEAM_X1   789
+#define R_TC_TEAM_Y1   238
 #define R_TC_TEAM_X2   1025
 #define R_TC_TEAM_Y2   266
 
 #define R_TC_CODE_X1   845
-#define R_TC_CODE_Y1   320
+#define R_TC_CODE_Y1   308
 #define R_TC_CODE_X2   984
 #define R_TC_CODE_Y2   345
 
@@ -453,10 +453,10 @@ extern int g_clientH;
 // BOARD 목록 영역(번호/제목/글쓴이 텍스트가 올라갈 영역)
 // ================================
 
-#define R_BOARD_LIST_X1  81
-#define R_BOARD_LIST_Y1  155
-#define R_BOARD_LIST_X2  1224
-#define R_BOARD_LIST_Y2  621
+#define R_BOARD_LIST_X1  75
+#define R_BOARD_LIST_Y1  150
+#define R_BOARD_LIST_X2  1233
+#define R_BOARD_LIST_Y2  630
 
 //등록버튼
 #define R_BOARD_BTN_REG_X1 188

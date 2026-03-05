@@ -212,7 +212,6 @@ static int HitScaled(int x1, int y1, int x2, int y2, int x, int y)
 Screen g_screen = SCR_START;
 
 typedef enum { OVR_NONE = 0, OVR_DEADLINE = 1, OVR_UNDONE = 2 } Overlay;
-
 static Overlay g_overlay = OVR_NONE;
 
 static RECT g_rcDeadlinePanel = { 0,0,0,0 };
@@ -1031,6 +1030,13 @@ static void RelayoutControls(HWND hWnd)
 
     if (g_edBdSearch) ShowWindow(g_edBdSearch, SW_HIDE);
 
+    if (g_edTaDeadline) ShowWindow(g_edTaDeadline, SW_HIDE);
+
+    if (g_edBwTitle)   ShowWindow(g_edBwTitle, SW_HIDE);
+    if (g_edBwContent) ShowWindow(g_edBwContent, SW_HIDE);
+
+    if (g_edDoneList) ShowWindow(g_edDoneList, SW_HIDE); 
+
     ShowMemberStatics(0);
     ShowMyTeamStatics(0);
 
@@ -1291,6 +1297,14 @@ static void HideAllControls(void)
     if (g_edTaFile)     ShowWindow(g_edTaFile, SW_HIDE);
     if (g_edTaDeadline) ShowWindow(g_edTaDeadline, SW_HIDE);
 
+
+    if (g_edBdSearch)  ShowWindow(g_edBdSearch, SW_HIDE);
+
+    if (g_edBwTitle)   ShowWindow(g_edBwTitle, SW_HIDE);
+    if (g_edBwContent) ShowWindow(g_edBwContent, SW_HIDE);
+
+    if (g_edDoneList)  ShowWindow(g_edDoneList, SW_HIDE); // (선택)
+    if (g_edOverlayList) ShowWindow(g_edOverlayList, SW_HIDE); // (선택)
     // 내팀 STATIC 5칸 같은 거 쓰면 이것도
     // for (int i=0;i<5;i++) if (g_stMyTeam[i]) ShowWindow(g_stMyTeam[i], SW_HIDE);
 }
@@ -1359,6 +1373,18 @@ static void SwitchScreen_NoHistory(HWND hWnd, Screen next)
 // ---------------------------------------------------------
 int App_OnCreate(HWND hWnd)
 {
+
+
+    g_uiFont = CreateFontW(
+        28, 0, 0, 0, FW_NORMAL,
+        FALSE, FALSE, FALSE,
+        DEFAULT_CHARSET,
+        OUT_DEFAULT_PRECIS,
+        CLIP_DEFAULT_PRECIS,
+        CLEARTYPE_QUALITY,
+        DEFAULT_PITCH | FF_SWISS,
+        L"맑은 고딕"
+    );
     if (!g_brWhite) g_brWhite = CreateSolidBrush(RGB(255, 255, 255));
     int w = 0, h = 0;
 
@@ -3026,11 +3052,18 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
             SAFE_LEAVE();
         }
 
-        // ✅ 목록/페이지 클릭
-        if (Board_OnClick(hWnd, x, y)) SAFE_LEAVE();
-
-        SAFE_LEAVE();
-    }
+        int r = Board_OnClick(hWnd, x, y);
+        if (r == 2) {
+            int postId = Board_GetOpenPostId();
+            if (postId > 0) {
+                // ✅ 여기서 글 열람 화면으로 넘기기
+                g_boardEditPostId = postId;   // 너가 쓰는 변수 그대로
+                SwitchScreen(hWnd, SCR_BOARD_WRITE); // 열람/수정 화면
+                SAFE_LEAVE();
+            }
+        }
+        if (r) SAFE_LEAVE();
+}
 }
 
 
