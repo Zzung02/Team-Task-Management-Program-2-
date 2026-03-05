@@ -53,49 +53,48 @@ extern int g_clientH;
 #define R_BTN_BACK_X2        90
 #define R_BTN_BACK_Y2        50
 
-#define R_SIGN_NAME_X1       270
-#define R_SIGN_NAME_Y1       263
-#define R_SIGN_NAME_X2       640
-#define R_SIGN_NAME_Y2       284
+#define R_SIGN_NAME_X1       466
+#define R_SIGN_NAME_Y1       230
+#define R_SIGN_NAME_X2       841
+#define R_SIGN_NAME_Y2       255
 
-#define R_SIGN_ID_X1         216
-#define R_SIGN_ID_Y1         341
-#define R_SIGN_ID_X2         645
-#define R_SIGN_ID_Y2         366
+#define R_SIGN_ID_X1         411
+#define R_SIGN_ID_Y1         299
+#define R_SIGN_ID_X2         842
+#define R_SIGN_ID_Y2         325
 
-#define R_SIGN_PW_X1         233
-#define R_SIGN_PW_Y1         422
-#define R_SIGN_PW_X2         645
-#define R_SIGN_PW_Y2         444
+#define R_SIGN_PW_X1         426
+#define R_SIGN_PW_Y1         370
+#define R_SIGN_PW_X2         842
+#define R_SIGN_PW_Y2         395
 
-#define R_BTN_CREATE_X1      453
-#define R_BTN_CREATE_Y1      482
-#define R_BTN_CREATE_X2      642
-#define R_BTN_CREATE_Y2      525
+#define R_BTN_CREATE_X1      655
+#define R_BTN_CREATE_Y1      432
+#define R_BTN_CREATE_X2      844
+#define R_BTN_CREATE_Y2      472
 
 // =========================================================
 // FINDPW(비밀번호 찾기) 텍스트필드들
 // =========================================================
-#define R_FIND_NAME_X1   270
-#define R_FIND_NAME_Y1   263
-#define R_FIND_NAME_X2   638
-#define R_FIND_NAME_Y2   283
+#define R_FIND_NAME_X1   278
+#define R_FIND_NAME_Y1   251
+#define R_FIND_NAME_X2   658
+#define R_FIND_NAME_Y2   277
 
-#define R_FIND_ID_X1     215
-#define R_FIND_ID_Y1     341
-#define R_FIND_ID_X2     645
-#define R_FIND_ID_Y2     365
+#define R_FIND_ID_X1     224
+#define R_FIND_ID_Y1     317
+#define R_FIND_ID_X2     658
+#define R_FIND_ID_Y2     341
 
-#define R_FIND_RESULT_X1  895
-#define R_FIND_RESULT_Y1  440
-#define R_FIND_RESULT_X2  1095
-#define R_FIND_RESULT_Y2  541
-
+#define R_FIND_RESULT_X1  735
+#define R_FIND_RESULT_Y1  242
+#define R_FIND_RESULT_X2  1214
+#define R_FIND_RESULT_Y2  420
 // FINDPW "찾기" 버튼 
-#define R_FIND_BTN_X1   459
-#define R_FIND_BTN_Y1   407
-#define R_FIND_BTN_X2   646
-#define R_FIND_BTN_Y2   446
+#define R_FIND_BTN_X1   468
+#define R_FIND_BTN_Y1   378
+#define R_FIND_BTN_X2   644
+#define R_FIND_BTN_Y2   422
 
 
 
@@ -414,10 +413,6 @@ extern int g_clientH;
 // 지금은 임시로 화면 중앙 아래쯤(너 스샷 기준) 잡아둠
 
 // [SCR_BOARD] 목록 텍스트 박스(번호/제목/글쓴이 출력 영역)
-#define R_BOARD_LIST_X1  91
-#define R_BOARD_LIST_Y1  168
-#define R_BOARD_LIST_X2  1223
-#define R_BOARD_LIST_Y2  619
 
 
 #define R_BD_PAGE_PREV_X1  610
@@ -436,8 +431,8 @@ extern int g_clientH;
 // ===============================
 
 // 제목 Edit
-#define R_BDW_TITLE_X1   121
-#define R_BDW_TITLE_Y1   122
+#define R_BDW_TITLE_X1   149
+#define R_BDW_TITLE_Y1   125
 #define R_BDW_TITLE_X2   1229
 #define R_BDW_TITLE_Y2   144
 
@@ -457,6 +452,11 @@ extern int g_clientH;
 // ================================
 // BOARD 목록 영역(번호/제목/글쓴이 텍스트가 올라갈 영역)
 // ================================
+
+#define R_BOARD_LIST_X1  81
+#define R_BOARD_LIST_Y1  155
+#define R_BOARD_LIST_X2  1224
+#define R_BOARD_LIST_Y2  621
 
 //등록버튼
 #define R_BOARD_BTN_REG_X1 188
@@ -546,7 +546,6 @@ extern int g_clientH;
 
 
 
-
 // =========================================================
 // 네모박스 
 // =========================================================
@@ -581,10 +580,10 @@ extern int g_clientH;
 #define R_TEAM_JOIN_CODECHK_Y2 345
 
 //회원가입
-#define SIGNUP_PWBTN_X1  668
-#define SIGNUP_PWBTN_Y1  404
-#define SIGNUP_PWBTN_X2  713
-#define SIGNUP_PWBTN_Y2  448
+#define SIGNUP_PWBTN_X1  863
+#define SIGNUP_PWBTN_Y1  358
+#define SIGNUP_PWBTN_X2  912
+#define SIGNUP_PWBTN_Y2  402
 
 
 

@@ -2951,13 +2951,16 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
         if (HitScaled(R_BOARD_BTN_REG_X1, R_BOARD_BTN_REG_Y1,
             R_BOARD_BTN_REG_X2, R_BOARD_BTN_REG_Y2, x, y))
         {
+            // ✅ 팀 선택 필수 (return 금지! 반드시 SAFE_LEAVE)
             if (g_currentTeamId[0] == 0) {
-                MessageBoxW(hWnd, L"팀을 먼저 선택해 주세요.", L"알림", MB_OK | MB_ICONINFORMATION);
+                MessageBoxW(hWnd, L"팀을 먼저 선택해주세요.", L"알림", MB_OK | MB_ICONINFORMATION);
                 SAFE_LEAVE();
             }
 
+            // ✅ 팀별 게시판 세팅 (중복 호출 제거)
             Board_SetTeamId(g_currentTeamId);
-            g_boardEditPostId = 0;            // ✅ 새 글 모드
+
+            g_boardEditPostId = 0;          // ✅ 새 글 모드
             SwitchScreen(hWnd, SCR_BOARD_WRITE);
             SAFE_LEAVE();
         }
@@ -3157,6 +3160,12 @@ void App_OnPaint(HWND hWnd, HDC hdc)
         SelectObject(mem, oldBrush);
         SelectObject(mem, oldPen);
         DeleteObject(penThin);
+    }
+
+
+    // ✅ BOARD: 선/격자/선택테두리/페이지 번호 그리기
+    if (g_screen == SCR_BOARD) {
+        Board_Draw(mem);
     }
 
     // (여기부터는 공통)
@@ -3791,10 +3800,29 @@ static int PtInRcScaled(int x, int y, int x1, int y1, int x2, int y2)
 }
 
 
-
-
 static void DrawDebugOverlay(HDC hdc)
 {
-    (void)hdc; // 경고 방지
-    // TODO: 필요하면 디버그 글씨/사각형 그리기
+    // 클릭 좌표 표시
+    wchar_t buf[128];
+    wsprintfW(buf, L"CLICK: %d , %d", g_lastX, g_lastY);
+
+    SetBkMode(hdc, TRANSPARENT);
+    SetTextColor(hdc, RGB(255, 0, 0));
+
+    RECT rc = { 10, 10, 500, 40 };
+    DrawTextW(hdc, buf, -1, &rc,
+        DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+
+    // 클릭 위치 십자 표시
+    HPEN pen = CreatePen(PS_SOLID, 2, RGB(255, 0, 0));
+    HGDIOBJ oldPen = SelectObject(hdc, pen);
+
+    MoveToEx(hdc, g_lastX - 10, g_lastY, NULL);
+    LineTo(hdc, g_lastX + 10, g_lastY);
+
+    MoveToEx(hdc, g_lastX, g_lastY - 10, NULL);
+    LineTo(hdc, g_lastX, g_lastY + 10);
+
+    SelectObject(hdc, oldPen);
+    DeleteObject(pen);
 }
