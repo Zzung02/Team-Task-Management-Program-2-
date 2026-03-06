@@ -162,28 +162,93 @@ static wchar_t g_tcCheckedCode[128] = L""; // ✅ 중복확인 통과한 코드 
 static int g_suPwVisible = 0;
 static int g_mtdDirty = 0;
 
-static int SelectFileDialog(HWND hWnd, wchar_t* outPath, int maxLen)
+static int SelectMultiFileDialog(HWND hWnd, wchar_t* outPaths, int maxLen)
 {
+    if (!outPaths || maxLen <= 0) return 0;
+    outPaths[0] = 0;
+
     OPENFILENAMEW ofn;
     ZeroMemory(&ofn, sizeof(ofn));
 
-    wchar_t buf[MAX_PATH] = L"";
+    // 다중선택은 버퍼를 크게 잡아야 함
+    wchar_t buf[8192];
+    ZeroMemory(buf, sizeof(buf));
 
     ofn.lStructSize = sizeof(ofn);
     ofn.hwndOwner = hWnd;
     ofn.lpstrFile = buf;
-    ofn.nMaxFile = MAX_PATH;
+    ofn.nMaxFile = (DWORD)(sizeof(buf) / sizeof(buf[0]));
     ofn.lpstrFilter = L"All Files\0*.*\0";
     ofn.nFilterIndex = 1;
-    ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
+    ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR |
+        OFN_ALLOWMULTISELECT | OFN_EXPLORER;
 
     if (!GetOpenFileNameW(&ofn))
         return 0;
 
-    lstrcpynW(outPath, buf, maxLen);
+    // 단일 선택이면 buf에 전체 경로 하나만 들어옴
+    wchar_t* p = buf;
+    size_t firstLen = wcslen(p);
+    wchar_t* next = p + firstLen + 1;
+
+    // ✅ 단일 파일 선택
+    if (*next == 0) {
+        lstrcpynW(outPaths, buf, maxLen);
+        return 1;
+    }
+
+    // ✅ 다중 파일 선택
+    // buf 구조:
+    // [폴더경로]\0[파일1]\0[파일2]\0...[파일N]\0\0
+    wchar_t dir[MAX_PATH];
+    lstrcpynW(dir, buf, MAX_PATH);
+
+    wchar_t result[4096];
+    result[0] = 0;
+
+    while (*next) {
+        wchar_t full[MAX_PATH * 2];
+        wsprintfW(full, L"%s\\%s", dir, next);
+
+        if (result[0] != 0) {
+            if (wcslen(result) + 2 < 4095) wcscat(result, L"||"); // ✅ 구분자
+        }
+
+        if (wcslen(result) + wcslen(full) < 4095) {
+            wcscat(result, full);
+        }
+
+        next += wcslen(next) + 1;
+    }
+
+    lstrcpynW(outPaths, result, maxLen);
     return 1;
 }
 
+static void OpenAllRegisteredFiles(const wchar_t* paths)
+{
+    if (!paths || !paths[0]) return;
+
+    const wchar_t* p = paths;
+
+    while (*p) {
+        const wchar_t* sep = wcsstr(p, L"||");
+
+        if (sep) {
+            int len = (int)(sep - p);
+            if (len > 0) {
+                wchar_t one[TASK_FILE_MAX] = L"";
+                wcsncpy_s(one, TASK_FILE_MAX, p, len);
+                ShellExecuteW(NULL, L"open", one, NULL, NULL, SW_SHOWNORMAL);
+            }
+            p = sep + 2;
+        }
+        else {
+            ShellExecuteW(NULL, L"open", p, NULL, NULL, SW_SHOWNORMAL);
+            break;
+        }
+    }
+}
 // ---------------------------------------------------------
 // [DO NOT TOUCH] 좌표/히트테스트 유틸
 // ---------------------------------------------------------
@@ -209,10 +274,13 @@ static int HitScaled(int x1, int y1, int x2, int y2, int x, int y)
 // ---------------------------------------------------------
 // 전역 상태
 // ---------------------------------------------------------
+// ---------------------------------------------------------
+// 전역 상태
+// ---------------------------------------------------------
 Screen g_screen = SCR_START;
 
-typedef enum { OVR_NONE = 0, OVR_DEADLINE = 1, OVR_UNDONE = 2 } Overlay;
-static Overlay g_overlay = OVR_NONE;
+
+static Overlay g_overlay = OV_NONE;
 
 static RECT g_rcDeadlinePanel = { 0,0,0,0 };
 static RECT g_rcDeadlineClose = { 0,0,0,0 };
@@ -2864,19 +2932,19 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
             SAFE_LEAVE();
         }
 
-        // ✅ 파일칸 클릭 -> 파일 선택창 띄우기 (편의기능: 로컬경로 입력됨)
+        // ✅ 파일칸 클릭 -> 여러 파일 선택 가능
         if (HitScaled(R_TA_FILE_X1, R_TA_FILE_Y1, R_TA_FILE_X2, R_TA_FILE_Y2, x, y))
         {
             wchar_t picked[TASK_FILE_MAX] = { 0 };
-            if (SelectFileDialog(hWnd, picked, TASK_FILE_MAX)) {
-                // 로컬 경로가 들어감 (공유는 안 됨)
+
+            if (SelectMultiFileDialog(hWnd, picked, TASK_FILE_MAX)) {
                 if (g_edTaFile) SetWindowTextW(g_edTaFile, picked);
             }
+
             SAFE_LEAVE();
         }
 
-
-        // 다운로드(열기) - 링크면 브라우저로, 로컬경로면 해당 PC에서 파일 열기
+        // ✅ 다운로드(열기)
         if (HitScaled(R_TA_BTN_DOWNLOAD_X1, R_TA_BTN_DOWNLOAD_Y1,
             R_TA_BTN_DOWNLOAD_X2, R_TA_BTN_DOWNLOAD_Y2, x, y))
         {
@@ -2888,62 +2956,27 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
                 SAFE_LEAVE();
             }
 
-            // ✅ http/https 링크면: 다른 사용자도 열 수 있음
+            // 여러 파일이면 전부 열기
+            if (wcsstr(path, L"||")) {
+                OpenAllRegisteredFiles(path);
+                SAFE_LEAVE();
+            }
+
+            // 링크면 브라우저
             if (wcsncmp(path, L"http://", 7) == 0 || wcsncmp(path, L"https://", 8) == 0) {
                 ShellExecuteW(NULL, L"open", path, NULL, NULL, SW_SHOWNORMAL);
                 SAFE_LEAVE();
             }
 
-            // ✅ 로컬 경로면: 그 PC에 파일이 있을 때만 열림
+            // 단일 파일
             ShellExecuteW(NULL, L"open", path, NULL, NULL, SW_SHOWNORMAL);
             SAFE_LEAVE();
         }
 
-
         SAFE_LEAVE();
     }
-
 
     if (g_screen == SCR_BOARD_WRITE)
-    {
-        // ✅ 등록 버튼 좌표(임시) → 너가 눌러서 좌표 맞춰야 함
-        if (HitScaled(
-            R_BDW_SAVE_X1, R_BDW_SAVE_Y1,
-            R_BDW_SAVE_X2, R_BDW_SAVE_Y2,
-            x, y))
-
-        {
-            wchar_t title[128] = { 0 };
-            wchar_t content[2048] = { 0 };
-
-            if (g_edBwTitle)   GetWindowTextW(g_edBwTitle, title, 128);
-            if (g_edBwContent) GetWindowTextW(g_edBwContent, content, 2048);
-
-            // ✅ 수정/새글 분기
-            if (g_boardEditPostId > 0) {
-                if (!Board_UpdatePost(g_boardEditPostId, title, content)) {
-                    MessageBoxW(hWnd, L"수정 실패(파일 저장 오류)", L"게시판", MB_OK | MB_ICONERROR);
-                    SAFE_LEAVE();
-                }
-                g_boardEditPostId = 0;
-                MessageBoxW(hWnd, L"수정 되었습니다.", L"게시판", MB_OK | MB_ICONINFORMATION);
-            }
-            else {
-                if (!Board_AddPost(title, g_currentUserId, content)) {
-                    MessageBoxW(hWnd, L"등록 실패(파일 저장 오류)", L"게시판", MB_OK | MB_ICONERROR);
-                    SAFE_LEAVE();
-                }
-                MessageBoxW(hWnd, L"등록 되었습니다.", L"게시판", MB_OK | MB_ICONINFORMATION);
-            }
-
-            // ✅ 게시판 리스트로 복귀
-            SwitchScreen(hWnd, SCR_BOARD);
-            SAFE_LEAVE();
-        }
-
-        SAFE_LEAVE();
-    }
-
 
     // -----------------------------------------------------
 // BOARD

@@ -6,9 +6,9 @@
 extern "C" {
 #endif
 
-#define TASK_TITLE_MAX   128
-#define TASK_TEXT_MAX    2048
-#define TASK_FILE_MAX    260
+#define TASK_TITLE_MAX     128
+#define TASK_TEXT_MAX      2048
+#define TASK_FILE_MAX      4096   // ✅ 여러 파일 경로 저장 가능하도록 증가
 #define TASK_DEADLINE_MAX  32
 
     typedef struct {

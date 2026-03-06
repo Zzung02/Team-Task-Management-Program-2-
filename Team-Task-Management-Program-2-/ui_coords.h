@@ -17,13 +17,13 @@ extern int g_clientH;
 // =========================================================
 // START 화면: ID/PW 입력 박스
 // =========================================================
-#define R_START_ID_X1   110
-#define R_START_ID_Y1   440
+#define R_START_ID_X1   111
+#define R_START_ID_Y1   434
 #define R_START_ID_X2   540
 #define R_START_ID_Y2   470
 
-#define R_START_PW_X1   129
-#define R_START_PW_Y1   515
+#define R_START_PW_X1   130
+#define R_START_PW_Y1   511
 #define R_START_PW_X2   536
 #define R_START_PW_Y2   535 
 
@@ -76,13 +76,13 @@ extern int g_clientH;
 // =========================================================
 // FINDPW(비밀번호 찾기) 텍스트필드들
 // =========================================================
-#define R_FIND_NAME_X1   278
-#define R_FIND_NAME_Y1   251
+#define R_FIND_NAME_X1   279
+#define R_FIND_NAME_Y1   245
 #define R_FIND_NAME_X2   658
 #define R_FIND_NAME_Y2   277
 
 #define R_FIND_ID_X1     224
-#define R_FIND_ID_Y1     317
+#define R_FIND_ID_Y1     313
 #define R_FIND_ID_X2     658
 #define R_FIND_ID_Y2     341
 
@@ -169,8 +169,8 @@ extern int g_clientH;
 #define R_TC_TEAM_X2   1025
 #define R_TC_TEAM_Y2   266
 
-#define R_TC_CODE_X1   845
-#define R_TC_CODE_Y1   308
+#define R_TC_CODE_X1   846
+#define R_TC_CODE_Y1   314
 #define R_TC_CODE_X2   984
 #define R_TC_CODE_Y2   345
 
@@ -243,15 +243,15 @@ extern int g_clientH;
 // =========================================================
 // TEAM_JOIN(팀참여) 필드
 // =========================================================
-#define R_TJ_TEAM_X1   791
-#define R_TJ_TEAM_Y1   242
-#define R_TJ_TEAM_X2   1026
-#define R_TJ_TEAM_Y2   262
+#define R_TJ_TEAM_X1   789
+#define R_TJ_TEAM_Y1   238
+#define R_TJ_TEAM_X2   1025
+#define R_TJ_TEAM_Y2   266
 
 #define R_TJ_CODE_X1   846
-#define R_TJ_CODE_Y1   321
-#define R_TJ_CODE_X2   1029
-#define R_TJ_CODE_Y2   348
+#define R_TJ_CODE_Y1   314
+#define R_TJ_CODE_X2   984
+#define R_TJ_CODE_Y2   345
 
 #define R_TJ_SAVE_X1  943
 #define R_TJ_SAVE_Y1  153
@@ -376,33 +376,33 @@ extern int g_clientH;
 #define R_TA_SEARCH_Y2   75
 
 // 제목
-#define R_TA_TITLE_X1    761
-#define R_TA_TITLE_Y1    186
-#define R_TA_TITLE_X2    1162
-#define R_TA_TITLE_Y2    203
+#define R_TA_TITLE_X1    765
+#define R_TA_TITLE_Y1    181
+#define R_TA_TITLE_X2    1184
+#define R_TA_TITLE_Y2    214
 
 // 내용(멀티라인 큰 박스)
-#define R_TA_CONTENT_X1  759
-#define R_TA_CONTENT_Y1  250
+#define R_TA_CONTENT_X1  768
+#define R_TA_CONTENT_Y1  249
 #define R_TA_CONTENT_X2  1171
 #define R_TA_CONTENT_Y2  528
 
 // 상세사항(작은 줄)
-#define R_TA_DETAIL_X1   785
-#define R_TA_DETAIL_Y1   544
-#define R_TA_DETAIL_X2   1014
-#define R_TA_DETAIL_Y2   563
+#define R_TA_DETAIL_X1   807
+#define R_TA_DETAIL_Y1   540
+#define R_TA_DETAIL_X2   985
+#define R_TA_DETAIL_Y2   568
 
 // 파일
-#define R_TA_FILE_X1     754
-#define R_TA_FILE_Y1     601
-#define R_TA_FILE_X2     951
-#define R_TA_FILE_Y2     628
+#define R_TA_FILE_X1     755
+#define R_TA_FILE_Y1     591
+#define R_TA_FILE_X2     959
+#define R_TA_FILE_Y2     623
 
-#define R_TA_DEADLINE_X1   1073
-#define R_TA_DEADLINE_Y1   542
-#define R_TA_DEADLINE_X2   1171
-#define R_TA_DEADLINE_Y2   559
+#define R_TA_DEADLINE_X1   1095
+#define R_TA_DEADLINE_Y1   539
+#define R_TA_DEADLINE_X2   1170
+#define R_TA_DEADLINE_Y2   570
 
 
 
@@ -431,14 +431,14 @@ extern int g_clientH;
 // ===============================
 
 // 제목 Edit
-#define R_BDW_TITLE_X1   149
-#define R_BDW_TITLE_Y1   125
-#define R_BDW_TITLE_X2   1229
-#define R_BDW_TITLE_Y2   144
+#define R_BDW_TITLE_X1   151
+#define R_BDW_TITLE_Y1   118
+#define R_BDW_TITLE_X2   1230
+#define R_BDW_TITLE_Y2   143
 
 // 내용 Edit
-#define R_BDW_CONTENT_X1 123
-#define R_BDW_CONTENT_Y1 167
+#define R_BDW_CONTENT_X1 139
+#define R_BDW_CONTENT_Y1 180
 #define R_BDW_CONTENT_X2 1217
 #define R_BDW_CONTENT_Y2 609
 
@@ -495,8 +495,8 @@ extern int g_clientH;
 #define R_BD_SEARCH_BTN_X2  1276
 #define R_BD_SEARCH_BTN_Y2  81
 
-#define R_BOARD_SEARCH_X1 900
-#define R_BOARD_SEARCH_Y1 54
+#define R_BOARD_SEARCH_X1 897
+#define R_BOARD_SEARCH_Y1 51
 #define R_BOARD_SEARCH_X2 1221
 #define R_BOARD_SEARCH_Y2 80
 
