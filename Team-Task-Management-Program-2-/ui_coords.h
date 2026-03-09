@@ -54,17 +54,17 @@ extern int g_clientH;
 #define R_BTN_BACK_Y2        50
 
 #define R_SIGN_NAME_X1       466
-#define R_SIGN_NAME_Y1       230
+#define R_SIGN_NAME_Y1       225
 #define R_SIGN_NAME_X2       841
 #define R_SIGN_NAME_Y2       255
 
 #define R_SIGN_ID_X1         411
-#define R_SIGN_ID_Y1         299
+#define R_SIGN_ID_Y1         296
 #define R_SIGN_ID_X2         842
 #define R_SIGN_ID_Y2         325
 
 #define R_SIGN_PW_X1         426
-#define R_SIGN_PW_Y1         370
+#define R_SIGN_PW_Y1         365
 #define R_SIGN_PW_X2         842
 #define R_SIGN_PW_Y2         395
 
@@ -197,11 +197,6 @@ extern int g_clientH;
 #define R_MYTEAM_SAVE_Y1  144
 #define R_MYTEAM_SAVE_X2  474
 #define R_MYTEAM_SAVE_Y2  186
-//삭제
-#define R_MTD_DEL_X1    488
-#define R_MTD_DEL_Y1    143
-#define R_MTD_DEL_X2    378
-#define R_MTD_DEL_Y2    184
 
 // 팀원 목록 영역(내팀 목록 큰 흰 박스랑 비슷한 곳)
 #define R_MTD_LIST_X1   140
@@ -354,22 +349,17 @@ extern int g_clientH;
 #define R_TA_ITEM4_X2  546
 #define R_TA_ITEM4_Y2  511
 
-#define R_TA_TITLE_X1  761
-#define R_TA_TITLE_Y1  186
-#define R_TA_TITLE_X2  1162
-#define R_TA_TITLE_Y2  203
+#define R_TA_TITLE_X1  764
+#define R_TA_TITLE_Y1  182
+#define R_TA_TITLE_X2  1185
+#define R_TA_TITLE_Y2  212
 
 // 조회 입력칸
-#define R_TA_SEARCH_X1   912
+#define R_TA_SEARCH_X1   909
 #define R_TA_SEARCH_Y1   55
 #define R_TA_SEARCH_X2   1224
 #define R_TA_SEARCH_Y2   75
 
-// 제목
-#define R_TA_TITLE_X1    765
-#define R_TA_TITLE_Y1    181
-#define R_TA_TITLE_X2    1184
-#define R_TA_TITLE_Y2    214
 
 // 내용(멀티라인 큰 박스)
 #define R_TA_CONTENT_X1  768
@@ -389,6 +379,11 @@ extern int g_clientH;
 #define R_TA_FILE_X2     838
 #define R_TA_FILE_Y2     631
 
+#define R_TA_DEADLINE_X1   1093
+#define R_TA_DEADLINE_Y1   540
+#define R_TA_DEADLINE_Y2   566
+#define R_TA_DEADLINE_X2   1180
+
 
 // ===============================
 // FILE_LIST 화면 좌표
@@ -400,11 +395,7 @@ extern int g_clientH;
 #define R_FL_TASK_LIST_X2   725
 #define R_FL_TASK_LIST_Y2   833
 
-// 오른쪽 파일 목록 큰 박스
-#define R_FL_FILE_LIST_X1   865
-#define R_FL_FILE_LIST_Y1   233
-#define R_FL_FILE_LIST_X2   1503
-#define R_FL_FILE_LIST_Y2   833
+
 
 // 오른쪽 파일목록 4칸
 #define R_FL_FILE1_X1   717
@@ -454,10 +445,10 @@ extern int g_clientH;
 #define R_FL_FILE_NEXT_X2   1310
 #define R_FL_FILE_NEXT_Y2   885
 
-#define R_FL_FILE_PAGE_X1   1210
-#define R_FL_FILE_PAGE_Y1   838
-#define R_FL_FILE_PAGE_X2   1260
-#define R_FL_FILE_PAGE_Y2   880
+#define R_FL_FILE_PAGE_X1   929
+#define R_FL_FILE_PAGE_Y1   643
+#define R_FL_FILE_PAGE_X2   975
+#define R_FL_FILE_PAGE_Y2   672
 
 #define R_FL_TITLE_X1		143
 #define R_FL_TITLE_Y1		182

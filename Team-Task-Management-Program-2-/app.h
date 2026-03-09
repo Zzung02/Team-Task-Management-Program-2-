@@ -18,7 +18,7 @@ LRESULT App_OnAppChildClickWndProc(HWND hWnd, WPARAM wParam, LPARAM lParam);
 // main.c에서 호출하는 함수
 int     App_OnDrawItem(HWND hWnd, const DRAWITEMSTRUCT* dis);
 LRESULT App_OnMouseMove(HWND hWnd, WPARAM wParam, LPARAM lParam);
-
+HBRUSH App_OnCtlColorStatic(HWND hCtrl, HDC hdc);
 void App_GoToStart(HWND hWnd);
 
 // --------------------------------------------------

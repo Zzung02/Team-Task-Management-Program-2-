@@ -1108,13 +1108,17 @@ static void CreateControlsForScreen(HWND hWnd, Screen s)
         g_edTaTitle = CreateEdit(hWnd, 906, 0);
         g_edTaContent = CreateEdit(hWnd, 907, ES_MULTILINE | ES_AUTOVSCROLL | WS_VSCROLL);
         g_edTaDetail = CreateEdit(hWnd, 908, ES_MULTILINE | ES_AUTOVSCROLL | WS_VSCROLL);
+        
+        
         g_edTaFile = CreateWindowExW(
-            0, L"STATIC", L"",
+            WS_EX_TRANSPARENT, L"STATIC", L"",
             WS_CHILD | WS_VISIBLE | SS_LEFT | SS_NOTIFY,
             0, 0, 10, 10,
             hWnd, (HMENU)(INT_PTR)909,
             GetModuleHandleW(NULL), NULL
         );
+
+
         SendMessageW(g_edTaFile, WM_SETFONT, (WPARAM)GetUIFont(), TRUE);
         HookStaticClick(g_edTaFile);
         g_edTaDeadline = CreateEdit(hWnd, 910, 0);
@@ -1389,40 +1393,62 @@ static void RelayoutControls(HWND hWnd)
         ShowWindow(g_edTaTitle, SW_SHOW);
         ShowWindow(g_edTaContent, SW_SHOW);
         ShowWindow(g_edTaDetail, SW_SHOW);
-        //ShowWindow(g_edTaFile, SW_SHOW);
-        ShowWindow(g_edTaDeadline, SW_SHOW);
+        ShowWindow(g_edTaFile, SW_SHOW);        // ✅ 다시 켜기
+        ShowWindow(g_edTaDeadline, SW_SHOW);    // ✅ 마감일도 표시
 
-      
-      
+        MoveEdit(g_edTaSearch,
+            SX(R_TA_SEARCH_X1), SY(R_TA_SEARCH_Y1),
+            SX(R_TA_SEARCH_X2), SY(R_TA_SEARCH_Y2),
+            0, 0, 0, 0);
 
-        MoveEdit(g_edTaSearch, SX(R_TA_SEARCH_X1), SY(R_TA_SEARCH_Y1),
-            SX(R_TA_SEARCH_X2), SY(R_TA_SEARCH_Y2), 0, 0, 0, 0);
+        MoveEdit(g_edTaTask1,
+            SX(R_TA_ITEM1_X1), SY(R_TA_ITEM1_Y1),
+            SX(R_TA_ITEM1_X2), SY(R_TA_ITEM1_Y2),
+            0, 0, 0, 0);
 
-        MoveEdit(g_edTaTask1, SX(R_TA_ITEM1_X1), SY(R_TA_ITEM1_Y1),
-            SX(R_TA_ITEM1_X2), SY(R_TA_ITEM1_Y2), 0, 0, 0, 0);
+        MoveEdit(g_edTaTask2,
+            SX(R_TA_ITEM2_X1), SY(R_TA_ITEM2_Y1),
+            SX(R_TA_ITEM2_X2), SY(R_TA_ITEM2_Y2),
+            0, 0, 0, 0);
 
-        MoveEdit(g_edTaTask2, SX(R_TA_ITEM2_X1), SY(R_TA_ITEM2_Y1),
-            SX(R_TA_ITEM2_X2), SY(R_TA_ITEM2_Y2), 0, 0, 0, 0);
+        MoveEdit(g_edTaTask3,
+            SX(R_TA_ITEM3_X1), SY(R_TA_ITEM3_Y1),
+            SX(R_TA_ITEM3_X2), SY(R_TA_ITEM3_Y2),
+            0, 0, 0, 0);
 
-        MoveEdit(g_edTaTask3, SX(R_TA_ITEM3_X1), SY(R_TA_ITEM3_Y1),
-            SX(R_TA_ITEM3_X2), SY(R_TA_ITEM3_Y2), 0, 0, 0, 0);
+        MoveEdit(g_edTaTask4,
+            SX(R_TA_ITEM4_X1), SY(R_TA_ITEM4_Y1),
+            SX(R_TA_ITEM4_X2), SY(R_TA_ITEM4_Y2),
+            0, 0, 0, 0);
 
-        MoveEdit(g_edTaTask4, SX(R_TA_ITEM4_X1), SY(R_TA_ITEM4_Y1),
-            SX(R_TA_ITEM4_X2), SY(R_TA_ITEM4_Y2), 0, 0, 0, 0);
+        MoveEdit(g_edTaTitle,
+            SX(R_TA_TITLE_X1), SY(R_TA_TITLE_Y1),
+            SX(R_TA_TITLE_X2), SY(R_TA_TITLE_Y2),
+            0, 0, 0, 0);
 
-        MoveEdit(g_edTaTitle, SX(R_TA_TITLE_X1), SY(R_TA_TITLE_Y1),
-            SX(R_TA_TITLE_X2), SY(R_TA_TITLE_Y2), 0, 0, 0, 0);
+        MoveEdit(g_edTaContent,
+            SX(R_TA_CONTENT_X1), SY(R_TA_CONTENT_Y1),
+            SX(R_TA_CONTENT_X2), SY(R_TA_CONTENT_Y2),
+            0, 0, 0, 0);
 
-        MoveEdit(g_edTaContent, SX(R_TA_CONTENT_X1), SY(R_TA_CONTENT_Y1),
-            SX(R_TA_CONTENT_X2), SY(R_TA_CONTENT_Y2), 0, 0, 0, 0);
+        MoveEdit(g_edTaDetail,
+            SX(R_TA_DETAIL_X1), SY(R_TA_DETAIL_Y1),
+            SX(R_TA_DETAIL_X2), SY(R_TA_DETAIL_Y2),
+            0, 0, 0, 0);
 
-        MoveEdit(g_edTaDetail, SX(R_TA_DETAIL_X1), SY(R_TA_DETAIL_Y1),
-            SX(R_TA_DETAIL_X2), SY(R_TA_DETAIL_Y2), 0, 0, 0, 0);
-     MoveWindow(g_edTaFile,
-    SX(R_TA_FILE_X1), SY(R_TA_FILE_Y1),
-    SX(R_TA_FILE_X2) - SX(R_TA_FILE_X1),
-    SY(R_TA_FILE_Y2) - SY(R_TA_FILE_Y1),
-    TRUE);
+        // ✅ 파일등록 버튼(투명 STATIC)
+        MoveWindow(g_edTaFile,
+            SX(R_TA_FILE_X1), SY(R_TA_FILE_Y1),
+            SX(R_TA_FILE_X2) - SX(R_TA_FILE_X1),
+            SY(R_TA_FILE_Y2) - SY(R_TA_FILE_Y1),
+            TRUE);
+
+        // ✅ 마감일 입력칸 위치 지정
+        MoveEdit(g_edTaDeadline,
+            SX(R_TA_DEADLINE_X1), SY(R_TA_DEADLINE_Y1),
+            SX(R_TA_DEADLINE_X2), SY(R_TA_DEADLINE_Y2),
+            0, 0, 0, 0);
+
         return;
     }
 
@@ -1760,10 +1786,11 @@ static void EnsureMemberStatics(HWND hWnd, HFONT font)
         );
 
         if (font) SendMessageW(g_stMembers[i], WM_SETFONT, (WPARAM)font, TRUE);
-        // HookStaticClick(g_stMembers[i]);   // ✅ 끄기
+
+        // ✅ 팀원 줄 클릭을 부모(App_OnLButtonDown)로 올림
+        HookStaticClick(g_stMembers[i]);
     }
 }
-
 static void ShowMemberStatics(int show)
 {
     for (int i = 0; i < MTD_SLOT_MAX; i++) {
@@ -1832,11 +1859,11 @@ static void MyTeamDetail_RefreshUI(HWND hWnd)
     // ✅ 로드
     Members_Load(g_detailTeamId);
 
-    // ✅ 선택 초기화(원하면 유지해도 되는데, 일단 안전하게)
+    // ✅ 선택 초기화
     if (g_memberSelected >= g_memberCount) g_memberSelected = -1;
     if (g_memberCount <= 0) g_memberSelected = -1;
 
-    // ✅ 출력은 반드시 g_mtdMembers 기준!
+    // ✅ 출력
     for (int i = 0; i < MTD_SLOT_MAX; i++) {
         if (!g_stMembers[i]) continue;
 
@@ -1854,10 +1881,9 @@ static void MyTeamDetail_RefreshUI(HWND hWnd)
 
     LayoutMemberStatics();
     ShowMemberStatics(1);
+
     InvalidateRect(hWnd, NULL, FALSE);
 }
-
-
 
 
 
@@ -2837,7 +2863,7 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
             SAFE_LEAVE();
         }
 
-    
+
 
         if (HitScaled(R_TA_SEARCH_ICON_X1, R_TA_SEARCH_ICON_Y1, R_TA_SEARCH_ICON_X2, R_TA_SEARCH_ICON_Y2, x, y))
         {
@@ -3029,32 +3055,10 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
             SAFE_LEAVE();
         }
 
+        // ✅ 파일등록 버튼 클릭 -> 파일목록 화면으로 전환
         if (HitScaled(R_TA_FILE_X1, R_TA_FILE_Y1, R_TA_FILE_X2, R_TA_FILE_Y2, x, y))
         {
             SwitchScreen(hWnd, SCR_FILE_LIST);
-            SAFE_LEAVE();
-        }
-
-        {
-            wchar_t path[TASK_FILE_MAX] = { 0 };
-            if (g_edTaFile) GetWindowTextW(g_edTaFile, path, TASK_FILE_MAX);
-
-            if (!path[0]) {
-                MessageBoxW(hWnd, L"파일/링크가 없습니다.", L"다운로드", MB_OK | MB_ICONWARNING);
-                SAFE_LEAVE();
-            }
-
-            if (wcsstr(path, L"||")) {
-                OpenAllRegisteredFiles(path);
-                SAFE_LEAVE();
-            }
-
-            if (wcsncmp(path, L"http://", 7) == 0 || wcsncmp(path, L"https://", 8) == 0) {
-                ShellExecuteW(NULL, L"open", path, NULL, NULL, SW_SHOWNORMAL);
-                SAFE_LEAVE();
-            }
-
-            ShellExecuteW(NULL, L"open", path, NULL, NULL, SW_SHOWNORMAL);
             SAFE_LEAVE();
         }
 
@@ -3509,6 +3513,7 @@ void App_OnPaint(HWND hWnd, HDC hdc)
     if (g_screen == SCR_FILE_LIST)
     {
         // ✅ 페이지 숫자
+        SetTextColor(mem, RGB(0, 0, 0));
         DrawFileListPageLabelCenter(mem, g_flFilePage,
             R_FL_FILE_PAGE_X1, R_FL_FILE_PAGE_Y1, R_FL_FILE_PAGE_X2, R_FL_FILE_PAGE_Y2);
 
@@ -4512,27 +4517,6 @@ static int PtInRcScaled(int x, int y, int x1, int y1, int x2, int y2)
 
 static void DrawDebugOverlay(HDC hdc)
 {
-    // 클릭 좌표 표시
-    wchar_t buf[128];
-    wsprintfW(buf, L"CLICK: %d , %d", g_lastX, g_lastY);
-
-    SetBkMode(hdc, TRANSPARENT);
-    SetTextColor(hdc, RGB(255, 0, 0));
-
-    RECT rc = { 10, 10, 500, 40 };
-    DrawTextW(hdc, buf, -1, &rc,
-        DT_LEFT | DT_VCENTER | DT_SINGLELINE);
-
-    // 클릭 위치 십자 표시
-    HPEN pen = CreatePen(PS_SOLID, 2, RGB(255, 0, 0));
-    HGDIOBJ oldPen = SelectObject(hdc, pen);
-
-    MoveToEx(hdc, g_lastX - 10, g_lastY, NULL);
-    LineTo(hdc, g_lastX + 10, g_lastY);
-
-    MoveToEx(hdc, g_lastX, g_lastY - 10, NULL);
-    LineTo(hdc, g_lastX, g_lastY + 10);
-
-    SelectObject(hdc, oldPen);
-    DeleteObject(pen);
+    (void)hdc; // 경고 방지
+    // TODO: 필요하면 디버그 글씨/사각형 그리기
 }

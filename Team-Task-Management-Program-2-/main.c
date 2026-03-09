@@ -48,11 +48,20 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
     case WM_APP_CHILDCLICK:
         return App_OnAppChildClickWndProc(hWnd, wParam, lParam);
 
+
     case WM_CTLCOLORSTATIC:
     {
         HDC hdc = (HDC)wParam;
+        HWND hCtrl = (HWND)lParam;
+        int id = GetDlgCtrlID(hCtrl);
+
         SetTextColor(hdc, RGB(0, 0, 0));
         SetBkMode(hdc, TRANSPARENT);
+
+        // ✅ 파일등록 버튼 투명
+        if (id == 909)
+            return (INT_PTR)GetStockObject(NULL_BRUSH);
+
         return (INT_PTR)g_brWhite;
     }
 

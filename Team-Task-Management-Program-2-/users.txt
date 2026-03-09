@@ -2,3 +2,6 @@
 1|1|1
 wjdala1178|archery1178|김정민
 wjdala0202|wjdala0209!|김정민
+
+kjm020206|kjm020209!|김정민
+khm070708|khm070708!|김혜민
