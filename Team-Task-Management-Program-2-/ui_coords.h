@@ -316,16 +316,6 @@ extern int g_clientH;
 #define R_DONE_LIST_X2   514
 #define R_DONE_LIST_Y2   655
 
-//파일 X표시
-#define R_TA_BTN_FILE_CLEAR_X1 964
-#define R_TA_BTN_FILE_CLEAR_Y1 596
-#define R_TA_BTN_FILE_CLEAR_X2 997
-#define R_TA_BTN_FILE_CLEAR_Y2 619
-
-#define R_TA_BTN_DOWNLOAD_X1 1020
-#define R_TA_BTN_DOWNLOAD_Y1 593
-#define R_TA_BTN_DOWNLOAD_X2 1173
-#define R_TA_BTN_DOWNLOAD_Y2 621
 
 // 페이지 좌/우 화살표(있으면)
 #define R_TA_PAGE_PREV_X1 254
@@ -394,15 +384,11 @@ extern int g_clientH;
 #define R_TA_DETAIL_Y2   568
 
 // 파일
-#define R_TA_FILE_X1     755
-#define R_TA_FILE_Y1     591
-#define R_TA_FILE_X2     959
-#define R_TA_FILE_Y2     623
+#define R_TA_FILE_X1     795
+#define R_TA_FILE_Y1     588
+#define R_TA_FILE_X2     838
+#define R_TA_FILE_Y2     631
 
-#define R_TA_DEADLINE_X1   1095
-#define R_TA_DEADLINE_Y1   539
-#define R_TA_DEADLINE_X2   1170
-#define R_TA_DEADLINE_Y2   570
 
 // ===============================
 // FILE_LIST 화면 좌표

@@ -127,7 +127,7 @@ static void LayoutMyTeamStatics(void);
 static void ApplyMyTeamTextsToUI(void);
 static void HideAllControls(void);
 static void ApplyCalendarClipForScreen(Screen s);
-
+static void MyTeam_UpdateSelectionBorder(void);
 
 static void HandleStartClick(HWND hWnd, int x, int y);
 static void HandleSignupClick(HWND hWnd, int x, int y);
@@ -481,6 +481,7 @@ static LRESULT CALLBACK EditHookProc(HWND hEdit, UINT msg, WPARAM wParam, LPARAM
 
             PostMessageW(parent, WM_APP_CHILDCLICK, (WPARAM)pt.x, (LPARAM)pt.y);
         }
+        return 0;
     }
 
     WNDPROC oldProc = (WNDPROC)GetPropW(hEdit, PROP_OLD_EDIT_PROC);
@@ -490,7 +491,6 @@ static LRESULT CALLBACK EditHookProc(HWND hEdit, UINT msg, WPARAM wParam, LPARAM
 
     return CallWindowProcW(oldProc, hEdit, msg, wParam, lParam);
 }
-
 static LRESULT CALLBACK StaticHookProc(HWND hSt, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     if (msg == WM_LBUTTONDOWN) {
@@ -810,35 +810,14 @@ static int LoadMyTeams_FromMembers(const wchar_t* userId)
     return count;
 }
 
-static void EnsureMyTeamStatics(HWND hWnd, HFONT font)
-{
-    for (int i = 0; i < MYTEAM_SLOT_MAX; i++)
-    {
-        if (g_stMyTeam[i] && IsWindow(g_stMyTeam[i])) continue;
-        g_stMyTeam[i] = CreateWindowExW(
-            0,
-            L"STATIC",
-            L"",
-            WS_CHILD | WS_VISIBLE | SS_LEFT | SS_NOTIFY,
-            0, 0, 10, 10,
-            hWnd,
-            (HMENU)(INT_PTR)(6000 + i),
-            GetModuleHandleW(NULL),
-            NULL
-        );
-
-        if (font) SendMessageW(g_stMyTeam[i], WM_SETFONT, (WPARAM)font, TRUE);
-        // HookStaticClick(g_stMyTeam[i]);   // ✅ 끄기
-    }
-}
-
 static void ApplyMyTeamTextsToUI(void)
 {
     for (int i = 0; i < MYTEAM_SLOT_MAX; i++)
     {
         if (!g_stMyTeam[i]) continue;
 
-        wchar_t buf[260] = { 0 };
+        wchar_t buf[260] = L"";
+
         if (g_myTeams[i].team[0] == 0) {
             buf[0] = 0;
         }
@@ -852,7 +831,31 @@ static void ApplyMyTeamTextsToUI(void)
                 g_myTeams[i].joinCode,
                 isLeader ? L"팀장" : L"팀원");
         }
+
         SetWindowTextW(g_stMyTeam[i], buf);
+    }
+}
+
+static void EnsureMyTeamStatics(HWND hWnd, HFONT font)
+{
+    for (int i = 0; i < MYTEAM_SLOT_MAX; i++)
+    {
+        if (g_stMyTeam[i] && IsWindow(g_stMyTeam[i])) continue;
+
+        g_stMyTeam[i] = CreateWindowExW(
+            0,
+            L"STATIC",
+            L"",
+            WS_CHILD | WS_VISIBLE | SS_LEFT | SS_NOTIFY,
+            0, 0, 10, 10,
+            hWnd,
+            (HMENU)(INT_PTR)(6000 + i),
+            GetModuleHandleW(NULL),
+            NULL
+        );
+
+        if (font) SendMessageW(g_stMyTeam[i], WM_SETFONT, (WPARAM)font, TRUE);
+        HookStaticClick(g_stMyTeam[i]);
     }
 }
 
@@ -871,6 +874,7 @@ static void MyTeam_RefreshUI(HWND hWnd)
     LoadMyTeams_FromMembers(g_currentUserId);
     ApplyMyTeamTextsToUI();
     LayoutMyTeamStatics();
+    MyTeam_UpdateSelectionBorder();   // ✅ 선택 테두리 다시 반영
     ShowMyTeamStatics(1);
 }
 
@@ -927,7 +931,7 @@ static void DestroyAllEdits(void)
     DestroyHookedWindow(&g_edTaTitle, PROP_OLD_EDIT_PROC);
     DestroyHookedWindow(&g_edTaContent, PROP_OLD_EDIT_PROC);
     DestroyHookedWindow(&g_edTaDetail, PROP_OLD_EDIT_PROC);
-    DestroyHookedWindow(&g_edTaFile, PROP_OLD_EDIT_PROC);
+    DestroyHookedWindow(&g_edTaFile, PROP_OLD_STATIC_PROC);
 
     // STATIC(왼쪽 1~4)은 PROP_OLD_STATIC_PROC로 훅 정리
     DestroyHookedWindow(&g_edTaTask1, PROP_OLD_STATIC_PROC);
@@ -1104,7 +1108,15 @@ static void CreateControlsForScreen(HWND hWnd, Screen s)
         g_edTaTitle = CreateEdit(hWnd, 906, 0);
         g_edTaContent = CreateEdit(hWnd, 907, ES_MULTILINE | ES_AUTOVSCROLL | WS_VSCROLL);
         g_edTaDetail = CreateEdit(hWnd, 908, ES_MULTILINE | ES_AUTOVSCROLL | WS_VSCROLL);
-        g_edTaFile = CreateEdit(hWnd, 909, 0);
+        g_edTaFile = CreateWindowExW(
+            0, L"STATIC", L"",
+            WS_CHILD | WS_VISIBLE | SS_LEFT | SS_NOTIFY,
+            0, 0, 10, 10,
+            hWnd, (HMENU)(INT_PTR)909,
+            GetModuleHandleW(NULL), NULL
+        );
+        SendMessageW(g_edTaFile, WM_SETFONT, (WPARAM)GetUIFont(), TRUE);
+        HookStaticClick(g_edTaFile);
         g_edTaDeadline = CreateEdit(hWnd, 910, 0);
         SetWindowTextW(g_edTaDeadline, L"");   // ✅ "0000/00/00" 대신 빈칸 시작
         SendMessageW(g_edTaDeadline, EM_LIMITTEXT, 10, 0); // YYYY/MM/DD 10글자 제한(선택)
@@ -1379,11 +1391,8 @@ static void RelayoutControls(HWND hWnd)
         ShowWindow(g_edTaFile, SW_SHOW);
         ShowWindow(g_edTaDeadline, SW_SHOW);
 
-        MoveEdit(g_edTaDeadline,
-            SX(R_TA_DEADLINE_X1), SY(R_TA_DEADLINE_Y1),
-            SX(R_TA_DEADLINE_X2), SY(R_TA_DEADLINE_Y2),
-            0, 0, 0, 0
-        );
+      
+      
 
         MoveEdit(g_edTaSearch, SX(R_TA_SEARCH_X1), SY(R_TA_SEARCH_Y1),
             SX(R_TA_SEARCH_X2), SY(R_TA_SEARCH_Y2), 0, 0, 0, 0);
@@ -1408,9 +1417,11 @@ static void RelayoutControls(HWND hWnd)
 
         MoveEdit(g_edTaDetail, SX(R_TA_DETAIL_X1), SY(R_TA_DETAIL_Y1),
             SX(R_TA_DETAIL_X2), SY(R_TA_DETAIL_Y2), 0, 0, 0, 0);
-
-        MoveEdit(g_edTaFile, SX(R_TA_FILE_X1), SY(R_TA_FILE_Y1),
-            SX(R_TA_FILE_X2), SY(R_TA_FILE_Y2), 0, 0, 0, 0);
+     MoveWindow(g_edTaFile,
+    SX(R_TA_FILE_X1), SY(R_TA_FILE_Y1),
+    SX(R_TA_FILE_X2) - SX(R_TA_FILE_X1),
+    SY(R_TA_FILE_Y2) - SY(R_TA_FILE_Y1),
+    TRUE);
         return;
     }
 
@@ -1446,10 +1457,11 @@ static void RelayoutControls(HWND hWnd)
     }
 
     if (g_screen == SCR_MYTEAM) {
-        EnsureMyTeamStatics(hWnd, GetUIFont());  // ✅ 혹시 없으면 생성
-        LayoutMyTeamStatics();                  // ✅ 먼저 위치/크기 배치
-        MyTeam_RefreshUI(hWnd);                 // ✅ 텍스트 로드/적용
-        ShowMyTeamStatics(1);                   // ✅ 마지막에 SHOW
+        EnsureMyTeamStatics(hWnd, GetUIFont());
+        LayoutMyTeamStatics();
+        MyTeam_RefreshUI(hWnd);
+        MyTeam_UpdateSelectionBorder();
+        ShowMyTeamStatics(1);
         InvalidateRect(hWnd, NULL, FALSE);
         return;
     }
@@ -2629,8 +2641,10 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
             if (PtInRect(&rcSlot, pt))
             {
                 g_myTeamSelected = i;
+                MyTeam_UpdateSelectionBorder();
                 InvalidateRect(hWnd, NULL, FALSE);
                 SAFE_LEAVE();
+            
             }
         }
 
@@ -2830,10 +2844,7 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
             SAFE_LEAVE();
         }
 
-        if (HitScaled(R_TA_BTN_FILE_CLEAR_X1, R_TA_BTN_FILE_CLEAR_Y1, R_TA_BTN_FILE_CLEAR_X2, R_TA_BTN_FILE_CLEAR_Y2, x, y)) {
-            if (g_edTaFile) SetWindowTextW(g_edTaFile, L"");
-            SAFE_LEAVE();
-        }
+    
 
         if (HitScaled(R_TA_SEARCH_ICON_X1, R_TA_SEARCH_ICON_Y1, R_TA_SEARCH_ICON_X2, R_TA_SEARCH_ICON_Y2, x, y))
         {
@@ -3031,8 +3042,6 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
             SAFE_LEAVE();
         }
 
-        if (HitScaled(R_TA_BTN_DOWNLOAD_X1, R_TA_BTN_DOWNLOAD_Y1,
-            R_TA_BTN_DOWNLOAD_X2, R_TA_BTN_DOWNLOAD_Y2, x, y))
         {
             wchar_t path[TASK_FILE_MAX] = { 0 };
             if (g_edTaFile) GetWindowTextW(g_edTaFile, path, TASK_FILE_MAX);
@@ -3628,6 +3637,24 @@ static void LayoutMyTeamStatics(void)
         MoveWindow(g_stMyTeam[i], left, top, width, height, TRUE);
     }
 }
+
+static void MyTeam_UpdateSelectionBorder(void)
+{
+    for (int i = 0; i < MYTEAM_SLOT_MAX; i++) {
+        if (!g_stMyTeam[i]) continue;
+
+        // WS_BORDER 같은 기본 테두리는 사용하지 않음
+        LONG st = GetWindowLongW(g_stMyTeam[i], GWL_STYLE);
+        st &= ~WS_BORDER;
+        SetWindowLongW(g_stMyTeam[i], GWL_STYLE, st);
+
+        SetWindowPos(g_stMyTeam[i], NULL, 0, 0, 0, 0,
+            SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+
+        InvalidateRect(g_stMyTeam[i], NULL, TRUE);
+    }
+}
+
 // ✅ 삭제된(비어있는) 과제 슬롯의 id를 찾아서 재사용하기
 // - 삭제 로직이 title[0]=0 으로 "비우기" 하니까 그걸 빈 슬롯으로 간주
 // - 가장 앞(작은 id)을 반환해서 "1번부터" 다시 채워지게 함
