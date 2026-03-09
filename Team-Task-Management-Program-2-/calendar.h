@@ -50,8 +50,6 @@ extern "C" {
 	// 내부적으로 clipMode로 변환해줌
 	void Calendar_SetVisibleWeekMask(unsigned int mask);
 
-	void Calendar_SetClipRect(RECT rc);
-
 #ifdef __cplusplus
 }
 #endif

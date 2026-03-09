@@ -47,7 +47,6 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
 
     // ✅ 자식(EDIT/STATIC)에서 PostMessage로 보낸 클릭 좌표 전달
     case WM_APP_CHILDCLICK:
-        App_OnLButtonDown(hWnd, (int)wParam, (int)lParam);
         return 0;
 
     case WM_CTLCOLORSTATIC:

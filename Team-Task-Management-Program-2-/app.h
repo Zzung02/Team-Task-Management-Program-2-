@@ -24,6 +24,7 @@ void App_GoToStart(HWND hWnd);
 // --------------------------------------------------
 // Screen enum (중복/누락 없이 정리)
 // --------------------------------------------------
+
 typedef enum {
     SCR_START = 0,
     SCR_SIGNUP,
@@ -38,7 +39,8 @@ typedef enum {
     SCR_TASK_ADD,
     SCR_BOARD,
     SCR_BOARD_WRITE,
-    SCR_MYTEAM_DETAIL     // ✅ 반드시 존재
+    SCR_MYTEAM_DETAIL,
+    SCR_FILE_LIST
 } Screen;
 
 
@@ -57,7 +59,9 @@ extern const wchar_t* BMP_TEAM_CREATE;
 extern const wchar_t* BMP_TEAM_JOIN;
 extern const wchar_t* BMP_TASK_ADD;
 extern const wchar_t* BMP_BOARD;
+extern const wchar_t* BMP_BOARD_WRITE;
 extern const wchar_t* BMP_MYTEAM_DETAIL;
+extern const wchar_t* BMP_FILE_LIST;
 
 // --------------------------------------------------
 // 전역 사용자 정보
@@ -80,7 +84,9 @@ extern HBITMAP g_bmpTeamCreate;
 extern HBITMAP g_bmpTeamJoin;
 extern HBITMAP g_bmpTaskAdd;
 extern HBITMAP g_bmpBoard;
+extern HBITMAP g_bmpBoardWrite;
 extern HBITMAP g_bmpMyTeamDetail;
+extern HBITMAP g_bmpFileList;
 // --------------------------------------------------
 // 공통 상태
 // --------------------------------------------------

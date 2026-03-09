@@ -404,6 +404,99 @@ extern int g_clientH;
 #define R_TA_DEADLINE_X2   1170
 #define R_TA_DEADLINE_Y2   570
 
+// ===============================
+// FILE_LIST 화면 좌표
+// ===============================
+
+// 왼쪽 과제 목록 큰 박스
+#define R_FL_TASK_LIST_X1   85
+#define R_FL_TASK_LIST_Y1   232
+#define R_FL_TASK_LIST_X2   725
+#define R_FL_TASK_LIST_Y2   833
+
+// 오른쪽 파일 목록 큰 박스
+#define R_FL_FILE_LIST_X1   865
+#define R_FL_FILE_LIST_Y1   233
+#define R_FL_FILE_LIST_X2   1503
+#define R_FL_FILE_LIST_Y2   833
+
+// 오른쪽 파일목록 4칸
+#define R_FL_FILE1_X1   717
+#define R_FL_FILE1_Y1   245
+#define R_FL_FILE1_X2   1199
+#define R_FL_FILE1_Y2   275
+
+#define R_FL_FILE2_X1   717 
+#define R_FL_FILE2_Y1   310
+#define R_FL_FILE2_X2   1199
+#define R_FL_FILE2_Y2   337
+
+#define R_FL_FILE3_X1   717
+#define R_FL_FILE3_Y1   395
+#define R_FL_FILE3_X2   1199
+#define R_FL_FILE3_Y2   427
+
+#define R_FL_FILE4_X1   717
+#define R_FL_FILE4_Y1   484
+#define R_FL_FILE4_X2   1199
+#define R_FL_FILE4_Y2   510
+
+// 왼쪽 페이지
+#define R_FL_TASK_PREV_X1   300
+#define R_FL_TASK_PREV_Y1   845
+#define R_FL_TASK_PREV_X2   345
+#define R_FL_TASK_PREV_Y2   885
+
+#define R_FL_TASK_NEXT_X1   405
+#define R_FL_TASK_NEXT_Y1   845
+#define R_FL_TASK_NEXT_X2   450
+#define R_FL_TASK_NEXT_Y2   885
+
+#define R_FL_TASK_PAGE_X1   350
+#define R_FL_TASK_PAGE_Y1   838
+#define R_FL_TASK_PAGE_X2   400
+#define R_FL_TASK_PAGE_Y2   880
+
+// 오른쪽 페이지
+#define R_FL_FILE_PREV_X1   1160
+#define R_FL_FILE_PREV_Y1   845
+#define R_FL_FILE_PREV_X2   1205
+#define R_FL_FILE_PREV_Y2   885
+
+#define R_FL_FILE_NEXT_X1   1265
+#define R_FL_FILE_NEXT_Y1   845
+#define R_FL_FILE_NEXT_X2   1310
+#define R_FL_FILE_NEXT_Y2   885
+
+#define R_FL_FILE_PAGE_X1   1210
+#define R_FL_FILE_PAGE_Y1   838
+#define R_FL_FILE_PAGE_X2   1260
+#define R_FL_FILE_PAGE_Y2   880
+
+#define R_FL_TITLE_X1		143
+#define R_FL_TITLE_Y1		182
+#define R_FL_TITLE_X2		555
+#define R_FL_TITLE_Y2		210
+
+#define R_FL_CONTENT_X1		145
+#define R_FL_CONTENT_Y1		257
+#define R_FL_CONTENT_X2		564
+#define R_FL_CONTENT_Y2		618
+
+#define R_FL_SAVE_X1		1004
+#define R_FL_SAVE_Y1		53
+#define R_FL_SAVE_X2		1123
+#define R_FL_SAVE_Y2		95
+
+#define R_FL_DEL_X1			1155
+#define R_FL_DEL_Y1			54
+#define R_FL_DEL_X2			1276
+#define R_FL_DEL_Y2			97
+
+#define R_FL_DOWNLOAD_X1	0
+#define R_FL_DOWNLOAD_Y1	0	
+#define R_FL_DOWNLOAD_X2	0
+#define R_FL_DOWNLOAD_Y2	0
 
 
 // 목록 1페이지 표시 줄 수
@@ -443,10 +536,10 @@ extern int g_clientH;
 #define R_BDW_CONTENT_Y2 609
 
 // 등록 버튼
-#define R_BDW_SAVE_X1    200
-#define R_BDW_SAVE_Y1    50
-#define R_BDW_SAVE_X2    550
-#define R_BDW_SAVE_Y2    130
+#define R_BDWW_SAVE_X1    200
+#define R_BDWW_SAVE_Y1    50
+#define R_BDWW_SAVE_X2    550
+#define R_BDWW_SAVE_Y2    130
 
 
 // ================================
