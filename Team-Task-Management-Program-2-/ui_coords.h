@@ -469,20 +469,20 @@ extern int g_clientH;
 #define R_FL_CONTENT_X2		564
 #define R_FL_CONTENT_Y2		618
 
-#define R_FL_SAVE_X1		1004
-#define R_FL_SAVE_Y1		53
-#define R_FL_SAVE_X2		1123
-#define R_FL_SAVE_Y2		95
+#define R_FL_SAVE_X1		847
+#define R_FL_SAVE_Y1		58
+#define R_FL_SAVE_X2		970
+#define R_FL_SAVE_Y2		100
 
-#define R_FL_DEL_X1			1155
-#define R_FL_DEL_Y1			54
-#define R_FL_DEL_X2			1276
-#define R_FL_DEL_Y2			97
+#define R_FL_DEL_X1			994
+#define R_FL_DEL_Y1			58
+#define R_FL_DEL_X2			1116
+#define R_FL_DEL_Y2			101
 
-#define R_FL_DOWNLOAD_X1	0
-#define R_FL_DOWNLOAD_Y1	0	
-#define R_FL_DOWNLOAD_X2	0
-#define R_FL_DOWNLOAD_Y2	0
+#define R_FL_DOWNLOAD_X1	1136
+#define R_FL_DOWNLOAD_Y1	59
+#define R_FL_DOWNLOAD_X2	1276
+#define R_FL_DOWNLOAD_Y2	100
 
 
 // 목록 1페이지 표시 줄 수

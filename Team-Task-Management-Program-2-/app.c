@@ -846,7 +846,7 @@ static void EnsureMyTeamStatics(HWND hWnd, HFONT font)
             0,
             L"STATIC",
             L"",
-            WS_CHILD | WS_VISIBLE | SS_LEFT | SS_NOTIFY,
+            WS_CHILD | WS_VISIBLE | SS_LEFT,
             0, 0, 10, 10,
             hWnd,
             (HMENU)(INT_PTR)(6000 + i),
@@ -874,7 +874,7 @@ static void MyTeam_RefreshUI(HWND hWnd)
     LoadMyTeams_FromMembers(g_currentUserId);
     ApplyMyTeamTextsToUI();
     LayoutMyTeamStatics();
-    MyTeam_UpdateSelectionBorder();   // ✅ 선택 테두리 다시 반영
+  
     ShowMyTeamStatics(1);
 }
 
@@ -1378,6 +1378,7 @@ static void RelayoutControls(HWND hWnd)
         return;
     }
 
+
     // TASK_ADD
     if (g_screen == SCR_TASK_ADD) {
         ShowWindow(g_edTaSearch, SW_SHOW);
@@ -1388,7 +1389,7 @@ static void RelayoutControls(HWND hWnd)
         ShowWindow(g_edTaTitle, SW_SHOW);
         ShowWindow(g_edTaContent, SW_SHOW);
         ShowWindow(g_edTaDetail, SW_SHOW);
-        ShowWindow(g_edTaFile, SW_SHOW);
+        //ShowWindow(g_edTaFile, SW_SHOW);
         ShowWindow(g_edTaDeadline, SW_SHOW);
 
       
@@ -2577,10 +2578,28 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
     }
 
     // -----------------------------------------------------
-    // MYTEAM
-    // -----------------------------------------------------
+   // MYTEAM
+   // -----------------------------------------------------
     if (g_screen == SCR_MYTEAM)
     {
+        // 1) 먼저 팀 목록 클릭부터 처리
+        for (int i = 0; i < MYTEAM_SLOT_MAX; i++)
+        {
+            if (g_myTeams[i].team[0] == 0) continue;
+
+            RECT rcSlot;
+            if (!GetMyTeamSlotRect(i, &rcSlot)) continue;
+
+            POINT pt = { x, y };
+            if (PtInRect(&rcSlot, pt))
+            {
+                g_myTeamSelected = i;
+                InvalidateRect(hWnd, NULL, FALSE);
+                SAFE_LEAVE();
+            }
+        }
+
+        // 2) 저장 버튼
         if (HitScaled(R_MYTEAM_SAVE_X1, R_MYTEAM_SAVE_Y1, R_MYTEAM_SAVE_X2, R_MYTEAM_SAVE_Y2, x, y))
         {
             if (g_myTeamSelected < 0 || g_myTeamSelected >= MYTEAM_SLOT_MAX ||
@@ -2603,6 +2622,7 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
             SAFE_LEAVE();
         }
 
+        // 3) 상세보기 버튼
         if (HitScaled(R_MYTEAM_DETAIL_X1, R_MYTEAM_DETAIL_Y1,
             R_MYTEAM_DETAIL_X2, R_MYTEAM_DETAIL_Y2, x, y))
         {
@@ -2622,35 +2642,8 @@ void App_OnLButtonDown(HWND hWnd, int x, int y)
             SAFE_LEAVE();
         }
 
-        for (int i = 0; i < MYTEAM_SLOT_MAX; i++)
-        {
-            if (!g_stMyTeam[i]) continue;
-            if (g_myTeams[i].team[0] == 0) continue;
-
-            RECT r;
-            GetWindowRect(g_stMyTeam[i], &r);
-
-            POINT p1 = { r.left, r.top };
-            POINT p2 = { r.right, r.bottom };
-            ScreenToClient(hWnd, &p1);
-            ScreenToClient(hWnd, &p2);
-
-            RECT rcSlot = { p1.x, p1.y, p2.x, p2.y };
-            POINT pt = { x, y };
-
-            if (PtInRect(&rcSlot, pt))
-            {
-                g_myTeamSelected = i;
-                MyTeam_UpdateSelectionBorder();
-                InvalidateRect(hWnd, NULL, FALSE);
-                SAFE_LEAVE();
-            
-            }
-        }
-
         SAFE_LEAVE();
     }
-
     // -----------------------------------------------------
     // MYTEAM_DETAIL
     // -----------------------------------------------------
@@ -3430,31 +3423,30 @@ void App_OnPaint(HWND hWnd, HDC hdc)
         Calendar_Draw(mem);
     }
 
-    // ✅ MYTEAM: 선택 테두리
+    // ✅ MYTEAM: 선택 테두리 직접 그리기
     if (g_screen == SCR_MYTEAM)
     {
-        if (g_myTeamSelected >= 0 && g_myTeamSelected < MYTEAM_SLOT_MAX &&
-            g_stMyTeam[g_myTeamSelected] && g_myTeams[g_myTeamSelected].team[0] != 0)
+        if (g_myTeamSelected >= 0 &&
+            g_myTeamSelected < MYTEAM_SLOT_MAX &&
+            g_myTeams[g_myTeamSelected].team[0] != 0)
         {
-            RECT r;
-            GetWindowRect(g_stMyTeam[g_myTeamSelected], &r);
+            RECT rcSel;
+            if (GetMyTeamSlotRect(g_myTeamSelected, &rcSel))
+            {
+                HPEN penBold = CreatePen(PS_SOLID, 3, RGB(0, 0, 0));
+                HGDIOBJ oldPen = SelectObject(mem, penBold);
+                HGDIOBJ oldBrush = SelectObject(mem, GetStockObject(HOLLOW_BRUSH));
 
-            POINT p1 = { r.left, r.top };
-            POINT p2 = { r.right, r.bottom };
-            ScreenToClient(hWnd, &p1);
-            ScreenToClient(hWnd, &p2);
+                Rectangle(mem,
+                    rcSel.left - 2,
+                    rcSel.top - 2,
+                    rcSel.right + 2,
+                    rcSel.bottom + 2);
 
-            RECT rcSel = { p1.x, p1.y, p2.x, p2.y };
-
-            HPEN pen2 = CreatePen(PS_SOLID, 2, RGB(0, 0, 0));
-            HGDIOBJ oldPen = SelectObject(mem, pen2);
-            HGDIOBJ oldBrush = SelectObject(mem, GetStockObject(HOLLOW_BRUSH));
-
-            Rectangle(mem, rcSel.left - 2, rcSel.top - 2, rcSel.right + 2, rcSel.bottom + 2);
-
-            SelectObject(mem, oldBrush);
-            SelectObject(mem, oldPen);
-            DeleteObject(pen2);
+                SelectObject(mem, oldBrush);
+                SelectObject(mem, oldPen);
+                DeleteObject(penBold);
+            }
         }
     }
     // ✅ TASK_ADD 선택 테두리 + 페이지 라벨
@@ -3637,21 +3629,41 @@ static void LayoutMyTeamStatics(void)
         MoveWindow(g_stMyTeam[i], left, top, width, height, TRUE);
     }
 }
+static int GetMyTeamSlotRect(int idx, RECT* outRc)
+{
+    if (!outRc) return 0;
+    if (idx < 0 || idx >= MYTEAM_SLOT_MAX) return 0;
+
+    int x1 = SX(R_MYTEAM_LIST_X1);
+    int y1 = SY(R_MYTEAM_LIST_Y1);
+    int x2 = SX(R_MYTEAM_LIST_X2);
+    int y2 = SY(R_MYTEAM_LIST_Y2);
+
+    int w = x2 - x1;
+    int h = y2 - y1;
+    if (w <= 0 || h <= 0) return 0;
+
+    int slotH = h / MYTEAM_SLOT_MAX;
+    int padX = 6;
+    int padY = 6;
+
+    outRc->left = x1 + padX;
+    outRc->top = y1 + idx * slotH + padY;
+    outRc->right = x2 - padX;
+    outRc->bottom = y1 + (idx + 1) * slotH - padY;
+
+    return 1;
+}
+
 
 static void MyTeam_UpdateSelectionBorder(void)
 {
     for (int i = 0; i < MYTEAM_SLOT_MAX; i++) {
-        if (!g_stMyTeam[i]) continue;
-
-        // WS_BORDER 같은 기본 테두리는 사용하지 않음
-        LONG st = GetWindowLongW(g_stMyTeam[i], GWL_STYLE);
-        st &= ~WS_BORDER;
-        SetWindowLongW(g_stMyTeam[i], GWL_STYLE, st);
-
-        SetWindowPos(g_stMyTeam[i], NULL, 0, 0, 0, 0,
-            SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
-
-        InvalidateRect(g_stMyTeam[i], NULL, TRUE);
+        if (g_stMyTeam[i] && IsWindow(g_stMyTeam[i])) {
+            HWND hParent = GetParent(g_stMyTeam[i]);
+            if (hParent) InvalidateRect(hParent, NULL, FALSE);
+            break;
+        }
     }
 }
 
@@ -3749,6 +3761,8 @@ static int TaskOwner_Set(const wchar_t* teamId, int taskId, const wchar_t* owner
             break;
         }
     }
+
+
 
     _wfopen_s(&fp, TASK_OWNERS_FILE, L"w, ccs=UTF-8");
     if (!fp) { if (lines) free(lines); return 0; }
@@ -3924,8 +3938,12 @@ static int FileList_ParseFiles(wchar_t items[][TASK_FILE_MAX], int maxItems)
 
 static int FileList_GetCount(void)
 {
-    wchar_t items[128][TASK_FILE_MAX];
-    return FileList_ParseFiles(items, 128);
+    wchar_t (*items)[TASK_FILE_MAX] = (wchar_t(*)[TASK_FILE_MAX])calloc(128, sizeof(*items));
+    if (!items) return 0;
+
+    int count = FileList_ParseFiles(items, 128);
+    free(items);
+    return count;
 }
 
 static int FileList_GetSelectedOnePath(wchar_t* outPath, int outLen)
@@ -3935,14 +3953,19 @@ static int FileList_GetSelectedOnePath(wchar_t* outPath, int outLen)
 
     if (g_flSelectedSlot < 0 || g_flSelectedSlot >= 4) return 0;
 
-    wchar_t items[128][TASK_FILE_MAX];
+    wchar_t (*items)[TASK_FILE_MAX] = (wchar_t(*)[TASK_FILE_MAX])calloc(128, sizeof(*items));
+    if (!items) return 0;
+
     int count = FileList_ParseFiles(items, 128);
 
     int idx = g_flFilePage * 4 + g_flSelectedSlot;
-    if (idx < 0 || idx >= count) return 0;
-    if (!items[idx][0]) return 0;
+    if (idx < 0 || idx >= count || !items[idx][0]) {
+        free(items);
+        return 0;
+    }
 
     lstrcpynW(outPath, items[idx], outLen);
+    free(items);
     return 1;
 }
 
@@ -3984,11 +4007,20 @@ static int FileList_SaveFilesToSelectedTask(HWND hWnd)
     wchar_t picked[TASK_FILE_MAX] = L"";
     if (!SelectOneFileDialog(hWnd, picked, TASK_FILE_MAX)) return 0;
 
-    wchar_t items[128][TASK_FILE_MAX];
+    // ✅ 스택 대신 힙 사용
+    wchar_t (*items)[TASK_FILE_MAX] = (wchar_t(*)[TASK_FILE_MAX])calloc(128, sizeof(*items));
+    if (!items) {
+        MessageBoxW(hWnd, L"메모리 할당 실패", L"파일 등록", MB_OK | MB_ICONERROR);
+        return 0;
+    }
+
     int count = FileList_ParseFiles(items, 128);
 
     int realIdx = g_flFilePage * 4 + g_flSelectedSlot;
-    if (realIdx < 0 || realIdx >= 128) return 0;
+    if (realIdx < 0 || realIdx >= 128) {
+        free(items);
+        return 0;
+    }
 
     // ✅ 필요한 인덱스까지 빈칸 확장
     while (count <= realIdx && count < 128) {
@@ -4001,6 +4033,8 @@ static int FileList_SaveFilesToSelectedTask(HWND hWnd)
 
     wchar_t merged[TASK_FILE_MAX] = L"";
     FileList_BuildMerged(merged, TASK_FILE_MAX, items, count);
+
+    free(items);
 
     TaskItem* buf = (TaskItem*)calloc(512, sizeof(TaskItem));
     if (!buf) return 0;
